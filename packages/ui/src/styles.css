@@ -1,0 +1,10 @@
+/* Hoja publicada como @tikin/ui/styles.css.
+   Es lo unico que necesita importar un consumidor que NO use Tailwind: trae los
+   tokens y las clases ya compiladas de todos los componentes.
+
+   @source apunta al codigo de los componentes para que Tailwind detecte las
+   clases que realmente usan y compile solo esas. */
+
+@import "@tikin/tokens";
+
+@source "./components";
