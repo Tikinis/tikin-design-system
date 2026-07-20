@@ -1,0 +1,10 @@
+/* Entrada de Tailwind para Storybook.
+
+   @source apunta al codigo fuente de los componentes para que Tailwind
+   descubra las clases que usan. Sin esto las stories saldrian sin estilos:
+   Storybook carga los .tsx desde otro paquete y la deteccion automatica de
+   Tailwind no llega hasta ahi. */
+
+@import "@tikin/tokens";
+
+@source "../../../packages/ui/src";

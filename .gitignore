@@ -15,3 +15,6 @@ apps/storybook/public/r/
 
 # Artefactos de Playwright MCP
 .playwright-mcp/
+
+# Storybook
+storybook-static/
