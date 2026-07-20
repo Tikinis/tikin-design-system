@@ -354,13 +354,13 @@ export const AlertAction = React.forwardRef<HTMLButtonElement, AlertActionProps>
           // exporta suelto. Sin el fallback, --tw-ring-offset-color cae a su
           // initial-value (#fff) y deja un halo blanco fijo en tema oscuro.
           "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tk-alert-bg,var(--tk-bg))]",
-          /* Par de deshabilitado del documento (seccion 05, familia compacta):
-             fondo claro y tinta gris media. El anterior, bg-edge + text-ink-400,
-             daba 1.47:1 — medido en el barrido visual —, ilegible aunque WCAG
-             exima a los controles inactivos del minimo de contraste. Este par da
-             ~3.4:1 y ademas es el que ya usan los botones compactos, asi que el
-             deshabilitado se ve igual en todo el sistema. */
-          "disabled:cursor-not-allowed disabled:bg-[var(--button-primary-bg-disable)] disabled:text-[var(--button-primary-text-disable)]",
+          /* Mismo par de deshabilitado que los botones compactos: fondo que
+             invierte con el tema y tinta del sistema. El anterior, bg-edge +
+             text-ink-400, daba 1.47:1 — medido en el barrido visual —, ilegible
+             aunque WCAG exima a los controles inactivos del minimo de contraste.
+             Ver la nota en button.tsx sobre por que no se usa ninguno de los dos
+             pares de Figma tal cual. */
+          "disabled:cursor-not-allowed disabled:bg-[var(--button-primary-bg-disabled-2)] disabled:text-ink-600",
           className,
         )}
         // Sin type explicito un <button> envia el formulario que lo contenga, y

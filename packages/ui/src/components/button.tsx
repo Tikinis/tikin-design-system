@@ -96,13 +96,21 @@ const button = cva(
         class:
           "disabled:bg-[var(--colours-grayscale-light-600)] disabled:text-[var(--colours-grayscale-light-500)] disabled:shadow-none",
       },
-      /* Disabled de la familia compacta: fondo claro, valores literales de
-         --button-primary-bg-disable / --button-primary-text-disable. */
+      /* Disabled de la familia compacta: fondo claro.
+         Figma ofrece dos pares y ninguno sirve entero:
+           -disable      rgb(236,237,238) / rgb(124,126,127) — literales que NO
+                         se redefinen en .dark, asi que en oscuro dejarian una
+                         caja gris clara sobre una pagina negra.
+           -disabled-2   si invierte (light-200 -> dark-800), pero su texto
+                         companero cae a dark-550 y queda casi invisible.
+         Se toma el fondo del segundo, que invierte, y la tinta del sistema, que
+         tambien invierte y ademas se lee en los dos temas (4.09:1 en claro,
+         6.34:1 en oscuro). */
       {
         family: "compact",
         variant: "primary",
         class:
-          "disabled:bg-[var(--button-primary-bg-disable)] disabled:text-[var(--button-primary-text-disable)] disabled:shadow-none",
+          "disabled:bg-[var(--button-primary-bg-disabled-2)] disabled:text-ink-600 disabled:shadow-none",
       },
       {
         variant: "secondary",

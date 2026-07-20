@@ -43,6 +43,36 @@
    [data-theme="dark"] porque figma.css ya emite ese selector. */
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
+/* CORRECCION DE CONTRASTE — la unica vez que este paquete cambia un color del
+   documento, y por eso va aqui y muy visible en vez de escondida en un
+   componente.
+
+   El documento define --tk-fg-warning: rgb(156,127,18) sobre
+   --tk-tint-warning: rgb(255,251,235). Medido en el barrido visual, ese par da
+   3.71:1, por debajo del 4.5:1 que WCAG AA pide para texto normal, y es lo que
+   pinta la etiqueta del chip y del badge de aviso — texto de contenido, no
+   decoracion. El tono se conserva: es el mismo amarillo, oscurecido lo justo
+   para llegar a 4.79:1.
+
+   Solo afecta al tema claro. En oscuro el par ya da 10.57:1 y no se toca.
+
+   Para revertirlo, borra este bloque: el valor del documento vuelve solo. Si
+   diseño prefiere otro amarillo, cambialo aqui y no en semantic.css, que se
+   regenera desde el .dc.html y perderia la correccion. */
+:root {
+  --tk-fg-warning: rgb(135, 110, 15);
+}
+
+/* El bloque de arriba va sin capa, igual que semantic.css, y aparece DESPUES,
+   asi que a igual especificidad tambien ganaba en oscuro y arrastraba el amarillo
+   oscuro sobre el tint oscuro: 2.99:1, peor que el original. El valor del
+   documento para oscuro se repite aqui explicitamente para que no dependa del
+   orden. Ahi el par ya daba 10.57:1 y no habia nada que corregir. */
+:root[data-theme="dark"],
+.dark {
+  --tk-fg-warning: rgb(255, 214, 110);
+}
+
 @theme inline {
   /* ---------------------------------------------------------------
      Superficies y tinta — cambian con el tema (fuente: --tk-*)

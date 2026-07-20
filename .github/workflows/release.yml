@@ -1,0 +1,60 @@
+name: Release
+
+# DESACTIVADO A PROPOSITO. Publicar es irreversible: una version publicada no se
+# puede retirar de verdad, solo deprecar. Este flujo queda escrito y probado
+# pero apagado hasta que alguien decida el destino (ver PUBLICAR.md).
+#
+# Para encenderlo:
+#   1. Elige destino y aplica sus cambios, siguiendo PUBLICAR.md.
+#   2. Añade el secreto NPM_TOKEN al repositorio.
+#   3. Quita el `if: false` de abajo.
+
+on:
+  push:
+    branches: [main]
+
+concurrency: release
+
+jobs:
+  release:
+    if: false # <- quitar para activar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # crear el PR de versiones y las etiquetas
+      pull-requests: write
+      id-token: write # procedencia npm, para que el paquete sea verificable
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # changesets necesita el historial para comparar
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # Las mismas puertas que en CI. Publicar sin ellas seria publicar a ciegas.
+      - run: pnpm typecheck
+      - run: pnpm tokens
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+      # Abre un PR con las versiones y los changelogs cuando hay changesets
+      # pendientes; si el PR ya estaba mezclado, publica.
+      - uses: changesets/action@v1
+        with:
+          version: pnpm version
+          publish: pnpm release
+          commit: "Publicar versiones"
+          title: "Publicar versiones"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -11,6 +11,7 @@
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" build",
     "typecheck": "pnpm -r typecheck",
+    "tokens": "node scripts/verificar-tokens.mjs",
     "test": "pnpm -r test",
     "lint": "eslint .",
     "format": "prettier --write .",

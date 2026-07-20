@@ -81,6 +81,7 @@ function servir(raiz) {
 
 /** Luminancia relativa segun WCAG, para el contraste. */
 function luminancia([r, g, b]) {
+  // Se ignora un cuarto componente si viene: aqui ya llega compuesto.
   const c = [r, g, b].map((v) => {
     const s = v / 255;
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
@@ -96,19 +97,71 @@ function contraste(a, b) {
 /* Lo que se ejecuta DENTRO de la pagina de cada story. Devuelve datos crudos;
    el analisis se hace fuera, en Node, para poder razonar con calma. */
 function recolectar() {
-  const rgb = (s) => {
-    const m = /rgba?\(([^)]+)\)/.exec(s);
-    if (!m) return null;
-    const p = m[1]
-      .split(/[,\s/]+/)
-      .filter(Boolean)
-      .map(Number);
-    // Transparente: el color efectivo lo pone lo de debajo, no se puede juzgar.
-    if (p.length > 3 && p[3] < 0.9) return null;
-    return [p[0], p[1], p[2]];
+  /* El color se convierte con un canvas de 1x1 en vez de parseando la cadena.
+     Tailwind 4 compila los modificadores de opacidad a color-mix(in oklab, …) y
+     Chromium los devuelve como `oklab(… / .45)`; antes ya habian aparecido
+     `color(srgb …)` y `rgba()`. Perseguir formatos uno a uno es una carrera que
+     se pierde: el canvas acepta cualquier color CSS valido y devuelve sus
+     componentes exactos, hoy y cuando aparezca el siguiente formato. */
+  const lienzo = document.createElement("canvas");
+  lienzo.width = 1;
+  lienzo.height = 1;
+  const ctx = lienzo.getContext("2d", { willReadFrequently: true });
+  const cache = new Map();
+
+  const rgb = (css) => {
+    if (!css || css === "transparent") return null;
+    if (cache.has(css)) return cache.get(css);
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = "#000";
+    ctx.fillStyle = css; // si el color no es valido, se queda el negro anterior
+    ctx.fillRect(0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    const r = d[3] === 0 ? null : [d[0], d[1], d[2], d[3] / 255];
+    cache.set(css, r);
+    return r;
   };
 
   const fondoEfectivo = (el) => {
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    /* Se recogen TODAS las capas desde el elemento hacia atras y se componen,
+       en vez de quedarse con la primera opaca. Asi un velo semitransparente
+       (el cristal del eyebrow, un scrim) aporta su color en la proporcion que
+       le toca, que es lo que hace el navegador.
+
+       Se usa la pila de pintado y no los ancestros porque hay fondos que pinta
+       un HERMANO —la banda lima del rango del date picker va en una capa detras
+       de la celda, no envolviendola— y el recorrido por padres se los saltaba.
+       La pila viene de ARRIBA abajo, asi que se empieza en el propio elemento:
+       lo anterior esta DELANTE de el y no es su fondo. */
+    const pila = x >= 0 && y >= 0 ? document.elementsFromPoint(x, y) : [];
+    const yo = pila.indexOf(el);
+    const capas = [];
+    for (const n of yo === -1 ? [el] : pila.slice(yo)) {
+      const cs = getComputedStyle(n);
+      /* Un degradado o una imagen no tienen UN color: el contraste cambia a lo
+         largo del elemento y habria que muestrear pixeles. Antes de dar un
+         numero inventado, se declara desconocido y el texto no se juzga. Es lo
+         que pasa con el scrim de la media card, que es un linear-gradient. */
+      if (cs.backgroundImage && cs.backgroundImage !== "none") return null;
+      const c = rgb(cs.backgroundColor);
+      if (!c) continue;
+      capas.push(c);
+      if (c[3] >= 1) break; // opaca: lo de mas atras ya no se ve
+    }
+    if (capas.length) {
+      // De la mas honda a la mas superficial, componiendo sobre blanco.
+      let base = [255, 255, 255];
+      for (const c of capas.reverse()) {
+        const a = c[3];
+        base = [0, 1, 2].map((i) => Math.round(c[i] * a + base[i] * (1 - a)));
+      }
+      return base;
+    }
+    // Fuera de la ventana no hay composicion que consultar: se cae al recorrido
+    // por ancestros, que sigue siendo mejor que nada.
     let n = el;
     while (n && n !== document.documentElement) {
       const c = rgb(getComputedStyle(n).backgroundColor);
@@ -148,6 +201,9 @@ function recolectar() {
 
     const tinta = rgb(cs.color);
     if (!tinta) continue;
+    const fondo = fondoEfectivo(el);
+    // null = hay un degradado o una imagen detras y no se puede dar un numero.
+    if (!fondo) continue;
     // WCAG 1.4.3 exime a los controles inactivos del minimo de contraste, asi
     // que se marcan en vez de tratarlos como el resto: un disabled apagado es
     // correcto, pero uno ilegible del todo sigue siendo mal diseño.
@@ -159,7 +215,7 @@ function recolectar() {
     textos.push({
       texto: texto.slice(0, 40),
       tinta,
-      fondo: fondoEfectivo(el),
+      fondo,
       tam: parseFloat(cs.fontSize),
       peso: cs.fontWeight,
       inactivo,

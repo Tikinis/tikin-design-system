@@ -29,6 +29,11 @@ jobs:
       - name: Tipos
         run: pnpm typecheck
 
+      # Detecta un re-export de Figma que reintroduzca colisiones de namespace,
+      # placeholders o colores que no invierten.
+      - name: Tokens
+        run: pnpm tokens
+
       - name: Lint
         run: pnpm lint
 

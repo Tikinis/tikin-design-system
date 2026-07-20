@@ -86,7 +86,9 @@ const IconoAbrir = () => (
 /** Marca el hueco de la imagen sin inventarse un gradiente decorativo. */
 const ImagenDemo = () => (
   <div className="flex size-full items-center justify-center bg-surface-3">
-    <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
+    {/* ink-700 y no ink-600: sobre surface-3, que ya es un gris, el 600 se
+        queda en 4.39:1 — a 0.11 del minimo AA. */}
+    <span className="font-meta text-[11px] tracking-[0.1em] text-ink-700 uppercase">
       Imagen de marca
     </span>
   </div>

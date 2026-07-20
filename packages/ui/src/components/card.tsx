@@ -375,7 +375,14 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
           {eyebrow ? (
             // Mayusculas por CSS: el texto accesible y el copiado conservan su
             // capitalizacion original.
-            <span className="rounded-pill border border-surface/28 bg-surface/16 px-3 py-1.5 font-mono text-[11px] tracking-[0.12em] uppercase backdrop-blur-[6px]">
+            /* El cristal tiñe de OSCURO, no de claro. El eyebrow lleva texto
+               blanco y se apoya sobre una imagen del consumidor, que puede ser
+               de cualquier color: con un velo claro (bg-surface/16) sobre una
+               foto clara el texto desaparecia — medido, 1.16:1. Un velo oscuro
+               garantiza el contraste pase lo que pase debajo, y sigue siendo
+               cristal: conserva el desenfoque y deja ver la imagen. El borde
+               claro se mantiene para recortar la pildora sobre fotos oscuras. */
+            <span className="rounded-pill border border-surface/28 bg-ink/65 px-3 py-1.5 font-mono text-[11px] tracking-[0.12em] uppercase backdrop-blur-[6px]">
               {eyebrow}
             </span>
           ) : null}

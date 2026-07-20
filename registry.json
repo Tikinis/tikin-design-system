@@ -26,7 +26,6 @@
       "title": "Accordion",
       "description": "Seccion 35 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Accordion, AccordionItem, AccordionTrigger, AccordionContent.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -65,7 +64,6 @@
       "title": "Avatars",
       "description": "Seccion 27 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Avatar, AvatarGroup, initialsFromName, toneFromName.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -104,7 +102,6 @@
       "title": "Botones",
       "description": "Seccion 05 del sistema de diseño. Del archivo de Figma. Exporta: Button.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -143,7 +140,6 @@
       "title": "Cards",
       "description": "Seccion 10 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Card, CardFeature, CardMedia, CardStat.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -202,7 +198,6 @@
       "title": "Date picker",
       "description": "Seccion 23 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: DatePicker.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -244,7 +239,8 @@
         "class-variance-authority"
       ],
       "registryDependencies": [
-        "https://tikin-ds.vercel.app/r/cn.json"
+        "https://tikin-ds.vercel.app/r/cn.json",
+        "https://tikin-ds.vercel.app/r/progress.json"
       ],
       "files": [
         {
@@ -299,7 +295,6 @@
       "title": "Links e icon buttons",
       "description": "Seccion 06 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Link, IconButton.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -319,7 +314,6 @@
       "title": "List items & filas",
       "description": "Seccion 45 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: List, ListItem, ListItemIcon, ListItemAmount, ListItemValue, ListItemCheck.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -339,7 +333,6 @@
       "title": "Menu, split & group",
       "description": "Seccion 07 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: MenuItem, MenuSeparator, MenuButton, SplitButton, ButtonGroup, ButtonGroupItem.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -359,7 +352,6 @@
       "title": "Modales & bottom sheets",
       "description": "Seccion 42 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Modal, ModalTrigger, ModalClose, ModalContent, ModalIcon, ModalTitle, ModalDescription, ModalFooter, ModalAction, BottomSheet, BottomSheetTrigger, BottomSheetClose, BottomSheetContent, BottomSheetTitle, BottomSheetDescription, BottomSheetList, BottomSheetItem.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -377,9 +369,8 @@
       "name": "navigation",
       "type": "registry:ui",
       "title": "Navigation",
-      "description": "Seccion 26 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: TopBar, TopBarAction, TopBarLink, TabBar, TabBarItem, TabBarAction, Sidebar, SidebarItem, SidebarFooter, SidebarUser.",
+      "description": "Seccion 26 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: TopBar, TopBarAction, TopBarLink, TabBar, TabBarItem, TabBarAction, Sidebar, SidebarItem, SidebarFooter, SidebarUser, BreadcrumbItem, Breadcrumbs.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -459,7 +450,8 @@
         "class-variance-authority"
       ],
       "registryDependencies": [
-        "https://tikin-ds.vercel.app/r/cn.json"
+        "https://tikin-ds.vercel.app/r/cn.json",
+        "https://tikin-ds.vercel.app/r/keypad.json"
       ],
       "files": [
         {
@@ -475,7 +467,6 @@
       "title": "Progress & sliders",
       "description": "Seccion 18 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Progress.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -495,7 +486,6 @@
       "title": "Radio button",
       "description": "Seccion 21 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: RadioGroup, Radio.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -515,7 +505,6 @@
       "title": "Range slider",
       "description": "Seccion 40 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: RangeSlider.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -573,7 +562,6 @@
       "title": "Snackbar & undo",
       "description": "Seccion 39 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: SnackbarProvider, SnackbarViewport, Snackbar, SnackbarAction, SnackbarClose.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -650,7 +638,6 @@
       "title": "Tabs & controles",
       "description": "Seccion 08 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Tabs, TabsList, TabsTrigger, TabsContent, SegmentedControl, SegmentedControlItem.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -689,7 +676,6 @@
       "title": "Toast",
       "description": "Seccion 17 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Toast, ToastProvider, ToastViewport, ToastAction.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -709,7 +695,6 @@
       "title": "Toggle",
       "description": "Seccion 16 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Toggle, SwitchField.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -729,7 +714,6 @@
       "title": "Tooltips",
       "description": "Seccion 19 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: TooltipProvider, Tooltip.",
       "dependencies": [
-        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [
