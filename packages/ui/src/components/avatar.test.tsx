@@ -58,6 +58,56 @@ describe("Avatar", () => {
     expect(toneFromName("  Valentina Cruz  ")).toBe(toneFromName("Valentina Cruz"));
   });
 
+  it("reparte los tres pasteles: nombres distintos NO caen todos en el mismo", () => {
+    // Sin esto, una implementacion que devolviera siempre "lavender" seria
+    // igual de "estable" y pasaria el test de arriba. Lo que pide la seccion es
+    // un reparto, no una constante: estos tres nombres cubren los tres pasteles
+    // de marca del prototipo (lavenderblue-100, limegreen-400, goldenyellow-300).
+    expect(toneFromName("Carlos Diaz")).toBe("lavender");
+    expect(toneFromName("Ana Lopez")).toBe("lime");
+    expect(toneFromName("Valentina Cruz")).toBe("gold");
+  });
+
+  it("el pastel derivado del nombre llega al DOM", () => {
+    // El hash no sirve de nada si el color no acaba pintado: aqui se comprueba
+    // el eslabon que faltaba, de `name` a la clase de relleno.
+    render(
+      <>
+        <Avatar name="Carlos Diaz" />
+        <Avatar name="Ana Lopez" />
+        <Avatar name="Valentina Cruz" />
+      </>,
+    );
+    expect(screen.getByRole("img", { name: "Carlos Diaz" }).className).toContain("bg-lavender");
+    expect(screen.getByRole("img", { name: "Ana Lopez" }).className).toContain("bg-lime");
+    expect(screen.getByRole("img", { name: "Valentina Cruz" }).className).toContain("bg-gold");
+  });
+
+  it("`tone` explicito manda sobre el pastel derivado del nombre", () => {
+    // "Valentina Cruz" cae en gold por hash; el consumidor debe poder fijarlo.
+    render(<Avatar name="Valentina Cruz" tone="lime" />);
+    const cls = screen.getByRole("img", { name: "Valentina Cruz" }).className;
+    expect(cls).toContain("bg-lime");
+    expect(cls).not.toContain("bg-gold");
+  });
+
+  it("sin nombre no inventa pastel: cae al neutro de superficie", () => {
+    const { container } = render(<Avatar />);
+    expect(container.firstElementChild?.className).toContain("bg-surface-2");
+  });
+
+  it("`ring` pinta el anillo de tinta y sin el no hay anillo", () => {
+    const { rerender } = render(<Avatar name="Ana Lopez" />);
+    expect(screen.getByRole("img", { name: "Ana Lopez" }).className).not.toContain("--tk-ink");
+
+    rerender(<Avatar name="Ana Lopez" ring />);
+    // Hueco del color del fondo primero y tinta despues: el anillo no debe
+    // tocar el borde de la foto.
+    expect(screen.getByRole("img", { name: "Ana Lopez" }).className).toContain(
+      "shadow-[0_0_0_2px_var(--tk-avatar-edge,var(--tk-surface)),0_0_0_4px_var(--tk-ink)]",
+    );
+  });
+
   it("sin nombre ni alt es decorativo: no expone rol ni nombre accesible", () => {
     const { container } = render(<Avatar />);
     // Un placeholder gris no aporta nada que anunciar.
@@ -65,6 +115,29 @@ describe("Avatar", () => {
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
     // Pero visualmente nunca esta vacio: cae al icono de persona.
     expect(container.querySelector("svg")).not.toBeNull();
+  });
+
+  it("no se marca aria-hidden si el consumidor lo etiqueta por fuera", () => {
+    // aria-labelledby es un mecanismo ARIA tan valido como aria-label. Si el
+    // avatar se marcase aria-hidden igualmente, quedaria etiquetado pero fuera
+    // del arbol de accesibilidad, que es una regresion silenciosa de 4.1.2.
+    const { container } = render(
+      <>
+        <span id="quien">Valentina Cruz</span>
+        <Avatar aria-labelledby="quien" />
+      </>,
+    );
+    const avatar = container.querySelector("[aria-labelledby]");
+    expect(avatar).not.toBeNull();
+    expect(avatar).not.toHaveAttribute("aria-hidden");
+  });
+
+  it("no se marca aria-hidden si el consumidor le da un rol propio", () => {
+    // Un avatar clicable (`role="button"`) es un control real: con aria-hidden
+    // encima, la consulta por rol no lo encuentra porque queda fuera del arbol
+    // de accesibilidad, y con el tampoco lo encontraria un lector de pantalla.
+    render(<Avatar role="button" tabIndex={0} />);
+    expect(screen.getByRole("button")).not.toHaveAttribute("aria-hidden");
   });
 
   it("expone un unico nodo accesible, tanto con foto como sin ella", () => {
@@ -203,6 +276,34 @@ describe("AvatarGroup", () => {
     expect(envoltorio?.className).toContain("shadow-[0_0_0_2.5px_var(--tk-avatar-edge");
     // ...luego el envoltorio tiene que estar en esa misma capa.
     expect(envoltorio?.className).toContain("relative");
+  });
+
+  it("el punto de estado se eleva para que no lo tape el avatar siguiente", () => {
+    // Mismo orden de pintado que el test de arriba, ahora en contra nuestra: el
+    // punto vive abajo a la derecha del avatar N, que es exactamente la franja
+    // que solapa el avatar N+1, y N+1 se pinta despues. Sin elevar el punto, un
+    // <Avatar online> que no fuese el ultimo del grupo lo perdia entero.
+    //
+    // Se eleva el PUNTO y no su avatar: ni la raiz del Avatar ni el envoltorio
+    // del grupo llevan z-index, o sea que no crean contexto de apilado y el
+    // z-index del punto se resuelve contra los hermanos del grupo. Elevar el
+    // avatar entero, en cambio, lo pondria por encima del borde separador del
+    // siguiente e invertiria el solapado que pide la seccion.
+    const { container } = render(
+      <AvatarGroup max={3}>
+        <Avatar name="Marta Ruiz" online />
+        <Avatar name="Carlos Diaz" />
+      </AvatarGroup>,
+    );
+
+    const primero = screen.getByRole("img", { name: "Marta Ruiz" });
+    const punto = primero.querySelector('[aria-hidden="true"]');
+    expect(punto?.className).toContain("z-10");
+    // El avatar que lo contiene NO se eleva: el solapado del grupo no cambia.
+    expect(primero.className).not.toContain("z-10");
+    expect(primero.parentElement?.className).not.toContain("z-10");
+    // Y el siguiente sigue pintando encima del anterior, como manda la seccion.
+    expect(container.querySelectorAll("[role='img']")).toHaveLength(2);
   });
 
   it("ignora hijos nulos, que es lo que deja un render condicional", () => {

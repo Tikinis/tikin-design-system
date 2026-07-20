@@ -169,7 +169,11 @@ export interface SearchInputProps
   loading?: boolean;
   /** Texto que anuncia el lector de pantalla mientras `loading`. */
   loadingLabel?: string;
-  /** Pinta la X de limpiar cuando hay texto. Por defecto `true`. */
+  /**
+   * Pinta la X de limpiar cuando hay texto y deja que Escape vacie el campo.
+   * Por defecto `true`. Un campo `disabled` o `readOnly` nunca ofrece limpiar,
+   * pase lo que pase aqui.
+   */
   clearable?: boolean;
   /** Se llama despues de vaciar el campo, ya sea por la X o por Escape. */
   onClear?: () => void;
@@ -194,7 +198,14 @@ export interface SearchInputProps
  *
  * NO renderiza la lista de resultados. El desplegable de recientes, resultados
  * y "sin resultados" que dibuja el documento se compone fuera, porque su
- * contenido y su navegacion dependen del dominio de cada pantalla.
+ * contenido y su navegacion dependen del dominio de cada pantalla. Con ello, la
+ * semantica de combobox (`role`, `aria-expanded`, `aria-controls`,
+ * `aria-activedescendant`) tambien le toca al consumidor: la story "En vivo"
+ * documenta el cableado completo.
+ *
+ * ESCAPE: con texto vacia el campo y se queda el evento — ni siquiera un Modal
+ * o un Popover de Radix por encima se cierra. Con el campo ya vacio, el evento
+ * sube y cierra lo que lo envuelva. Dos pulsaciones, dos efectos.
  */
 export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
   function SearchInput(
@@ -217,6 +228,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
       value,
       defaultValue,
       disabled,
+      readOnly,
       ...props
     },
     ref,
@@ -256,23 +268,79 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
       onClear?.();
     };
 
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-      /* Escape limpia, pero SOLO si queda algo que limpiar. Con el campo vacio
-         el evento sigue subiendo para que el modal, el popover o el panel de
-         resultados que lo envuelva pueda cerrarse — que es lo que el usuario
-         espera al pulsar Escape dos veces. */
-      if (event.key === "Escape" && clearable && !disabled && currentValue !== "") {
-        // Varios navegadores ya vacian un input[type=search] con Escape por su
-        // cuenta; con preventDefault el comportamiento es uno solo y pasa
-        // siempre por `clear`, que ademas avisa a `onClear`.
-        event.preventDefault();
-        event.stopPropagation();
+    /* Escape limpia, pero SOLO si queda algo que limpiar. Con el campo vacio el
+       evento sigue subiendo para que el modal, el popover o el panel de
+       resultados que lo envuelva pueda cerrarse — que es lo que el usuario
+       espera al pulsar Escape dos veces.
+       readOnly cuenta como "nada que limpiar": el setter nativo que usa `clear`
+       NO respeta readOnly, asi que sin esta guarda un campo de solo lectura se
+       vaciaria igual. */
+    const puedeLimpiar = clearable && !disabled && !readOnly && currentValue !== "";
+
+    /* El listener nativo de mas abajo se registra UNA sola vez y no puede
+       recapturar closures, asi que lee la decision por ref. Se refresca en cada
+       render (efecto sin dependencias) en vez de mutarla durante el render. */
+    const limpiarPorEscapeRef = React.useRef<() => boolean>(() => false);
+    React.useEffect(() => {
+      limpiarPorEscapeRef.current = () => {
+        if (!puedeLimpiar) return false;
         clear();
+        return true;
+      };
+    });
+
+    /* Marca el evento NATIVO que ya se ha atendido en captura, para que el
+       handler sintetico no vuelva a limpiar ni se coma un Escape ajeno. */
+    const escapeAtendidoRef = React.useRef<KeyboardEvent | null>(null);
+
+    /* POR QUE UN LISTENER NATIVO EN CAPTURA Y NO SOLO `onKeyDown`
+       -----------------------------------------------------------
+       La composicion principal de este campo es dentro de un Modal o un
+       Popover, y ambos se apoyan en el DismissableLayer de Radix, que escucha
+       Escape sobre `document` en FASE DE CAPTURA. Ese handler corre ANTES de
+       que el evento llegue siquiera al <input>, asi que un `stopPropagation`
+       sobre el evento sintetico de React llega tarde: el usuario pulsaria
+       Escape una vez y veria vaciarse el campo Y cerrarse el modal a la vez.
+       Lo que Radix si respeta es `defaultPrevented` (solo cierra si nadie lo ha
+       marcado), de modo que la unica via que funciona es hacer preventDefault
+       antes que el, y para eso hay que estar tambien en captura sobre el
+       document. Entre listeners del mismo nodo y la misma fase manda el orden
+       de registro, y este efecto es de un descendiente: React vacia los efectos
+       de los hijos antes que los del ancestro que monta la capa. */
+    React.useEffect(() => {
+      const input = innerRef.current;
+      if (!input) return;
+      const doc = input.ownerDocument;
+
+      const enCaptura = (event: KeyboardEvent) => {
+        if (event.key !== "Escape") return;
+        if (event.target !== innerRef.current) return;
+        escapeAtendidoRef.current = null;
+        if (!limpiarPorEscapeRef.current()) return;
+        /* Doble efecto buscado: frena el cierre de Radix y anula de paso el
+           vaciado nativo que algunos navegadores hacen en input[type=search],
+           para que el unico camino sea `clear` — que ademas avisa a `onClear`. */
+        event.preventDefault();
+        escapeAtendidoRef.current = event;
+      };
+
+      doc.addEventListener("keydown", enCaptura, { capture: true });
+      return () => doc.removeEventListener("keydown", enCaptura, { capture: true });
+    }, []);
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+      /* Si el listener en captura ya limpio, aqui solo se corta la propagacion
+         sintetica: un ancestro de React no debe reaccionar a un Escape que este
+         campo ya ha consumido. El `onKeyDown` del consumidor se sigue llamando
+         siempre — es suyo, no de un ancestro. */
+      if (escapeAtendidoRef.current === event.nativeEvent) {
+        escapeAtendidoRef.current = null;
+        event.stopPropagation();
       }
       onKeyDown?.(event);
     };
 
-    const showClear = clearable && !disabled && currentValue !== "";
+    const showClear = puedeLimpiar;
 
     return (
       <div className={cn("flex w-full flex-col gap-2", wrapperClassName)}>
@@ -311,12 +379,18 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             value={value}
             defaultValue={defaultValue}
             disabled={disabled}
+            readOnly={readOnly}
             aria-busy={loading || undefined}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             className={cn(
               "h-full min-w-0 flex-1 bg-transparent outline-none",
               "font-sans text-base text-ink placeholder:text-ink-500",
+              /* El bloque ESTADOS pinta el DEFAULT en --tk-500 pero el LOADING
+                 en --tk-600: mientras se busca, el texto de espera pesa un poco
+                 mas que un placeholder en reposo. La diferencia es deliberada
+                 en el archivo, asi que se replica. */
+              loading && "placeholder:text-ink-600",
               "disabled:cursor-not-allowed disabled:text-ink-500",
               // WebKit pinta su propia cruz de borrado dentro de los
               // input[type=search]. Tendriamos dos X, una encima de otra.

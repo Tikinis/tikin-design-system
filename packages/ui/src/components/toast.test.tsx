@@ -3,9 +3,15 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { Toast, ToastAction, ToastProvider, ToastViewport } from "./toast";
 
-/* Estos tests cubren COMPORTAMIENTO, no apariencia. Los valores visuales
+/* Estos tests cubren COMPORTAMIENTO, no apariencia. Los VALORES visuales
  * (tinta 900, r12, icono 17, sombra alta) se verifican contra el navegador, no
- * aqui: jsdom no aplica CSS, asi que comprobar clases seria tautologico.
+ * aqui: jsdom no aplica CSS, asi que afirmar que una clase esta puesta no
+ * demuestra que pinte nada.
+ *
+ * La excepcion son los dos tests del final, que no miran valores sino
+ * contratos: que el className del consumidor gane a la base (tailwind-merge) y
+ * que los @keyframes existan de verdad — ahi la clase ES el defecto que se
+ * vigila, no una tautologia.
  *
  * DOS DETALLES DE RADIX QUE CONDICIONAN COMO SE CONSULTA EL DOM
  * ------------------------------------------------------------
@@ -28,6 +34,29 @@ function montar(ui: React.ReactNode) {
 /** Region que envuelve al viewport: todo lo visible del toast vive dentro. */
 function region() {
   return within(screen.getByRole("region"));
+}
+
+/** El <li> del toast. No lleva rol propio, asi que se llega por el mensaje. */
+function toastRoot(mensaje: string) {
+  return region().getByText(mensaje).parentElement!;
+}
+
+/**
+ * Arrastra el toast `deltaY` pixeles hacia abajo y suelta.
+ *
+ * jsdom no implementa la API de captura de puntero y Radix la llama al arrancar
+ * el arrastre. Se apuntala en el propio nodo, no en el setup compartido, para
+ * no cambiarle el entorno al resto de la suite.
+ */
+function arrastrar(nodo: HTMLElement, deltaY: number) {
+  Object.assign(nodo, {
+    setPointerCapture: () => {},
+    hasPointerCapture: () => false,
+    releasePointerCapture: () => {},
+  });
+  fireEvent.pointerDown(nodo, { button: 0, clientX: 0, clientY: 0, pointerId: 1 });
+  fireEvent.pointerMove(nodo, { clientX: 0, clientY: deltaY, pointerId: 1 });
+  fireEvent.pointerUp(nodo, { clientX: 0, clientY: deltaY, pointerId: 1 });
 }
 
 afterEach(() => {
@@ -239,11 +268,113 @@ describe("Toast", () => {
     expect(region().getByText("Envío completado")).toBeInTheDocument();
   });
 
+  it("cada tono trae su glifo, y el neutro ninguno", () => {
+    // Es lo unico que hace la prop `tone`, y hasta ahora no lo miraba nadie.
+    const casos: Array<[Parameters<typeof Toast>[0]["tone"], string | null]> = [
+      ["neutral", null],
+      ["success", "toast-glyph-check"],
+      ["error", "toast-glyph-warning"],
+      ["loading", "toast-glyph-spinner"],
+    ];
+
+    for (const [tone, slot] of casos) {
+      const { unmount } = montar(<Toast tone={tone}>Envío completado</Toast>);
+      const lista = screen.getByRole("region");
+
+      if (slot === null) {
+        // Sin glifo no debe quedar ni el hueco del icono comiendo el gap.
+        expect(lista.querySelector("[data-slot='toast-icon']")).toBeNull();
+      } else {
+        expect(lista.querySelector(`[data-slot='${slot}']`)).not.toBeNull();
+      }
+      unmount();
+    }
+  });
+
+  it("el arrastre hacia abajo descarta el toast", () => {
+    montar(<Toast>Envío completado</Toast>);
+    // El umbral de Radix son 50px; 80 lo cruza de sobra. La direccion es la del
+    // provider (abajo), asi que el delta tiene que ser Y positivo.
+    arrastrar(toastRoot("Envío completado"), 80);
+
+    expect(region().queryByText("Envío completado")).not.toBeInTheDocument();
+  });
+
+  it("un arrastre corto no descarta: el toast vuelve a su sitio", () => {
+    montar(<Toast>Envío completado</Toast>);
+    // 20px se queda por debajo del umbral de 50: es un roce, no un descarte.
+    arrastrar(toastRoot("Envío completado"), 20);
+
+    expect(region().queryByText("Envío completado")).toBeInTheDocument();
+  });
+
+  it("el lector de pantalla oye el altText de la accion, no su label", async () => {
+    montar(
+      <Toast
+        action={<ToastAction altText="Deshacer el borrado del movimiento">Deshacer</ToastAction>}
+      >
+        Movimiento eliminado
+      </Toast>,
+    );
+
+    const anuncio = screen.getByRole("status");
+    // Quien no llega al boton a tiempo necesita la frase completa; "Deshacer",
+    // a secas y fuera de pantalla, no dice que se deshace.
+    await waitFor(() => expect(anuncio).toHaveTextContent("Deshacer el borrado del movimiento"));
+    expect(anuncio).not.toHaveTextContent(/Deshacer$/);
+  });
+
+  it("F8 deja un rastro visible al llegar a la lista", () => {
+    montar(<Toast>Envío completado</Toast>);
+    fireEvent.keyDown(document, { key: "F8", code: "F8" });
+
+    // La <ol> lleva outline-none; sin anillo propio el salto de foco seria
+    // invisible y el unico camino de teclado hasta el toast quedaria a ciegas.
+    const lista = screen.getByRole("list");
+    expect(lista).toHaveFocus();
+    expect(lista.className).toContain("focus:ring-2");
+  });
+
   it("permite sobreescribir estilos por className", () => {
     montar(<Toast className="rounded-none">Envío completado</Toast>);
     // tailwind-merge debe descartar el rounded-lg de la base, no acumularlo.
     const cls = region().getByText("Envío completado").parentElement?.className ?? "";
     expect(cls).toContain("rounded-none");
     expect(cls).not.toContain("rounded-lg");
+  });
+
+  it("la salida se anima con @keyframes reales, no con una transicion", () => {
+    montar(<Toast>Envío completado</Toast>);
+    const cls = region().getByText("Envío completado").parentElement?.className ?? "";
+
+    // Presence de Radix desmonta el nodo en el mismo tick si el estilo
+    // calculado no declara animationName. Con `transition` la regla de cierre
+    // era codigo muerto: nunca llegaba a pintarse. Ergo las dos mitades tienen
+    // que existir — la clase que la invoca Y los @keyframes que la definen.
+    expect(cls).toContain("data-[state=closed]:animate-[tk-toast-out");
+    expect(cls).not.toContain("transition-[opacity,transform]");
+
+    const reglas = Array.from(document.querySelectorAll("style"))
+      .map((s) => s.textContent ?? "")
+      .join("");
+    expect(reglas).toContain("@keyframes tk-toast-out");
+    expect(reglas).toContain("@keyframes tk-toast-in");
+  });
+
+  it("no repite los @keyframes por cada toast en pantalla", () => {
+    render(
+      <ToastProvider>
+        <Toast>Uno</Toast>
+        <Toast>Dos</Toast>
+        <Toast>Tres</Toast>
+        <ToastViewport />
+      </ToastProvider>,
+    );
+
+    // React deduplica por `href`: tres toasts, una sola regla en el documento.
+    const bloques = Array.from(document.querySelectorAll("style")).filter((s) =>
+      (s.textContent ?? "").includes("@keyframes tk-toast-in"),
+    );
+    expect(bloques).toHaveLength(1);
   });
 });

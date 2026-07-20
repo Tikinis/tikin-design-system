@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   BottomSheet,
@@ -234,10 +234,15 @@ function grabber(): HTMLElement {
   return el;
 }
 
-/** Simula un arrastre vertical sobre el grabber de la hoja. */
-function dragHandle(handle: Element, distance: number) {
+/** Baja el dedo sobre el grabber y lo mueve, SIN soltarlo: hoja en pleno gesto. */
+function startDrag(handle: Element, distance: number) {
   fireEvent.pointerDown(handle, { button: 0, clientY: 0 });
   fireEvent.pointerMove(window, { clientY: distance });
+}
+
+/** Simula un arrastre vertical completo sobre el grabber de la hoja. */
+function dragHandle(handle: Element, distance: number) {
+  startDrag(handle, distance);
   fireEvent.pointerUp(window, { clientY: distance });
 }
 
@@ -312,15 +317,107 @@ describe("BottomSheet", () => {
     expect(document.querySelector("[data-slot='modal-scrim']")).toBeNull();
   });
 
-  it("el Close oculto del gesto no aparece en el arbol accesible", async () => {
+  it("pulsar el scrim cierra la hoja", async () => {
     render(<SheetDemo />);
     await userEvent.click(screen.getByRole("button", { name: "Abrir hoja" }));
 
-    // Solo debe haber una salida visible declarada por el consumidor. Si el
-    // Close interno se colara, habria dos botones "cerrar" para el lector.
+    await userEvent.click(scrim());
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("el Close oculto del gesto no aparece en el arbol accesible", () => {
+    render(
+      <BottomSheet defaultOpen>
+        <BottomSheetContent aria-describedby={undefined}>
+          <BottomSheetTitle>Enviar dinero a</BottomSheetTitle>
+          {/* Nodo oculto puesto por el consumidor: contar `[hidden]` haria que
+              este test fallara por su culpa. Lo que importa es el arbol
+              accesible, no cuantos nodos ocultos haya. */}
+          <div hidden data-testid="oculto-del-consumidor" />
+          <BottomSheetClose asChild>
+            <button type="button">Cerrar</button>
+          </BottomSheetClose>
+        </BottomSheetContent>
+      </BottomSheet>,
+    );
+
+    // Solo la salida declarada por el consumidor. Si el Close interno del gesto
+    // se colara, el lector de pantalla veria dos botones y uno sin nombre.
     const dialog = screen.getByRole("dialog");
-    const ocultos = dialog.querySelectorAll("[hidden]");
-    expect(ocultos.length).toBe(1);
-    expect(ocultos[0]).toHaveAttribute("aria-hidden", "true");
+    expect(
+      within(dialog)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Cerrar"]);
+  });
+
+  it("showHandle={false} quita el grabber pero deja las salidas accesibles", async () => {
+    render(
+      <BottomSheet defaultOpen>
+        <BottomSheetContent showHandle={false} aria-describedby={undefined}>
+          <BottomSheetTitle>Enviar dinero a</BottomSheetTitle>
+        </BottomSheetContent>
+      </BottomSheet>,
+    );
+
+    // Sin grabber no hay gesto: es una decision del consumidor, no un fallo.
+    expect(document.querySelector("[data-drag-handle]")).toBeNull();
+
+    // Pero nunca puede quedarse sin salida: Escape y scrim siguen ahi.
+    expect(scrim()).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("el gesto sobrevive a un style del consumidor en la hoja", async () => {
+    render(
+      <BottomSheet defaultOpen>
+        {/* Un consumidor que fija su propio style no puede dejar la hoja
+            quieta bajo el dedo: el translateY del gesto manda mientras dura. */}
+        <BottomSheetContent style={{ zIndex: 5 }} aria-describedby={undefined}>
+          <BottomSheetTitle>Enviar dinero a</BottomSheetTitle>
+        </BottomSheetContent>
+      </BottomSheet>,
+    );
+
+    startDrag(grabber(), 40);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.style.transform).toBe("translateY(40px)");
+    // Y lo del consumidor se conserva: se fusiona, no se pisa.
+    expect(dialog.style.zIndex).toBe("5");
+
+    fireEvent.pointerUp(window, { clientY: 40 });
+    expect(dialog.style.transform).toBe("");
+    expect(dialog.style.zIndex).toBe("5");
+  });
+
+  it("overlayClassName acota la capa y container elige donde portalizar", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+
+    render(
+      <BottomSheet defaultOpen>
+        <BottomSheetContent
+          container={host}
+          overlayClassName="absolute"
+          aria-describedby={undefined}
+        >
+          <BottomSheetTitle>Enviar dinero a</BottomSheetTitle>
+        </BottomSheetContent>
+      </BottomSheet>,
+    );
+
+    // El portal cuelga del contenedor pedido, no de document.body.
+    expect(host.querySelector("[role='dialog']")).not.toBeNull();
+
+    // La capa es el padre del scrim; tailwind-merge debe cambiar el
+    // posicionamiento, no acumular fixed y absolute.
+    const capa = scrim().parentElement;
+    expect(capa).toHaveClass("absolute");
+    expect(capa).not.toHaveClass("fixed");
+
+    host.remove();
   });
 });

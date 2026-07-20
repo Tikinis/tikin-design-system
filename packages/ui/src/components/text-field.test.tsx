@@ -40,9 +40,16 @@ describe("TextField", () => {
   });
 
   it("no pone la etiqueta en mayusculas en JS", () => {
-    // Importa para el texto accesible y para lo que se copia al portapapeles.
+    // Las mayusculas de la seccion son cosa del CSS. Se comprueba el nodo y no
+    // solo la busqueda: el texto literal es lo que acaba en el nombre accesible
+    // y en lo que se copia al portapapeles.
     render(<TextField label="Nombre completo" />);
-    expect(screen.getByLabelText("Nombre completo")).toBeInTheDocument();
+    const etiqueta = screen.getByText("Nombre completo");
+    expect(etiqueta.tagName).toBe("LABEL");
+    expect(etiqueta.textContent).toBe("Nombre completo");
+    expect(screen.getByRole("textbox", { name: "Nombre completo" })).toBe(
+      screen.getByLabelText("Nombre completo"),
+    );
   });
 
   it("escribir actualiza el valor y dispara onChange", async () => {
@@ -86,8 +93,60 @@ describe("TextField", () => {
   it("sin mensaje ni contador no deja nodos vacios bajo el campo", () => {
     const { container } = render(<TextField label="Correo" />);
     expect(screen.getByLabelText("Correo")).not.toHaveAttribute("aria-describedby");
-    // El bloque de mensaje/contador solo existe si hay algo que enseñar.
-    expect(container.querySelectorAll("[aria-live]")).toHaveLength(0);
+    // El bloque de mensaje/contador solo existe si hay algo que enseñar: bajo la
+    // caja no debe quedar un hermano vacio abriendo el hueco del `gap-2`.
+    expect(container.firstElementChild?.children).toHaveLength(1);
+  });
+
+  it("el mensaje no se declara region viva: se monta con su texto", () => {
+    // Un aria-live que aparece a la vez que su contenido no lo anuncia ningun
+    // lector de pantalla, y duplica la lectura del aria-describedby que si
+    // funciona. Si alguien lo reintroduce, este test lo caza.
+    render(<TextField label="Correo" feedback="error" message="Ingresa un correo válido." />);
+    const mensaje = screen.getByText("Ingresa un correo válido.");
+    expect(mensaje).not.toHaveAttribute("aria-live");
+    expect(screen.getByLabelText("Correo").getAttribute("aria-describedby")).toBe(mensaje.id);
+  });
+
+  it("en solo lectura conserva indicador de foco pese a no ser editable", () => {
+    // El campo entra en el orden de tabulacion y el input lleva outline-none:
+    // sin estilo de foco en la caja, el usuario de teclado no ve donde esta
+    // (WCAG 2.4.7). Deshabilitado no lo necesita: no recibe foco.
+    const { container: soloLectura } = render(<TextField label="Correo" readOnly />);
+    const cajaLectura = soloLectura.firstElementChild?.firstElementChild;
+    expect(cajaLectura?.className).toMatch(/focus-within:border/);
+
+    const { container: apagado } = render(<TextField label="Correo" disabled />);
+    const cajaApagada = apagado.firstElementChild?.firstElementChild;
+    expect(cajaApagada?.className).not.toMatch(/focus-within:border/);
+  });
+
+  it("solo recorta la caja cuando hay capsulas que puedan desbordar la esquina", () => {
+    // `overflow-hidden` permanente se comia el anillo de foco que el consumidor
+    // pone en endAction, que es la unica pieza interactiva ademas del input.
+    const { container: sinCapsulas } = render(<TextField label="Correo" endAction={<button />} />);
+    expect(sinCapsulas.firstElementChild?.firstElementChild?.className).not.toContain(
+      "overflow-hidden",
+    );
+
+    const { container: conCapsula } = render(<TextField label="Monto" prefix="$" />);
+    expect(conCapsula.firstElementChild?.firstElementChild?.className).toContain("overflow-hidden");
+  });
+
+  it("con icono leading la etiqueta vuelve al borde al flotar", () => {
+    // El documento es explicito: con `.tk-lead` la etiqueta descansa a 46px
+    // junto al icono y al flotar se alinea a 16px, encima de el. jsdom no
+    // resuelve :placeholder-shown, asi que se verifica el cableado de la clase.
+    const { container: conIcono } = render(
+      <TextField label="Buscar" startIcon={<span>lupa</span>} />,
+    );
+    expect(conIcono.querySelector("label")?.className).toContain(
+      "peer-focus:left-[calc((var(--tf-icon)+10px)*-1)]",
+    );
+
+    // Sin icono la etiqueta ya nace en el borde: desplazarla la sacaria fuera.
+    const { container: sinIcono } = render(<TextField label="Buscar" />);
+    expect(sinIcono.querySelector("label")?.className).not.toContain("var(--tf-icon)");
   });
 
   it("el contador cuenta sin control externo, partiendo del defaultValue", async () => {

@@ -68,8 +68,16 @@ const notification = cva(
       },
       /* El prototipo pone cursor:pointer pero no dibuja hover. Sin una señal de
        * que la fila responde, en desktop no se distingue de un bloque de texto:
-       * se añade el hover mas suave del sistema. */
-      interactive: { true: "cursor-pointer hover:bg-surface-2", false: "" },
+       * se añade el hover mas suave del sistema.
+       *
+       * `hover:duration-140` no es redundante con el 300 de la base: el fondo
+       * leido/no leido y el fondo de hover son la MISMA propiedad CSS, asi que
+       * no se pueden temporizar por separado con dos clases sueltas. Poniendo la
+       * duracion corta solo dentro del estado :hover, la entrada del hover
+       * responde a los 140ms del resto del sistema (button, accordion, alert...)
+       * mientras el cambio de estado, que ocurre fuera de :hover, conserva los
+       * .3s que pide el prototipo. */
+      interactive: { true: "cursor-pointer hover:bg-surface-2 hover:duration-140", false: "" },
     },
     defaultVariants: { unread: false, interactive: false },
   },
@@ -151,8 +159,10 @@ const GLIFO: Record<NotificationTone, () => React.JSX.Element> = {
 
 export interface NotificationItemProps
   // onSelect se omite a proposito: en React es el evento de seleccion de texto
-  // del DOM, y aqui significa "abrir la notificacion".
-  extends Omit<React.ComponentPropsWithoutRef<"li">, "onSelect" | "title"> {
+  // del DOM, y aqui significa "abrir la notificacion". `title` en cambio NO se
+  // omite: no colisiona con ninguna prop de este componente y quitarlo dejaba al
+  // consumidor sin el atributo HTML nativo del <li> sin ganar nada a cambio.
+  extends Omit<React.ComponentPropsWithoutRef<"li">, "onSelect"> {
   /** Tipo de aviso. Decide el color del circulo y el glifo por defecto. */
   tone?: NotificationTone;
   /** Sustituye el glifo del tono. Hereda su color por currentColor. */
@@ -173,15 +183,39 @@ export interface NotificationItemProps
   actions?: React.ReactNode;
   /** "Tocar = ir": destino del detalle. Convierte la fila en un enlace real. */
   href?: string;
-  /** Alternativa a `href` cuando la navegacion la resuelve el router en JS. */
-  onSelect?: () => void;
+  /**
+   * Alternativa a `href` cuando la navegacion la resuelve el router en JS.
+   *
+   * Si se pasan LOS DOS no se anulan: el enlace navega y ademas se llama a
+   * `onSelect`. Es el patron de mejora progresiva (href real para abrir en otra
+   * pestaña o copiar, router en JS para el clic normal), y por eso `onSelect`
+   * recibe el evento: para poder hacer `event.preventDefault()` y quedarse solo
+   * con la navegacion del router.
+   */
+  onSelect?: (event: React.MouseEvent<HTMLElement>) => void;
 }
+
+/* El id del texto de la notificacion viaja por contexto hasta las acciones.
+ *
+ * Motivo: quien navega saltando de boton en boton oye "Pagar" y nada mas. En un
+ * centro con varias solicitudes de dinero hay N botones "Pagar" identicos, y la
+ * accion es irreversible sobre dinero ajeno. Es el mismo argumento por el que la
+ * fila cuelga hora y estado del pulsable, y aqui pesa mas.
+ *
+ * Va por contexto y no clonando los hijos de `actions` porque `actions` acepta
+ * cualquier ReactNode —fragmentos, wrappers, un map del consumidor— y
+ * cloneElement solo alcanzaria al primer nivel. */
+const NotificationTextIdContext = React.createContext<string | undefined>(undefined);
 
 /**
  * Fila del centro de notificaciones — EXTENSION construida con la paleta.
  *
- * Renderiza un `<li>`: debe vivir dentro de un `<ul>` (o algo con role="list")
- * para que el lector de pantalla anuncie cuantos avisos hay.
+ * Renderiza un `<li>`: debe vivir dentro de un `<ul role="list">` para que el
+ * lector de pantalla anuncie cuantos avisos hay. El `role="list"` explicito no
+ * sobra: el preflight de Tailwind pone `list-style: none` en todo `ul`, y con
+ * eso Safari/VoiceOver deja de exponer el rol de lista. Sin el, la garantia que
+ * justifica renderizar un `<li>` se pierde justo en el navegador donde mas
+ * gente usa lector.
  *
  * El area pulsable NO es el `<li>` entero con un onClick encima, sino un boton
  * (o enlace) real que cubre la fila con `::after`. Dos motivos:
@@ -217,12 +251,17 @@ export const NotificationItem = React.forwardRef<HTMLLIElement, NotificationItem
     const interactive = Boolean(href) || Boolean(onSelect);
 
     const id = React.useId();
+    const textId = `${id}-text`;
     const timeId = `${id}-time`;
     const stateId = `${id}-state`;
+
+    /* `time=""` (o `false`, o ausente) NO se dibuja. Un <span> vacio si se
+     * pinta pero deja una descripcion accesible en blanco: el lector anuncia el
+     * boton y se queda callado un turno, que es peor que no describir nada. */
+    const hayHora = time != null && time !== false && time !== "";
+
     const describedBy =
-      [time != null && time !== false ? timeId : null, unread ? stateId : null]
-        .filter(Boolean)
-        .join(" ") || undefined;
+      [hayHora ? timeId : null, unread ? stateId : null].filter(Boolean).join(" ") || undefined;
 
     const claseTexto = "text-sm text-[var(--tk-notif-text)] [&_strong]:font-semibold";
 
@@ -255,6 +294,7 @@ export const NotificationItem = React.forwardRef<HTMLLIElement, NotificationItem
           <div className="flex min-w-0 flex-col gap-0.5">
             {href ? (
               <a
+                id={textId}
                 href={href}
                 className={claseEnlace}
                 aria-describedby={describedBy}
@@ -264,6 +304,7 @@ export const NotificationItem = React.forwardRef<HTMLLIElement, NotificationItem
               </a>
             ) : onSelect ? (
               <button
+                id={textId}
                 // Sin type explicito un <button> envia el formulario que lo
                 // contenga; un centro de notificaciones puede vivir dentro de uno.
                 type="button"
@@ -274,10 +315,12 @@ export const NotificationItem = React.forwardRef<HTMLLIElement, NotificationItem
                 {children}
               </button>
             ) : (
-              <span className={claseTexto}>{children}</span>
+              <span id={textId} className={claseTexto}>
+                {children}
+              </span>
             )}
 
-            {time != null && time !== false && (
+            {hayHora && (
               <span id={timeId} className="font-mono text-[11px] text-[var(--tk-notif-meta)]">
                 {time}
               </span>
@@ -286,7 +329,11 @@ export const NotificationItem = React.forwardRef<HTMLLIElement, NotificationItem
 
           {/* relative para quedar por encima del overlay ::after de la fila:
               si no, el clic en PAGAR lo interceptaria el enlace de la fila. */}
-          {actions && <div className="relative flex flex-wrap gap-2">{actions}</div>}
+          {actions && (
+            <NotificationTextIdContext.Provider value={textId}>
+              <div className="relative flex flex-wrap gap-2">{actions}</div>
+            </NotificationTextIdContext.Provider>
+          )}
         </div>
 
         {unread && (
@@ -345,13 +392,22 @@ export interface NotificationActionProps
  * El label va en MAYUSCULAS por CSS, nunca con `.toUpperCase()` en JS: eso
  * romperia el texto que anuncia el lector de pantalla y lo que el usuario copia
  * al portapapeles.
+ *
+ * Dentro de un `NotificationItem` se describe sola con el texto de la
+ * notificacion, para que "PAGAR" no sea un boton anonimo entre otros iguales.
+ * Fuera de uno no hay nada que describir y no pone el atributo.
  */
 export const NotificationAction = React.forwardRef<HTMLButtonElement, NotificationActionProps>(
   function NotificationAction({ className, variant, type, children, ...props }, ref) {
+    const textId = React.useContext(NotificationTextIdContext);
     return (
       <button
         ref={ref}
         type={type ?? "button"}
+        // Antes del spread a proposito: si el consumidor pasa su propio
+        // aria-describedby (p.ej. apuntando al saldo disponible) debe ganar el
+        // suyo, no quedar pisado por el que pone el componente.
+        aria-describedby={textId}
         className={cn(notificationAction({ variant, className }))}
         {...props}
       >

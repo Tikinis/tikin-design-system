@@ -125,9 +125,26 @@ describe("Checkbox", () => {
   it("marca aria-invalid cuando esta en error", () => {
     render(<Checkbox label="Con error" invalid />);
     expect(screen.getByRole("checkbox")).toHaveAttribute("aria-invalid", "true");
-    // Sin `invalid` no se ensucia el DOM con aria-invalid="false".
+  });
+
+  it("sin error no ensucia el DOM con aria-invalid='false'", () => {
+    // Caso aparte y no un segundo render() en el test anterior: dos arboles
+    // montados a la vez comparten el screen y esconden falsos positivos.
     render(<Checkbox label="Sin error" />);
-    expect(screen.getByRole("checkbox", { name: "Sin error" })).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByRole("checkbox")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("en error y deshabilitado a la vez sigue sin alternar y conserva aria-invalid", async () => {
+    const onCheckedChange = vi.fn();
+    render(<Checkbox label="Con error" invalid disabled onCheckedChange={onCheckedChange} />);
+
+    const box = screen.getByRole("checkbox");
+    expect(box).toBeDisabled();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+
+    await userEvent.click(box);
+    await userEvent.click(screen.getByText("Con error"));
+    expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
   it("dentro de un form envia el valor bajo su name", async () => {
@@ -157,6 +174,51 @@ describe("Checkbox", () => {
     // No hay fila envolvente: el consumidor pone la suya.
     expect(box.parentElement?.tagName).toBe("DIV");
     expect(box.parentElement).not.toHaveClass("min-h-11");
+  });
+
+  it("la fila con label reserva los 44 de alto del area tactil", () => {
+    render(<Checkbox label="Recordar" />);
+    const fila = screen.getByRole("checkbox").parentElement;
+    expect(fila).toHaveClass("min-h-11");
+  });
+
+  it("estira la zona de clic de la casilla a los 44 de la fila, y solo con label", () => {
+    // Excepcion consciente a la regla de no mirar clases: la casilla mide 22
+    // dentro de una fila de 44, y ese pseudo invisible es lo unico que hace
+    // clicables las bandas de 11 de arriba y abajo. jsdom no calcula areas de
+    // impacto, asi que la presencia de la utilidad es el unico guardarrail.
+    const { unmount } = render(<Checkbox label="Recordar" />);
+    expect(screen.getByRole("checkbox").className).toContain("before:-inset-y-[11px]");
+    unmount();
+
+    // Sin label la fila la compone el consumidor: la casilla no debe invadir.
+    render(<Checkbox aria-label="Suelta" />);
+    expect(screen.getByRole("checkbox").className).not.toContain("before:-inset-y-[11px]");
+  });
+
+  it("rowClassName viste la fila y no la casilla", () => {
+    render(<Checkbox label="Recordar" rowClassName="w-full" className="rounded-none" />);
+    const box = screen.getByRole("checkbox");
+    expect(box.parentElement).toHaveClass("w-full");
+    expect(box).not.toHaveClass("w-full");
+    // Y al reves: className sigue yendo a la casilla, no a la fila.
+    expect(box).toHaveClass("rounded-none");
+    expect(box.parentElement).not.toHaveClass("rounded-none");
+  });
+
+  it("deshabilitado y marcado conserva el borde de la casilla", () => {
+    // Regresion: `data-[state=checked]:shadow-none` empataba en especificidad
+    // con `disabled:shadow-…` y ganaba por orden de fuente, dejando la casilla
+    // deshabilitada+marcada sin borde. El refuerzo `disabled:data-[state=…]`
+    // rompe el empate; jsdom no cascadea CSS, asi que se afirma la utilidad.
+    render(<Checkbox label="Marcado" disabled defaultChecked />);
+    const cls = screen.getByRole("checkbox").className;
+    expect(cls).toContain(
+      "disabled:data-[state=checked]:shadow-[inset_0_0_0_1.5px_var(--tk-border)]",
+    );
+    expect(cls).toContain(
+      "disabled:data-[state=indeterminate]:shadow-[inset_0_0_0_1.5px_var(--tk-border)]",
+    );
   });
 
   it("permite sobreescribir estilos de la casilla por className", () => {

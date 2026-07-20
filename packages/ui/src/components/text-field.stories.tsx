@@ -87,7 +87,14 @@ export const IconoLeading: Story = {
   args: { label: "Buscar contacto", startIcon: <Lupa /> },
 };
 
-/** `endAction` es una ranura interactiva: se alcanza con Tab desde el input. */
+/**
+ * `endAction` es una ranura interactiva: se alcanza con Tab desde el input, asi
+ * que necesita su propio `focus-visible` — el `focus-within` de la caja no dice
+ * si el foco esta en el input o en el boton.
+ *
+ * El `-mr-2` es el patron del documento: `.tk-btn` mide 36 y va a `right:8`,
+ * de modo que el glifo cae a 16 del borde, justo donde caeria un `endIcon`.
+ */
 export const AccionFinal: Story = {
   name: "Contraseña · ojo",
   args: { label: "Contraseña" },
@@ -104,7 +111,7 @@ export const AccionFinal: Story = {
               type="button"
               aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
               onClick={() => setVisible((v) => !v)}
-              className="grid size-9 cursor-pointer place-items-center rounded-md text-ink-600 transition-colors duration-140 hover:bg-surface-2"
+              className="-mr-2 grid size-9 cursor-pointer place-items-center rounded-md text-ink-600 transition-colors duration-140 outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--textfield-bg-default)]"
             >
               <Ojo />
             </button>
@@ -116,7 +123,10 @@ export const AccionFinal: Story = {
   },
 };
 
-/** Limpiar el campo: mismo hueco que el ojo, con la pastilla redonda del documento. */
+/**
+ * Limpiar el campo: mismo hueco que el ojo, con la pastilla redonda del
+ * documento (`.tk-clear` 26x26 a `right:12` — de ahi el `-mr-1`).
+ */
 export const Limpiar: Story = {
   name: "Trailing · limpiar",
   render: (args) => {
@@ -134,7 +144,7 @@ export const Limpiar: Story = {
                 type="button"
                 aria-label="Limpiar"
                 onClick={() => setValor("")}
-                className="grid size-[26px] cursor-pointer place-items-center rounded-pill bg-edge text-ink-700 [&_svg]:size-[14px]"
+                className="-mr-1 grid size-[26px] cursor-pointer place-items-center rounded-pill bg-edge text-ink-700 outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--textfield-bg-default)] [&_svg]:size-[14px]"
               >
                 <Equis />
               </button>

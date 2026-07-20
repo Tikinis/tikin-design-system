@@ -1,3 +1,4 @@
+import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -165,6 +166,45 @@ describe("Tabs", () => {
     // El padre no movio el valor, asi que el panel no cambia.
     expect(screen.getByRole("tabpanel")).toHaveTextContent("Panel día");
   });
+
+  it("una variante explicita en el riel o en la pestaña gana a la heredada", () => {
+    render(
+      <Tabs defaultValue="a" variant="segmented">
+        <TabsList variant="underline">
+          <TabsTrigger value="a" variant="underline">
+            A
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="a">Panel A</TabsContent>
+      </Tabs>,
+    );
+
+    // Es la unica salvaguarda para pieles mixtas: si el `variant ?? heredado` se
+    // rompiera, riel y pestaña se desparejarian sin avisar.
+    expect(screen.getByRole("tablist").className).toContain("border-b");
+    expect(screen.getByRole("tablist").className).not.toContain("bg-surface");
+    expect(screen.getByRole("tab").className).toContain("border-b-2");
+    expect(screen.getByRole("tab").className).not.toContain("px-3");
+  });
+
+  it("pinta el startIcon dentro de la pestaña, antes del label", () => {
+    render(
+      <Tabs defaultValue="a">
+        <TabsList>
+          <TabsTrigger value="a" startIcon={<svg data-testid="icono" aria-hidden="true" />}>
+            Recibos
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="a">Panel A</TabsContent>
+      </Tabs>,
+    );
+
+    const tab = screen.getByRole("tab", { name: "Recibos" });
+    const icono = screen.getByTestId("icono");
+    expect(tab).toContainElement(icono);
+    // Antes del label: el icono es el primer hijo del boton.
+    expect(tab.firstChild).toBe(icono);
+  });
 });
 
 describe("SegmentedControl", () => {
@@ -187,51 +227,156 @@ describe("SegmentedControl", () => {
     const onValueChange = vi.fn();
     render(<Filtro onValueChange={onValueChange} />);
 
-    expect(screen.getByRole("tab", { name: "Todos" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("radio", { name: "Todos" })).toBeChecked();
 
-    await userEvent.click(screen.getByRole("tab", { name: "Pagados" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Pagados" }));
 
     expect(onValueChange).toHaveBeenCalledWith("pagados");
-    expect(screen.getByRole("tab", { name: "Pagados" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Todos" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("radio", { name: "Pagados" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Todos" })).not.toBeChecked();
   });
 
-  it("sin panel no deja un aria-controls colgando", () => {
+  it("no es un tablist: sin paneles que intercambiar no expone pestañas", () => {
     render(<Filtro />);
-    // Radix apunta por defecto al id del panel; sin panel ese id no existe y
-    // una referencia rota es peor que la ausencia del atributo.
-    for (const tab of screen.getAllByRole("tab")) {
-      expect(tab).not.toHaveAttribute("aria-controls");
-    }
+    // Regresion: montarlo sobre Radix Tabs dejaba `role=tab` dentro de un
+    // `role=tablist` sin ningun `tabpanel` en el arbol.
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.getByRole("radiogroup")).toHaveAccessibleName("Filtrar recibos");
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
   });
 
   it("apunta con aria-controls a la region que filtra cuando se declara", () => {
     render(<Filtro controls="recibos" />);
-    for (const tab of screen.getAllByRole("tab")) {
-      expect(tab).toHaveAttribute("aria-controls", "recibos");
+    // El grupo entero controla la lista; ya no hay un id por opcion que enlazar.
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-controls", "recibos");
+  });
+
+  it("sin `controls` no deja un aria-controls colgando", () => {
+    render(<Filtro />);
+    expect(screen.getByRole("radiogroup")).not.toHaveAttribute("aria-controls");
+    for (const opcion of screen.getAllByRole("radio")) {
+      expect(opcion).not.toHaveAttribute("aria-controls");
     }
   });
 
-  it("se recorre con las flechas y expone el nombre accesible del riel", async () => {
-    render(<Filtro />);
-    expect(screen.getByRole("tablist")).toHaveAccessibleName("Filtrar recibos");
-
-    screen.getByRole("tab", { name: "Todos" }).focus();
-    await userEvent.keyboard("{ArrowRight}");
-
-    const pendientes = screen.getByRole("tab", { name: "Pendientes" });
-    expect(pendientes).toHaveFocus();
-    expect(pendientes).toHaveAttribute("aria-selected", "true");
+  it("un aria-controls explicito gana sobre el que deriva de `controls`", () => {
+    render(
+      <SegmentedControl defaultValue="a" controls="recibos" aria-controls="otra-cosa">
+        <SegmentedControlItem value="a">A</SegmentedControlItem>
+      </SegmentedControl>,
+    );
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-controls", "otra-cosa");
   });
 
-  it("deja el contador dentro de la opcion sin romper su nombre accesible", () => {
+  it("se recorre con las flechas, da la vuelta y solo gasta una parada de tabulador", async () => {
+    render(<Filtro />);
+
+    screen.getByRole("radio", { name: "Todos" }).focus();
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Pagados" })).toHaveFocus();
+
+    // Vuelve al principio al pasar del ultimo.
+    await userEvent.keyboard("{ArrowRight}");
+    const todos = screen.getByRole("radio", { name: "Todos" });
+    expect(todos).toHaveFocus();
+
+    // Roving focus: solo una opcion esta en el orden de tabulacion.
+    expect(todos).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("radio", { name: "Pagados" })).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("la flecha selecciona, no solo mueve el foco", async () => {
+    render(<Filtro />);
+    screen.getByRole("radio", { name: "Todos" }).focus();
+
+    /* Con la tecla MANTENIDA (`{Tecla>}`): Radix mueve el foco en un timeout y
+     * solo marca si la flecha sigue pulsada. Un keydown+keyup instantaneo como
+     * el que emite userEvent por defecto no existe en un teclado real, pero en
+     * jsdom llega antes que ese timeout y se perderia la seleccion. */
+    await userEvent.keyboard("{ArrowRight>}");
+    const pendientes = screen.getByRole("radio", { name: "Pendientes" });
+    expect(pendientes).toHaveFocus();
+    expect(pendientes).toBeChecked();
+    await userEvent.keyboard("{/ArrowRight}");
+  });
+
+  it("salta las opciones deshabilitadas con las flechas", async () => {
     render(
-      <SegmentedControl defaultValue="todos">
-        <SegmentedControlItem value="todos">
-          Todos <span aria-hidden="true">12</span>
+      <SegmentedControl defaultValue="uno" aria-label="Filtro">
+        <SegmentedControlItem value="uno">Uno</SegmentedControlItem>
+        <SegmentedControlItem value="dos" disabled>
+          Dos
+        </SegmentedControlItem>
+        <SegmentedControlItem value="tres">Tres</SegmentedControlItem>
+      </SegmentedControl>,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: "Dos" }));
+    expect(screen.getByRole("radio", { name: "Uno" })).toBeChecked();
+
+    screen.getByRole("radio", { name: "Uno" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Tres" })).toHaveFocus();
+  });
+
+  it("lleva className y ref al riel, que es la propia raiz", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    render(
+      <SegmentedControl defaultValue="todos" aria-label="Filtro" className="w-full" ref={ref}>
+        <SegmentedControlItem value="todos">Todos</SegmentedControlItem>
+        <SegmentedControlItem value="pagados">Pagados</SegmentedControlItem>
+      </SegmentedControl>,
+    );
+
+    const riel = screen.getByRole("radiogroup");
+    expect(ref.current).toBe(riel);
+    // El riel ya no vive dentro de un envoltorio con `w-fit` que anule esto.
+    expect(riel.className).toContain("w-full");
+    expect(riel.className).not.toContain("w-fit");
+    expect(riel.parentElement?.className).not.toContain("w-fit");
+  });
+
+  it("acepta icono de 16 antes del label sin tocar el nombre accesible", () => {
+    render(
+      <SegmentedControl defaultValue="todos" aria-label="Filtro">
+        <SegmentedControlItem
+          value="todos"
+          startIcon={<svg data-testid="icono" aria-hidden="true" />}
+        >
+          Todos
         </SegmentedControlItem>
       </SegmentedControl>,
     );
-    expect(screen.getByRole("tab", { name: "Todos" })).toBeInTheDocument();
+
+    const opcion = screen.getByRole("radio", { name: "Todos" });
+    expect(opcion).toContainElement(screen.getByTestId("icono"));
+  });
+
+  it("expone el contador de la activa al lector de pantalla", () => {
+    render(
+      <SegmentedControl defaultValue="todos" aria-label="Filtro">
+        <SegmentedControlItem value="todos">
+          Todos <span className="font-num">12</span>
+        </SegmentedControlItem>
+      </SegmentedControl>,
+    );
+    // El numero es dato. Con el `aria-hidden="true"` que traian la story y este
+    // test, el 12 desaparecia por completo del nombre accesible.
+    expect(screen.getByRole("radio", { name: "Todos 12" })).toBeInTheDocument();
+  });
+
+  it("permite dar unidad al contador sin perder el texto visible en el nombre", () => {
+    render(
+      <SegmentedControl defaultValue="todos" aria-label="Filtro">
+        <SegmentedControlItem value="todos" aria-label="Todos 12 recibos">
+          Todos <span className="font-num">12</span>
+        </SegmentedControlItem>
+      </SegmentedControl>,
+    );
+    /* El aria-label contiene literalmente el texto visible ("Todos 12"), que es
+     * lo que exige "label in name" para el control por voz. */
+    const opcion = screen.getByRole("radio", { name: "Todos 12 recibos" });
+    expect(opcion).toHaveTextContent("Todos 12");
   });
 });

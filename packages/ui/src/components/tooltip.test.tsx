@@ -199,12 +199,107 @@ describe("Tooltip", () => {
 
   it("no pone la etiqueta en mayusculas en JS", async () => {
     // La burbuja va en Ubuntu Sans y en caja normal: aqui no hay uppercase ni
-    // por CSS ni por JS, y el texto llega tal cual al portapapeles.
+    // por CSS ni por JS, asi que el texto del DOM es el que escribio quien lo
+    // consume. Importa porque un .toUpperCase() en JS si cambiaria lo que lee
+    // un lector de pantalla, no solo lo que se ve.
     render(
       <Tooltip label="Siempre $0 en Tikin" defaultOpen>
         <button aria-label="Comision">i</button>
       </Tooltip>,
     );
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Siempre $0 en Tikin");
+  });
+
+  it("dibuja la flecha por defecto y la quita con arrow={false}", async () => {
+    // "FLECHA AL ORIGEN" es uno de los tres principios del documento, y es la
+    // unica pieza visual con interruptor. Sin este test, borrar el
+    // <TooltipPrimitive.Arrow> no rompe nada.
+    const { unmount } = render(
+      <Tooltip label="Con flecha" defaultOpen>
+        <button aria-label="Con flecha">a</button>
+      </Tooltip>,
+    );
+    expect((await screen.findByRole("tooltip")).querySelector("svg")).not.toBeNull();
+    unmount();
+
+    render(
+      <Tooltip label="Sin flecha" arrow={false} defaultOpen>
+        <button aria-label="Sin flecha">b</button>
+      </Tooltip>,
+    );
+    expect((await screen.findByRole("tooltip")).querySelector("svg")).toBeNull();
+  });
+
+  it("pasa side y align a Radix en vez de quedarselos", async () => {
+    // El componente fija sus propios defaults (top / center / 12px) sobre los
+    // de Radix; el riesgo es que al hacerlo dejen de propagarse los del
+    // consumidor. data-side y data-align son la unica huella observable.
+    render(
+      <Tooltip label="A la derecha" side="right" align="start" defaultOpen>
+        <button aria-label="A la derecha">r</button>
+      </Tooltip>,
+    );
+    const tip = await screen.findByRole("tooltip");
+    expect(tip).toHaveAttribute("data-side", "right");
+    expect(tip).toHaveAttribute("data-align", "start");
+  });
+
+  it("por defecto sale arriba y centrado, como pide el documento", async () => {
+    render(
+      <Tooltip label="Arriba" defaultOpen>
+        <button aria-label="Arriba">t</button>
+      </Tooltip>,
+    );
+    const tip = await screen.findByRole("tooltip");
+    expect(tip).toHaveAttribute("data-side", "top");
+    expect(tip).toHaveAttribute("data-align", "center");
+  });
+
+  /* Este caso NO lo puede coger el compilador: las declaraciones de
+     radix-ui@1.6.3 resuelven a `any`, asi que `children` es `any` por mucho que
+     el componente lo declare mas estrecho (ver la nota en TooltipProps). El
+     test deja constancia de lo unico que si es observable: con el disparador
+     por defecto, un hijo que no sea un elemento revienta el render entero en
+     vez de degradar en silencio. */
+  it("un disparador que no es un unico elemento revienta el render", () => {
+    // React ademas escupe el error por consola; aqui solo interesa el throw.
+    const quieto = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => render(<Tooltip label="Buscar">texto plano</Tooltip>)).toThrow();
+    quieto.mockRestore();
+  });
+
+  it("con triggerAsChild={false} envuelve el contenido en su propio boton", async () => {
+    // La otra cara del test anterior: estrechar el tipo no puede quitarle al
+    // consumidor el caso en el que un nodo cualquiera si es valido.
+    render(
+      <Tooltip label="Ayuda" triggerAsChild={false} defaultOpen>
+        Pulsa aqui
+      </Tooltip>,
+    );
+    expect(screen.getByRole("button", { name: "Pulsa aqui" })).toBeInTheDocument();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Ayuda");
+  });
+});
+
+describe("Tooltip · interlineado", () => {
+  /* La altura de 29px de la burbuja simple (13 * ~1.15 + 7 + 7) depende de que
+     el interlineado llegue vivo hasta el elemento. Declarado suelto en la base
+     no llegaba: tailwind-merge considera que text-* y leading-* compiten por lo
+     mismo, asi que el tamaño de la variante borraba el leading anterior y la
+     burbuja heredaba el 1.5 del preflight. */
+
+  it("el interlineado viaja pegado al tamaño y sobrevive al merge", async () => {
+    render(
+      <Tooltip label="Copiar" delayDuration={0} disableHoverableContent>
+        <button type="button" aria-label="Accion">
+          A
+        </button>
+      </Tooltip>,
+    );
+    await userEvent.hover(screen.getByRole("button", { name: "Accion" }));
+    const burbuja = await screen.findByRole("tooltip");
+    expect(burbuja.className).toContain("text-[13px]/[normal]");
+    // Un leading suelto volveria a ser borrado por el tamaño de la variante.
+    expect(burbuja.className).not.toMatch(/(?:^|\s)leading-\[normal\]/);
   });
 });

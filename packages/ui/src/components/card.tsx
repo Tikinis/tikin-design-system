@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Slot } from "radix-ui";
+import * as Slot from "radix-ui/slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -76,8 +76,8 @@ const card = cva(
       interactive: {
         true: [
           "cursor-pointer text-left outline-none",
-          "hover:-translate-y-0.5 hover:border-edge-2 hover:shadow-md",
-          "active:translate-y-0 active:border-edge-2 active:bg-page active:shadow-none",
+          "hover:-translate-y-0.5 hover:shadow-md",
+          "active:translate-y-0 active:bg-page active:shadow-none",
           "focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
         ],
         false: "",
@@ -85,6 +85,17 @@ const card = cva(
     },
 
     compoundVariants: [
+      /* El cambio de borde a gris 230-2 que pide el documento vive aqui y no en
+         `interactive`: solo la superficie default lleva clase `border`, asi que
+         en muted y en ink un `hover:border-edge-2` suelto no pintaba nada — el
+         preflight deja border-width:0 y el color no tiene donde caer. Ni el
+         documento pide borde en esas dos superficies ni conviene añadirselo
+         (creceria la caja 2px). Alli el feedback lo dan sombra, lift y fondo. */
+      {
+        surface: "default",
+        interactive: true,
+        class: "hover:border-edge-2 active:border-edge-2",
+      },
       /* El pressed generico (hueso) borraria la tarjeta de tinta. Sobre tinta
          el feedback va al reves: sube a ink-strong, que en claro es mas negro
          y en oscuro mas blanco. */
@@ -137,19 +148,32 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
   /* Una tarjeta tocable sin semantica es una trampa para teclado y para lector
    * de pantalla. Lo correcto es `asChild` con un <button> o un <a>; cuando el
    * consumidor no lo hace, le damos el minimo imprescindible — rol, foco y
-   * Enter/Espacio — en vez de dejar la tarjeta accesible solo con raton.
+   * teclado — en vez de dejar la tarjeta accesible solo con raton.
    *
-   * No se pisa lo que el consumidor haya puesto a mano: si trae su propio role
-   * o tabIndex, manda el suyo. */
-  const fallbackSemantics = Boolean(interactive) && !asChild && role === undefined;
+   * Son DOS decisiones, no una. Antes iban atadas al mismo booleano y un
+   * `role="link"` del consumidor apagaba tambien el foco y el teclado: quedaba
+   * un div con cursor-pointer, fuera del orden de tabulacion y sin activacion.
+   * Que el consumidor sepa mejor que nosotros COMO se llama su tarjeta no
+   * significa que renuncie a poder usarla.
+   *
+   * Sigue sin pisarse lo que venga a mano: su role manda sobre el fallback, y
+   * su tabIndex sobre el 0 (asi puede sacarla del tab con -1 si lleva un
+   * roving tabindex). */
+  const necesitaTeclado = Boolean(interactive) && !asChild;
+  const rolFallback = necesitaTeclado && role === undefined;
+  const rolEfectivo = rolFallback ? "button" : role;
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(event);
-    if (!fallbackSemantics || event.defaultPrevented) return;
+    if (!necesitaTeclado || event.defaultPrevented) return;
     // Si la tecla nace en un hijo interactivo (el boton de accion de la media
     // card, un enlace del cuerpo) es suya, no de la tarjeta.
     if (event.target !== event.currentTarget) return;
-    if (event.key !== "Enter" && event.key !== " ") return;
+    // Enter activa cualquier rol; Espacio solo el de boton. Un role="link" no
+    // se activa con Espacio en ningun navegador, y robarselo le quitaria al
+    // usuario el scroll de pagina a cambio de nada.
+    const activa = event.key === "Enter" || (event.key === " " && rolEfectivo === "button");
+    if (!activa) return;
     // Espacio hace scroll de pagina por defecto; Enter en un div no hace nada,
     // pero se corta igual para que ningun ancestro lo interprete dos veces.
     event.preventDefault();
@@ -162,8 +186,8 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
     <Comp
       ref={ref}
       className={cn(card({ surface, radius, padding, interactive, className }))}
-      role={fallbackSemantics ? "button" : role}
-      tabIndex={fallbackSemantics ? (tabIndex ?? 0) : tabIndex}
+      role={rolEfectivo}
+      tabIndex={necesitaTeclado ? (tabIndex ?? 0) : tabIndex}
       onKeyDown={handleKeyDown}
       {...props}
     />
@@ -230,7 +254,7 @@ export const CardFeature = React.forwardRef<HTMLDivElement, CardFeatureProps>(fu
 /* Rol MEDIA                                                           */
 /* ------------------------------------------------------------------ */
 
-export interface CardMediaProps extends Omit<CardProps, "surface" | "padding" | "title"> {
+interface CardMediaOwnProps extends Omit<CardProps, "surface" | "padding" | "title"> {
   /** Imagen a sangre. Se estira al contenedor y se recorta con object-cover. */
   image?: React.ReactNode;
   /** Etiqueta corta sobre cristal, arriba a la izquierda. */
@@ -238,14 +262,28 @@ export interface CardMediaProps extends Omit<CardProps, "surface" | "padding" | 
   /** Titulo en Funnel Display 26. */
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Icono de la accion circular de la esquina (la ↗ del documento). */
-  action?: React.ReactNode;
-  /** Nombre accesible de esa accion. Obligatorio si hay `action`. */
-  actionLabel?: string;
-  onActionClick?: React.MouseEventHandler<HTMLButtonElement>;
   titleAs?: HeadingTag;
   children?: React.ReactNode;
 }
+
+/* La accion y su nombre accesible viajan juntos o no viajan.
+ *
+ * El icono de la esquina es un <svg> decorativo dentro de un boton circular sin
+ * texto: sin `actionLabel` sale un boton anonimo, que para un lector de
+ * pantalla es "boton" y nada mas. Cuando era un `actionLabel?: string` con un
+ * JSDoc que decia "obligatorio", olvidarlo no costaba ni un aviso. Como union
+ * discriminada el compilador lo exige, que es donde se detecta gratis. */
+type CardMediaActionProps =
+  | {
+      /** Icono de la accion circular de la esquina (la ↗ del documento). */
+      action: React.ReactNode;
+      /** Nombre accesible de esa accion. */
+      actionLabel: string;
+      onActionClick?: React.MouseEventHandler<HTMLButtonElement>;
+    }
+  | { action?: never; actionLabel?: never; onActionClick?: never };
+
+export type CardMediaProps = CardMediaOwnProps & CardMediaActionProps;
 
 /**
  * Tarjeta de promocion con imagen a sangre.
@@ -337,7 +375,7 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
           {eyebrow ? (
             // Mayusculas por CSS: el texto accesible y el copiado conservan su
             // capitalizacion original.
-            <span className="rounded-pill border border-surface/30 bg-surface/15 px-3 py-1.5 font-mono text-[11px] tracking-[0.12em] uppercase backdrop-blur-[6px]">
+            <span className="rounded-pill border border-surface/28 bg-surface/16 px-3 py-1.5 font-mono text-[11px] tracking-[0.12em] uppercase backdrop-blur-[6px]">
               {eyebrow}
             </span>
           ) : null}
@@ -346,7 +384,13 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
               type="button"
               aria-label={actionLabel}
               onClick={onActionClick}
-              className="ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill border border-surface/40 transition-colors duration-140 ease-out outline-none hover:bg-surface/15 focus-visible:ring-2 focus-visible:ring-surface [&_svg]:size-[18px]"
+              /* El anillo de foco necesita DOS tonos. El fondo de esta tarjeta
+                 es una fotografia cualquiera: un anillo claro se pierde sobre
+                 una foto clara — el caso normal de una promocion — igual que
+                 uno oscuro sobre una foto oscura. Con el hueco pintado en
+                 tinta congelada, el indicador siempre tiene un borde de
+                 contraste contra la imagen, venga como venga. */
+              className="ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill border border-surface/40 transition-colors duration-140 ease-out outline-none hover:bg-surface/15 focus-visible:ring-2 focus-visible:ring-surface focus-visible:ring-offset-2 focus-visible:ring-offset-ink [&_svg]:size-[18px]"
             >
               {action}
             </button>
@@ -356,7 +400,7 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
         <div className="flex flex-col gap-1.5">
           <Title className="font-display text-[26px] leading-[1.05] font-semibold">{title}</Title>
           {description ? (
-            <p className="text-sm leading-[1.45] text-surface/85">{description}</p>
+            <p className="text-sm leading-[1.45] text-surface/88">{description}</p>
           ) : null}
           {children}
         </div>
@@ -374,7 +418,7 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
  * Manda el prototipo: la lima es color de marca para acciones, y una metrica a
  * la baja necesita su equivalente en rojo, que la paleta de marca no ofrece. */
 const statDelta = cva(
-  "ml-auto inline-flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 font-mono text-xs tracking-[0.02em] [&_svg]:size-[13px]",
+  "ml-auto inline-flex shrink-0 items-center gap-[3px] rounded-pill px-2.5 py-1 font-mono text-xs tracking-[0.02em] [&_svg]:size-[13px]",
   {
     variants: {
       trend: {
@@ -387,6 +431,18 @@ const statDelta = cva(
   },
 );
 
+/* La tendencia NO puede viajar solo en el color de la pildora (WCAG 1.4.1).
+ * `trendIcon` es opcional, y aunque se pase es decorativo: sin este texto, una
+ * caida del 8.1% y una subida del 8.1% se leen exactamente igual en un lector
+ * de pantalla, y en escala de grises tampoco se distinguen. Va en sr-only —
+ * nunca display:none, que no lo lee nadie — delante de la cifra, que es el
+ * orden en que se dice en voz alta: "a la baja 8.1%". */
+const trendLabels: Record<NonNullable<CardStatProps["trend"]>, string> = {
+  up: "al alza",
+  down: "a la baja",
+  flat: "sin cambio",
+};
+
 export interface CardStatProps extends Omit<CardProps, "surface"> {
   /** Label de seccion, mono y en mayusculas por CSS. */
   label: React.ReactNode;
@@ -398,6 +454,12 @@ export interface CardStatProps extends Omit<CardProps, "surface"> {
   trend?: "up" | "down" | "flat";
   /** Icono de tendencia dentro de la pildora, antes del delta. */
   trendIcon?: React.ReactNode;
+  /**
+   * Texto solo para lector de pantalla que dice la tendencia con palabras.
+   * Por defecto "al alza" / "a la baja" / "sin cambio". Pasa cadena vacia si el
+   * delta ya lo dice ("+12.4% mas que el mes pasado") para no duplicarlo.
+   */
+  trendLabel?: string;
   /** Linea de comparacion bajo la cifra. */
   comparison?: React.ReactNode;
   /** Sparkline. Se le reserva una banda de 64px al pie de la tarjeta. */
@@ -419,6 +481,7 @@ export const CardStat = React.forwardRef<HTMLDivElement, CardStatProps>(function
     delta,
     trend = "up",
     trendIcon,
+    trendLabel = trendLabels[trend],
     comparison,
     chart,
     children,
@@ -427,11 +490,16 @@ export const CardStat = React.forwardRef<HTMLDivElement, CardStatProps>(function
   ref,
 ) {
   return (
-    <Card ref={ref} className={cn("gap-4", className)} {...props}>
+    /* El min-height 300 del documento vale para los TRES roles, no solo para
+       feature y media: sin el, el `flex-1` que ancla el sparkline al fondo no
+       tiene sobrante que repartir y la tarjeta se encoge al alto de su
+       contenido, que era justo lo que obligaba a parchearlo desde fuera. */
+    <Card ref={ref} className={cn("min-h-[300px] gap-4", className)} {...props}>
       <div className="flex items-center gap-2.5">
         <span className="font-mono text-xs tracking-[0.1em] text-ink-600 uppercase">{label}</span>
         {delta ? (
           <span className={statDelta({ trend })}>
+            {trendLabel ? <span className="sr-only">{`${trendLabel} `}</span> : null}
             {trendIcon}
             {delta}
           </span>

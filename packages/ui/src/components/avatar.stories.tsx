@@ -171,6 +171,30 @@ export const Grupo: Story = {
   ),
 };
 
+/**
+ * El punto de estado sobrevive al solapado: se pinta por encima del avatar
+ * siguiente, que es justo el que le tapaba la esquina inferior derecha.
+ */
+export const GrupoConEstado: Story = {
+  name: "Grupo con estado en línea",
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "Combinacion que el prototipo no dibuja pero que aparece en cuanto una lista de destinatarios marca quien esta conectado. El punto del primero y el del segundo tienen que verse enteros, no solo el del ultimo.",
+      },
+    },
+  },
+  render: () => (
+    <AvatarGroup max={3} total={7} aria-label="Destinatarios conectados">
+      <Avatar name="Marta Ruiz" online />
+      <Avatar name="Carlos Diaz" online />
+      <Avatar name="Valentina Cruz" />
+    </AvatarGroup>
+  ),
+};
+
 /** Con `total` el contador cuenta el universo real, no los hijos renderizados. */
 export const GrupoConTotal: Story = {
   name: "Grupo con total del servidor",

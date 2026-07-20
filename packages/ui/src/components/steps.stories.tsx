@@ -24,7 +24,7 @@ const meta = {
           "",
           "- **Hecho** — relleno tinta con check.",
           "- **Actual** — anillo tinta con punto.",
-          "- **Pendiente** — borde gris con el número.",
+          "- **Pendiente** — borde gris con el número en horizontal, y anillo vacío en vertical, tal como los dibuja el documento: allí el título ya ordena la lista y el número sobra.",
           "- **Error** — anillo rojo con aspa; no se deduce de la posición, se declara con `status`.",
           "",
           "El conector entre dos pasos se pinta en tinta cuando el paso de la izquierda (o de arriba) está hecho.",
@@ -69,6 +69,14 @@ export const ActualConNumero: Story = {
 /** Cuando cada paso lleva resumen, el eje se vuelve vertical. */
 export const Vertical: Story = {
   args: { steps: PASOS_CON_DETALLE, orientation: "vertical" },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "El paso pendiente deja el anillo vacío, sin número: en vertical la etiqueta es un título de 15 que ya ordena la lista. El detalle (`description`) solo se pinta en este eje.",
+      },
+    },
+  },
 };
 
 /** El error se declara, no se deduce: el paso sigue siendo el actual. */

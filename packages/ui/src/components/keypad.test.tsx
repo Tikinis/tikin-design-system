@@ -30,6 +30,20 @@ describe("formatAmount / parseAmount", () => {
     expect(parseAmount("")).toBe(0);
   });
 
+  it("conserva el signo de un monto negativo", () => {
+    // Pintar un ajuste o un saldo en rojo como si fuera positivo es un error de
+    // importe que no avisa de nada.
+    expect(formatAmount(-500)).toBe("-500");
+    expect(formatAmount(-1250.5)).toBe("-1.250,5");
+    expect(formatAmount("-1250")).toBe("-1.250");
+    expect(parseAmount(formatAmount(-1250.5))).toBe(-1250.5);
+  });
+
+  it("no inventa un cero negativo al redondear", () => {
+    // -0,004 con dos decimales es cero, y "-0" no es un monto.
+    expect(formatAmount(-0.004)).toBe("0");
+  });
+
   it("parsea tanto el crudo como el formateado", () => {
     expect(parseAmount("1250,5")).toBe(1250.5);
     expect(parseAmount("1.250,5")).toBe(1250.5);
@@ -265,10 +279,99 @@ describe("Keypad", () => {
 
   it("permite sobreescribir estilos por className", () => {
     render(<Keypad className="max-w-none" aria-label="Numpad" />);
-    const grupo = screen.getByRole("group", { name: "Numpad" });
+    const rejilla = screen.getByRole("grid", { name: "Numpad" });
     // tailwind-merge debe descartar el max-w-[300px] del componente.
-    expect(grupo.className).toContain("max-w-none");
-    expect(grupo.className).not.toContain("max-w-[300px]");
+    expect(rejilla.className).toContain("max-w-none");
+    expect(rejilla.className).not.toContain("max-w-[300px]");
+  });
+
+  it("se expone como rejilla, no como grupo: 'group' no es un rol de widget", () => {
+    // Con role="group" el lector de pantalla se queda en modo exploracion, las
+    // flechas mueven su cursor virtual en vez de llegar al numpad y el foco
+    // itinerante ya le ha quitado el Tab a once de las doce teclas.
+    render(<Keypad action="decimal" />);
+
+    expect(screen.getByRole("grid", { name: "Teclado numérico" })).toBeInTheDocument();
+    expect(screen.queryByRole("group")).toBeNull();
+    // Cuatro filas de tres celdas, siempre: el hueco de la esquina tambien es
+    // celda, si no la rejilla declararia filas de distinto ancho.
+    expect(screen.getAllByRole("row")).toHaveLength(4);
+    expect(screen.getAllByRole("gridcell")).toHaveLength(12);
+  });
+
+  it("con maxDecimals 0 no hay coma: ni tecla, ni ruta por teclado fisico", async () => {
+    const onValueChange = vi.fn();
+    render(<Keypad action="decimal" maxDecimals={0} onValueChange={onValueChange} />);
+
+    // Antes se pintaba una tecla enfocable, sin `disabled` y calcada a las
+    // vivas, que no hacia absolutamente nada al pulsarla.
+    expect(screen.queryByRole("button", { name: "Coma decimal" })).toBeNull();
+    expect(screen.getAllByRole("gridcell")).toHaveLength(12);
+
+    await userEvent.tab();
+    await userEvent.keyboard("12");
+    await userEvent.keyboard(",");
+    await userEvent.keyboard(".");
+    expect(onValueChange).toHaveBeenLastCalledWith("12");
+  });
+
+  it("respeta topes de cifras propios", async () => {
+    const onValueChange = vi.fn();
+    const { unmount } = render(
+      <Keypad defaultValue="123" maxIntegerDigits={3} onValueChange={onValueChange} />,
+    );
+    await userEvent.click(tecla("4"));
+    expect(onValueChange).not.toHaveBeenCalled();
+    unmount();
+
+    const conUnDecimal = vi.fn();
+    render(
+      <Keypad action="decimal" defaultValue="12" maxDecimals={1} onValueChange={conUnDecimal} />,
+    );
+    await userEvent.click(tecla("Coma decimal"));
+    await userEvent.click(tecla("5"));
+    expect(conUnDecimal).toHaveBeenLastCalledWith("12,5");
+
+    conUnDecimal.mockClear();
+    await userEvent.click(tecla("7"));
+    expect(conUnDecimal).not.toHaveBeenCalled();
+  });
+
+  it("si la esquina se vacia, la rejilla no se queda sin parada de tabulacion", async () => {
+    const { rerender } = render(<Keypad action="decimal" />);
+
+    await userEvent.click(tecla("Coma decimal"));
+    expect(tecla("Coma decimal")).toHaveAttribute("tabindex", "0");
+
+    // La tecla enfocada desaparece de la rejilla. Sin recalcular el indice
+    // itinerante, las doce teclas quedarian con tabIndex -1 y el numpad seria
+    // inalcanzable con Tab.
+    rerender(<Keypad action="none" />);
+    expect(tecla("1")).toHaveAttribute("tabindex", "0");
+
+    await userEvent.tab();
+    expect(tecla("1")).toHaveFocus();
+  });
+
+  it("el consumidor conserva onKeyDown y puede quedarse con la tecla", async () => {
+    const onKeyDown = vi.fn((e: React.KeyboardEvent) => {
+      // Atajo propio de la pantalla: Escape cierra la hoja del monto.
+      if (e.key === "Escape" || e.key === "ArrowRight") e.preventDefault();
+    });
+    const onValueChange = vi.fn();
+    render(<Keypad onKeyDown={onKeyDown} onValueChange={onValueChange} />);
+
+    await userEvent.tab();
+    await userEvent.keyboard("{Escape}");
+    expect(onKeyDown).toHaveBeenCalled();
+
+    // Consumida por el consumidor: el numpad no la reinterpreta.
+    await userEvent.keyboard("{ArrowRight}");
+    expect(tecla("1")).toHaveFocus();
+
+    // Y lo que el consumidor no consume sigue funcionando.
+    await userEvent.keyboard("5");
+    expect(onValueChange).toHaveBeenLastCalledWith("5");
   });
 });
 
@@ -305,6 +408,22 @@ describe("AmountDisplay", () => {
     // Importa para el texto accesible y para lo que se copia al portapapeles.
     render(<AmountDisplay label="Vas a enviar" value="10" />);
     expect(screen.getByText("Vas a enviar")).toBeInTheDocument();
+  });
+
+  it("el monto se anuncia con su rotulo, no como un numero suelto", () => {
+    // Es una region viva: cada pulsacion se anuncia. Sin nombre accesible se
+    // oye "$ 1.250" sin decir de que, aunque la etiqueta este escrita al lado.
+    render(<AmountDisplay label="Vas a enviar" value="1250" />);
+    expect(screen.getByRole("status", { name: "Vas a enviar" })).toHaveTextContent("$ 1.250");
+  });
+
+  it("expone la ref del contenedor y deja sobreescribir estilos", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    render(<AmountDisplay ref={ref} className="text-left" value="10" />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    // tailwind-merge debe descartar el text-center del componente.
+    expect(ref.current?.className).toContain("text-left");
+    expect(ref.current?.className).not.toContain("text-center");
   });
 
   it("invalido tiñe pero no borra ni bloquea el monto", () => {

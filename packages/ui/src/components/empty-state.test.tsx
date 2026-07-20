@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import { EmptyState, EmptyStateAction } from "./empty-state";
 
 /* Estos tests cubren COMPORTAMIENTO, no apariencia. Las medidas del prototipo
  * (tile 56, radio 16, mensaje 13.5/1.5) se verifican contra el navegador, no
- * aqui: jsdom no aplica CSS, asi que comprobar clases seria tautologico. */
+ * aqui: jsdom no aplica CSS, asi que comprobar cuanto miden seria tautologico.
+ *
+ * La excepcion son los MAPAS DE VARIANTES (tono, bordered) y las clases que son
+ * contrato explicito (uppercase). Ahi la clase es un dato, no un estilo: un
+ * `bg-tint-eror` compila a nada, no rompe tsc ni ningun otro test, y deja el
+ * tono sin color. Por eso el tono si se comprueba por clase. */
 
 describe("EmptyState", () => {
   it("renderiza el titulo como encabezado real, nivel 3 por defecto", () => {
@@ -61,6 +67,29 @@ describe("EmptyState", () => {
     expect(region).toHaveTextContent("Sin resultados");
   });
 
+  it("con announce la region viva se monta VACIA y el texto entra despues", () => {
+    // El anuncio depende de esto: NVDA y JAWS solo vigilan regiones que ya
+    // existian en el DOM. Si el primer commit ya trae el texto dentro, no hay
+    // cambio que observar y el lector no dice nada.
+    // El render del servidor es el primer commit sin efectos, asi que sirve de
+    // radiografia exacta de lo que se inserta.
+    const html = renderToStaticMarkup(
+      <EmptyState announce title="Sin resultados">
+        Prueba con otro nombre.
+      </EmptyState>,
+    );
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain("Sin resultados");
+    expect(html).not.toContain("Prueba con otro nombre.");
+  });
+
+  it("sin announce el contenido sale ya pintado en el primer commit", () => {
+    // Diferir siempre penalizaria el SSR de un vacio de primera vez, que no
+    // necesita anunciarse.
+    const html = renderToStaticMarkup(<EmptyState title="Crea tu primer bolsillo" />);
+    expect(html).toContain("Crea tu primer bolsillo");
+  });
+
   it("un role explicito gana sobre announce", () => {
     render(
       <EmptyState announce role="alert" title="Sin conexión">
@@ -71,6 +100,46 @@ describe("EmptyState", () => {
     // Si el consumidor elige el rol, no le colamos ademas un aria-live que
     // pelee con el.
     expect(region).not.toHaveAttribute("aria-live");
+  });
+
+  it("no pinta encabezado ni parrafo vacios", () => {
+    // `title={cond && "..."}` es el patron habitual y cuando cond es false
+    // colaba un <h3> sin texto: axe lo reporta como violacion de WCAG 2.4.6, y
+    // el <p> vacio se comia ademas 12px del gap del contenedor.
+    const { container } = render(<EmptyState title="">{false}</EmptyState>);
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(container.querySelector("p")).toBeNull();
+  });
+
+  it("aplica el color del tile segun el tono", () => {
+    // El tono es la unica variante real del componente: un error tipografico en
+    // una de estas clases compila a nada y deja el tile sin color sin romper
+    // ningun otro test.
+    const casos = [
+      ["neutral", "bg-surface-2", "text-ink"],
+      ["muted", "bg-surface-2", "text-ink-600"],
+      ["brand", "bg-lavender", "text-on-accent"],
+      ["success", "bg-tint-success", "text-fg-success"],
+      ["error", "bg-tint-error", "text-fg-error"],
+    ] as const;
+
+    for (const [tone, fondo, tinta] of casos) {
+      const { container, unmount } = render(
+        <EmptyState tone={tone} title="X" icon={<svg viewBox="0 0 24 24" />} />,
+      );
+      const tile = container.querySelector("[aria-hidden='true']");
+      expect(tile, tone).not.toBeNull();
+      expect(tile?.className, tone).toContain(fondo);
+      expect(tile?.className, tone).toContain(tinta);
+      unmount();
+    }
+  });
+
+  it("bordered=false quita el borde de la tarjeta", () => {
+    // Un vacio embebido en una tabla o una tarjeta ya vive dentro de un borde;
+    // el doble marco se ve como un fallo.
+    const { container } = render(<EmptyState bordered={false} title="X" />);
+    expect(container.firstElementChild?.className).not.toContain("border-edge");
   });
 
   it("permite sobreescribir estilos por className", () => {
@@ -130,9 +199,36 @@ describe("EmptyStateAction", () => {
   });
 
   it("no pone el label en mayusculas en JS, solo por CSS", () => {
-    // Importa para el texto accesible y para lo que se copia al portapapeles.
     render(<EmptyStateAction>Enviar dinero</EmptyStateAction>);
-    expect(screen.getByRole("button")).toHaveAccessibleName("Enviar dinero");
+    const boton = screen.getByRole("button");
+    // El texto real conserva su capitalizacion: es lo que anuncia el lector de
+    // pantalla y lo que se copia al portapapeles.
+    expect(boton).toHaveAccessibleName("Enviar dinero");
+    expect(boton.textContent).toBe("Enviar dinero");
+    // Y las mayusculas si llegan, pero por CSS. Sin esta mitad el test pasaria
+    // igual con un boton que nunca las aplica.
+    expect(boton.className).toContain("uppercase");
+  });
+
+  it("las tres variantes definen pressed y disabled legible", () => {
+    // La seccion 05 pide default/hover/pressed/disabled a todo boton del
+    // sistema. Sin pressed no hay respuesta tactil al pulsar, y el disabled
+    // anterior (bg-edge sobre ink-400) daba ~1.5:1: label ilegible.
+    const casos = [
+      ["primary", "active:not-disabled:bg-ink-strong", "disabled:text-ink-600"],
+      ["secondary", "active:not-disabled:bg-ink", "disabled:text-ink-400"],
+      ["quiet", "active:not-disabled:bg-surface-3", "disabled:text-ink-400"],
+    ] as const;
+
+    for (const [variant, pressed, disabled] of casos) {
+      const { unmount } = render(<EmptyStateAction variant={variant}>X</EmptyStateAction>);
+      const cls = screen.getByRole("button").className;
+      expect(cls, variant).toContain(pressed);
+      expect(cls, variant).toContain(disabled);
+      // El disabled del primary ya no pinta el label sobre el borde.
+      expect(cls, variant).not.toContain("disabled:bg-edge");
+      unmount();
+    }
   });
 
   it("respeta disabled", async () => {

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Toast } from "radix-ui";
+import * as Toast from "radix-ui/toast";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -32,6 +32,14 @@ import { cn } from "../lib/cn";
  * que la regla la impone el consumidor manteniendo un unico estado abierto. No
  * se fuerza aqui porque hacerlo obligaria a montar un store global dentro del
  * paquete de UI.
+ *
+ * OMISION DELIBERADA: el bloque "EN VIVO" del documento — que son demos
+ * ampliadas, no la anatomia canonica — dice "al deshacer muestra ✓ y cierra".
+ * Aqui se dispara `onAction` y Radix cierra de inmediato, sin estado de
+ * confirmacion intermedio. Se deja fuera a proposito: ese ✓ obligaria a retener
+ * la pieza en pantalla despues de que el consumidor ya haya revertido, y quien
+ * quiera esa confirmacion la consigue montando un segundo snackbar con `key`
+ * distinta, que es el mismo mecanismo de "uno a la vez".
  *
  * GEOMETRIA (bloque "VARIANTES · ANATOMIA", que es el canonico de la seccion)
  *   superficie  bg tinta fuerte, texto surface, r12, sombra 0 8px 24px -6px
@@ -231,6 +239,17 @@ function createPauseStore(): PauseStore {
 
 const SnackbarPauseContext = React.createContext<PauseStore | null>(null);
 
+/* POR QUE HACE FALTA UN CONTEXTO PROPIO PARA LA DURACION
+ * ------------------------------------------------------
+ * Radix resuelve el plazo de cada toast con `durationProp || context.duration`,
+ * pero su contexto es interno: no lo exporta. Sin espejo, un
+ * `<SnackbarProvider duration={8000}>` con `<Snackbar>` sin `duration` dejaba la
+ * barra vaciandose en 5 s mientras el cierre real llegaba a los 8 — la promesa
+ * del componente es justo lo contrario, que la cuenta y el temporizador no se
+ * desincronicen nunca. Se replica el valor aqui con la MISMA regla de Radix
+ * (`||`, no `??`, para que un 0 caiga al defecto igual que alli). */
+const SnackbarDurationContext = React.createContext<number | null>(null);
+
 /* -------------------------------------------------------------------------
  * Provider
  * ------------------------------------------------------------------------- */
@@ -282,12 +301,14 @@ export function SnackbarProvider({
 
   return (
     <SnackbarPauseContext.Provider value={pauseStore}>
-      <Toast.Provider
-        duration={duration}
-        swipeDirection={swipeDirection}
-        label={label}
-        {...props}
-      />
+      <SnackbarDurationContext.Provider value={duration}>
+        <Toast.Provider
+          duration={duration}
+          swipeDirection={swipeDirection}
+          label={label}
+          {...props}
+        />
+      </SnackbarDurationContext.Provider>
     </SnackbarPauseContext.Provider>
   );
 }
@@ -355,7 +376,12 @@ export interface SnackbarProps extends Omit<
   message: React.ReactNode;
   /** Segunda linea opcional con el detalle: "$ 250.000 a $mariarojas". */
   description?: React.ReactNode;
-  /** Icono leading a 18px. Se ignora con `loading`, que ocupa esa ranura. */
+  /**
+   * Icono leading a 18px. Solo hay una ranura leading y la comparten tres
+   * piezas, en este orden: el spinner de `loading`, el anillo de
+   * `countdown="ring"` y este icono. Con cualquiera de las dos primeras el
+   * icono NO se pinta.
+   */
   icon?: React.ReactNode;
   /**
    * Label de la accion principal. Se escribe en capitalizacion normal
@@ -421,6 +447,7 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
    * cae en un store propio: pierde la herencia entre snackbars, pero sigue
    * congelando la cuenta con sus propias pausas. */
   const pauseStore = React.useContext(SnackbarPauseContext) ?? localStore;
+  const providerDuration = React.useContext(SnackbarDurationContext);
   const paused = React.useSyncExternalStore(
     pauseStore.subscribe,
     pauseStore.get,
@@ -446,11 +473,12 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
   const showClose = Boolean(closeLabel) && !loading;
   const shape = loading ? "none" : countdown;
 
-  /* La animacion tiene que durar lo mismo que el temporizador. Radix guarda su
-   * duracion por defecto en el provider y no la expone por contexto publico,
-   * asi que aqui se asume DEFAULT_DURATION_MS: si cambias la del provider,
-   * pasa tambien `duration` al snackbar o la barra ira desacompasada. */
-  const countdownMs = resolvedDuration ?? DEFAULT_DURATION_MS;
+  /* La animacion tiene que durar lo mismo que el temporizador, y el temporizador
+   * es el de Radix: `durationProp || context.duration`. Se resuelve igual, con
+   * el espejo del provider, para que la barra siga a la duracion heredada y no
+   * al defecto. Sin SnackbarProvider el contexto es null y queda el mismo 5000
+   * que usa Radix por defecto. */
+  const countdownMs = resolvedDuration || providerDuration || DEFAULT_DURATION_MS;
   const finite = Number.isFinite(countdownMs);
 
   const countdownStyle: React.CSSProperties = {
@@ -459,120 +487,129 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
   };
 
   return (
-    <Toast.Root
-      ref={ref}
-      duration={resolvedDuration}
-      onPause={handlePause}
-      onResume={handleResume}
-      aria-busy={loading || undefined}
-      className={cn(snackbarRoot(), className)}
-      {...props}
-    >
+    <>
+      {/* Fuera del Toast.Root a proposito. React 19 lo hoista a <head>, pero el
+          paquete declara React 18 como peer valido y alli NO se hoista: se
+          quedaria dentro del <li>, y el anunciador de Radix recorre los nodos
+          descartando solo los que llevan aria-hidden, hidden o display:none en
+          linea — un <style> no cumple ninguno, asi que el lector de pantalla
+          leeria los cuatro bloques de @keyframes antes del mensaje. Aqui cuelga
+          del arbol del consumidor, no del toast portalizado. */}
       <style href="tk-snackbar" precedence="default">
         {SNACKBAR_KEYFRAMES}
       </style>
 
-      <div className="flex items-center gap-3 py-3 pr-3 pl-4">
-        {loading ? (
-          // Spinner de 16 con borde 2, como el prototipo: aro gris 550 y solo
-          // el borde superior en la tinta de la pieza.
-          <span
-            aria-hidden="true"
-            className="size-4 shrink-0 animate-spin rounded-full border-2 border-[var(--colours-grayscale-dark-550)] border-t-[var(--tk-snack-ink)] motion-reduce:animate-none"
-          />
-        ) : shape === "ring" ? (
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="size-[18px] shrink-0 -rotate-90"
-            // La variable se declara en el <svg> y el circulo la hereda: los
-            // keyframes necesitan el valor, no lo pueden calcular.
-            style={{ "--tk-snack-ring-c": RING_CIRCUMFERENCE } as React.CSSProperties}
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r={RING_RADIUS}
-              fill="none"
-              strokeWidth="3"
-              className="stroke-[var(--colours-grayscale-dark-550)]"
+      <Toast.Root
+        ref={ref}
+        duration={resolvedDuration}
+        onPause={handlePause}
+        onResume={handleResume}
+        aria-busy={loading || undefined}
+        className={cn(snackbarRoot(), className)}
+        {...props}
+      >
+        <div className="flex items-center gap-3 py-3 pr-3 pl-4">
+          {loading ? (
+            // Spinner de 16 con borde 2, como el prototipo: aro gris 550 y solo
+            // el borde superior en la tinta de la pieza.
+            <span
+              aria-hidden="true"
+              className="size-4 shrink-0 animate-spin rounded-full border-2 border-[var(--colours-grayscale-dark-550)] border-t-[var(--tk-snack-ink)] motion-reduce:animate-none"
             />
-            <circle
-              cx="12"
-              cy="12"
-              r={RING_RADIUS}
-              fill="none"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={RING_CIRCUMFERENCE}
-              className={cn(
-                "stroke-lime",
-                finite && "animate-[tk-snackbar-ring_linear_forwards] motion-reduce:animate-none",
-              )}
-              style={finite ? countdownStyle : undefined}
-            />
-          </svg>
-        ) : (
-          icon && (
-            <span aria-hidden="true" className="shrink-0 [&>svg]:size-[18px]">
-              {icon}
-            </span>
-          )
-        )}
+          ) : shape === "ring" ? (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-[18px] shrink-0 -rotate-90"
+              // La variable se declara en el <svg> y el circulo la hereda: los
+              // keyframes necesitan el valor, no lo pueden calcular.
+              style={{ "--tk-snack-ring-c": RING_CIRCUMFERENCE } as React.CSSProperties}
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r={RING_RADIUS}
+                fill="none"
+                strokeWidth="3"
+                className="stroke-[var(--colours-grayscale-dark-550)]"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r={RING_RADIUS}
+                fill="none"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={RING_CIRCUMFERENCE}
+                className={cn(
+                  "stroke-lime",
+                  finite && "animate-[tk-snackbar-ring_linear_forwards] motion-reduce:animate-none",
+                )}
+                style={finite ? countdownStyle : undefined}
+              />
+            </svg>
+          ) : (
+            icon && (
+              <span aria-hidden="true" className="shrink-0 [&>svg]:size-[18px]">
+                {icon}
+              </span>
+            )
+          )}
 
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <Toast.Title className="font-sans text-sm">{message}</Toast.Title>
-          {description && (
-            // Gris 500 literal, no `text-ink-500`: la utilidad semantica sube a
-            // rgb(110) en oscuro y la pieza es negra en los dos temas, asi que
-            // el detalle perderia legibilidad justo donde mas cuesta leerlo.
-            <Toast.Description className="font-sans text-xs text-[var(--colours-grayscale-light-500)]">
-              {description}
-            </Toast.Description>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Toast.Title className="font-sans text-sm">{message}</Toast.Title>
+            {description && (
+              // Gris 500 literal, no `text-ink-500`: la utilidad semantica sube a
+              // rgb(110) en oscuro y la pieza es negra en los dos temas, asi que
+              // el detalle perderia legibilidad justo donde mas cuesta leerlo.
+              <Toast.Description className="font-sans text-xs text-[var(--colours-grayscale-light-500)]">
+                {description}
+              </Toast.Description>
+            )}
+          </div>
+
+          {/* Separador de 1x16 en gris 550. Decorativo: la accion ya es un boton
+              con su propio nombre accesible. */}
+          {(showAction || showClose) && (
+            <span
+              aria-hidden="true"
+              className="h-4 w-px shrink-0 bg-[var(--colours-grayscale-dark-550)]"
+            />
+          )}
+
+          {showClose && (
+            <Toast.Close className={snackbarAction({ tone: "muted" })}>{closeLabel}</Toast.Close>
+          )}
+
+          {showAction && actionLabel && (
+            // `altText` es obligatorio en Radix: es lo que lee un lector de
+            // pantalla cuando el snackbar ya se ha ido y la accion sigue siendo
+            // alcanzable. Va sin mayusculas forzadas, igual que el label.
+            <Toast.Action
+              altText={actionAltText ?? actionLabel}
+              onClick={onAction}
+              className={snackbarAction({ tone: "primary" })}
+            >
+              {actionIcon}
+              {actionLabel}
+            </Toast.Action>
           )}
         </div>
 
-        {/* Separador de 1x16 en gris 550. Decorativo: la accion ya es un boton
-            con su propio nombre accesible. */}
-        {(showAction || showClose) && (
-          <span
-            aria-hidden="true"
-            className="h-4 w-px shrink-0 bg-[var(--colours-grayscale-dark-550)]"
-          />
+        {shape === "bar" && (
+          <div aria-hidden="true" className="h-[3px] w-full bg-[var(--colours-grayscale-dark-550)]">
+            <div
+              className={cn(
+                "h-full origin-left bg-lime",
+                finite &&
+                  "animate-[tk-snackbar-countdown_linear_forwards] motion-reduce:animate-none",
+              )}
+              style={finite ? countdownStyle : undefined}
+            />
+          </div>
         )}
-
-        {showClose && (
-          <Toast.Close className={snackbarAction({ tone: "muted" })}>{closeLabel}</Toast.Close>
-        )}
-
-        {showAction && actionLabel && (
-          // `altText` es obligatorio en Radix: es lo que lee un lector de
-          // pantalla cuando el snackbar ya se ha ido y la accion sigue siendo
-          // alcanzable. Va sin mayusculas forzadas, igual que el label.
-          <Toast.Action
-            altText={actionAltText ?? actionLabel}
-            onClick={onAction}
-            className={snackbarAction({ tone: "primary" })}
-          >
-            {actionIcon}
-            {actionLabel}
-          </Toast.Action>
-        )}
-      </div>
-
-      {shape === "bar" && (
-        <div aria-hidden="true" className="h-[3px] w-full bg-[var(--colours-grayscale-dark-550)]">
-          <div
-            className={cn(
-              "h-full origin-left bg-lime",
-              finite &&
-                "animate-[tk-snackbar-countdown_linear_forwards] motion-reduce:animate-none",
-            )}
-            style={finite ? countdownStyle : undefined}
-          />
-        </div>
-      )}
-    </Toast.Root>
+      </Toast.Root>
+    </>
   );
 });
 

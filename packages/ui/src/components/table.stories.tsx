@@ -31,12 +31,14 @@ const meta = {
           "- **Orden y movil** — columnas ordenables con la flecha ↕. En movil la tabla **no se encoje**: se cambia por tarjetas-fila (ver Cards · list row).",
           "",
           "Se renderiza una `<table>` de verdad, no la rejilla de `<div>` del prototipo: sin `thead`/`th[scope]` el lector de pantalla deja de anunciar la columna y no hay donde colgar `aria-sort`.",
+          "",
+          "Tres densidades, una por juego de medidas del archivo: `default` (dispersion, filas 14/16), `medium` (bloques con seleccion y con total, filas 12/14) y `compact` (filas 8/14).",
         ].join("\n"),
       },
     },
   },
   argTypes: {
-    density: { control: "inline-radio", options: ["default", "compact"] },
+    density: { control: "inline-radio", options: ["default", "medium", "compact"] },
     frame: { control: "boolean" },
   },
 } satisfies Meta<typeof Table>;
@@ -254,7 +256,9 @@ function SeleccionDemo() {
 
   return (
     <div className="w-[560px] max-w-full">
-      <Table>
+      {/* density="medium" es el juego de medidas de este bloque en el archivo:
+          cabecera 10/14 con texto de 9px y filas de 12/14. */}
+      <Table density="medium">
         <TableCaption visuallyHidden>Destinatarios del envío</TableCaption>
         <TableHeader>
           <TableRow>
@@ -296,7 +300,11 @@ function SeleccionDemo() {
                     }
                   />
                 </TableCell>
-                <TableCell>{fila.nombre}</TableCell>
+                {/* El nombre es la cabecera de SU fila: un <th scope="row">
+                    hace que el lector diga "María Rojas, MONTO, 120.000" en vez
+                    de leer cifras sueltas. Fuera del thead se pinta como celda,
+                    no como rotulo de columna. */}
+                <TableHead>{fila.nombre}</TableHead>
                 <TableCell font="num">{fila.monto}</TableCell>
                 <TableCell align="right">
                   <button
@@ -337,7 +345,9 @@ export const ConTotal: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
     <div className="w-[480px] max-w-full">
-      <Table>
+      {/* Filas de 12 en vertical, como el bloque del archivo; el pie no se
+          comprime con la densidad y mantiene su 14/16 y su DM Mono 16. */}
+      <Table density="medium">
         <TableCaption visuallyHidden>Resumen del envío</TableCaption>
         <TableBody>
           <TableRow hover={false}>
@@ -376,6 +386,44 @@ export const SinMarco: Story = {
             <TableCell font="num">– $20.000</TableCell>
           </TableRow>
           <TableRow>
+            <TableCell>Pago PSE</TableCell>
+            <TableCell font="num">– $95.000</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+  ),
+};
+
+/**
+ * Rotulo de bloque como lo pinta el archivo: fuera del marco, en Ubuntu Sans
+ * Mono con linea inferior, y el `caption` oculto para que la tabla conserve su
+ * nombre accesible.
+ */
+export const RotuloDeBloque: Story = {
+  name: "Rótulo de bloque",
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "Un `TableCaption` visible cae DENTRO del marco: el `<caption>` es parte de la `<table>` y el borde lo dibuja el contenedor. Cuando el rotulo tiene que ir fuera —como en el archivo— se escribe como elemento propio encima de la tabla y el caption se deja en `visuallyHidden`.",
+      },
+    },
+  },
+  render: () => (
+    <div className="flex w-[520px] max-w-full flex-col gap-3.5">
+      <div className="border-b border-edge pb-2.5 font-mono text-[13px] tracking-[0.14em] text-ink-600 uppercase">
+        Compacta · densa
+      </div>
+      <Table density="compact">
+        <TableCaption visuallyHidden>Movimientos</TableCaption>
+        <TableBody>
+          <TableRow hover={false}>
+            <TableCell>Recarga celular</TableCell>
+            <TableCell font="num">– $20.000</TableCell>
+          </TableRow>
+          <TableRow hover={false}>
             <TableCell>Pago PSE</TableCell>
             <TableCell font="num">– $95.000</TableCell>
           </TableRow>
@@ -429,6 +477,34 @@ export const MatrizDeEspecificacion: Story = {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+          Densidad medium · header 10/14 · fila 12/14
+        </h3>
+        <Table density="medium">
+          <TableHeader>
+            <TableRow>
+              <TableHead>font=&quot;sans&quot; · 14</TableHead>
+              <TableHead>font=&quot;mono&quot; · 13</TableHead>
+              <TableHead align="right">font=&quot;num&quot; · 13</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              {/* th del cuerpo: cabecera de fila con tipografia de celda. */}
+              <TableHead>María Rojas</TableHead>
+              <TableCell font="mono">14 JUL</TableCell>
+              <TableCell font="num">$120.000</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableHead>Carlos Díaz</TableHead>
+              <TableCell font="mono">13 JUL</TableCell>
+              <TableCell font="num">$90.000</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
           Densidad compact · header 8/14 · texto 13
         </h3>
         <Table density="compact">
@@ -460,6 +536,10 @@ export const MatrizDeEspecificacion: Story = {
         <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
           Estados de columna ordenable
         </h3>
+        {/* Estas tres columnas van sin `onSort` a proposito: muestran el glifo y
+            el aria-sort de cada estado sin colar en el recorrido de teclado tres
+            botones que no notificarian a nadie. La columna interactiva de verdad
+            es la de la story "Ordenable". */}
         <Table>
           <TableHeader>
             <TableRow>

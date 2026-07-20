@@ -201,13 +201,19 @@ describe("Accordion", () => {
 
   it("permite sobreescribir estilos por className en las cuatro piezas", async () => {
     render(
-      <Accordion type="single" collapsible className="gap-0">
+      <Accordion type="single" collapsible className="gap-0" data-testid="lista">
         <AccordionItem value="a" className="rounded-none" data-testid="fila">
           <AccordionTrigger className="p-0">Pregunta</AccordionTrigger>
           <AccordionContent className="px-0">Respuesta</AccordionContent>
         </AccordionItem>
       </Accordion>,
     );
+    // La raiz tambien: sin esta asercion el test decia "cuatro piezas" y solo
+    // cubria tres, y una regresion de cn() en la raiz pasaria en verde.
+    const lista = screen.getByTestId("lista");
+    expect(lista.className).toContain("gap-0");
+    expect(lista.className).not.toContain("gap-2.5");
+
     const btn = trigger("Pregunta");
     // tailwind-merge debe descartar la clase de la variante, no acumularla.
     expect(btn.className).toContain("p-0");
@@ -232,9 +238,65 @@ describe("Accordion", () => {
         </AccordionItem>
       </Accordion>,
     );
-    // Comprobar la clase concreta seria tautologico; lo que se verifica es que
-    // el contexto llega y la fila NO se queda con la piel por defecto.
-    expect(screen.getByTestId("fila").className).not.toContain("rounded-lg");
-    expect(trigger("Pregunta").className).not.toContain("p-4");
+    // Con solo la asercion negativa, un contexto que entregase un valor
+    // invalido (CVA emitiendo cadena vacia) tambien pasaria. Se comprueba
+    // ademas que llega la piel `flush` de verdad.
+    const fila = screen.getByTestId("fila");
+    expect(fila.className).toContain("border-b");
+    expect(fila.className).not.toContain("rounded-lg");
+
+    const btn = trigger("Pregunta");
+    expect(btn.className).toContain("px-3");
+    expect(btn.className).not.toContain("p-4");
+  });
+
+  it("renderiza startIcon antes de la pregunta, dentro del disparador", () => {
+    render(
+      <Accordion type="single" collapsible>
+        <AccordionItem value="a">
+          <AccordionTrigger startIcon={<span data-testid="icono">*</span>}>
+            Pregunta
+          </AccordionTrigger>
+          <AccordionContent>Respuesta</AccordionContent>
+        </AccordionItem>
+      </Accordion>,
+    );
+    const btn = screen.getByRole("button");
+    const icono = screen.getByTestId("icono");
+    expect(btn).toContainElement(icono);
+    // Antes de la pregunta: el icono precede al <span> del texto.
+    expect(btn.firstElementChild).toBe(icono);
+  });
+
+  it("permite apagar el giro del caret con prefers-reduced-motion", () => {
+    render(<Faq />);
+    const caret = trigger("Cuanto tarda una transferencia").querySelector("svg");
+    // Es la unica animacion del componente; sin esto no habia forma de pararla.
+    expect(caret?.getAttribute("class")).toContain("motion-reduce:transition-none");
+  });
+
+  it("usa el anillo de foco por dentro, no uno con offset que el clip cortaria", () => {
+    render(<Faq />);
+    const clases = trigger("Cuanto tarda una transferencia").className;
+    // Idioma del sistema para filas recortadas (list-item, menu-button).
+    expect(clases).toContain("focus-visible:ring-inset");
+    expect(clases).toContain("focus-visible:ring-2");
+    expect(clases).not.toContain("ring-offset");
+  });
+
+  it("no deja el contenido sin indicador de foco si el consumidor lo hace focusable", async () => {
+    render(
+      <Accordion type="single" collapsible defaultValue="a">
+        <AccordionItem value="a">
+          <AccordionTrigger>Pregunta</AccordionTrigger>
+          <AccordionContent tabIndex={-1}>Respuesta</AccordionContent>
+        </AccordionItem>
+      </Accordion>,
+    );
+    // Patron habitual: mover el foco al contenido tras abrir. Un `outline-none`
+    // heredado del componente lo dejaria sin contorno nativo y sin sustituto,
+    // porque el contenido no es focusable por teclado y :focus-visible no salta.
+    const region = screen.getByRole("region");
+    expect(region.className).not.toContain("outline-none");
   });
 });

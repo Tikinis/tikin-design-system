@@ -24,8 +24,8 @@ import { cn } from "../lib/cn";
  *                titulo display 500 15 · detalle 13 en --tk-600 · pb 20
  *   puntos       8x8 · gap 8 · el actual es una pildora 24x8 r999
  *
- * TRES DISCREPANCIAS DEL PROPIO DOCUMENTO Y COMO SE RESUELVEN
- * ----------------------------------------------------------
+ * CUATRO DISCREPANCIAS DEL PROPIO DOCUMENTO Y COMO SE RESUELVEN
+ * ------------------------------------------------------------
  * 1. GLIFO DEL PASO ACTUAL. El bloque de reglas dice "Actual: anillo tinta con
  *    punto", y asi lo pintan la demo en vivo y el ejemplo vertical. Pero el
  *    ejemplo HORIZONTAL dibuja el numero "2" dentro del anillo. Gana el punto
@@ -41,6 +41,15 @@ import { cn } from "../lib/cn";
  *    el estatico (100), que es el que se repite en los bloques HORIZONTAL y CON
  *    ERROR. El circulo mide 30 en todos los bloques, asi que ahi no hay
  *    conflicto.
+ *
+ * 4. GLIFO DEL PASO PENDIENTE. Los bloques HORIZONTAL y CON ERROR pintan el
+ *    numero dentro del anillo gris; el bloque VERTICAL deja ese mismo anillo
+ *    vacio (`<div ...></div>`, sin ningun hijo). No es descuido: en vertical la
+ *    etiqueta ya es un titulo display de 15 que ordena la lista por si solo, asi
+ *    que el numero solo añadiria ruido, mientras que en horizontal la etiqueta
+ *    es mono 11 y el numero es lo que da la posicion de un vistazo. Se respeta
+ *    cada eje tal como lo dibuja el archivo. No cambia nada accesible: el
+ *    circulo va aria-hidden y la posicion la da el <ol>.
  *
  * COLOR EN TEMA OSCURO
  * --------------------
@@ -130,20 +139,23 @@ const stepTitle = cva("font-display text-[15px] font-medium", {
   defaultVariants: { status: "pending" },
 });
 
-const stepConnector = cva(
-  "bg-edge transition-colors duration-300 ease-out motion-reduce:transition-none",
-  {
-    variants: {
-      orientation: {
-        // margin-top 14 + medio grosor = 15 = centro exacto del circulo de 30.
-        horizontal: "mt-[14px] h-0.5 flex-1",
-        vertical: "min-h-[28px] w-0.5 flex-1",
-      },
-      filled: { true: "bg-ink", false: "" },
+const stepConnector = cva("transition-colors duration-300 ease-out motion-reduce:transition-none", {
+  variants: {
+    orientation: {
+      // margin-top 14 + medio grosor = 15 = centro exacto del circulo de 30.
+      horizontal: "mt-[14px] h-0.5 flex-1",
+      vertical: "min-h-[28px] w-0.5 flex-1",
     },
-    defaultVariants: { orientation: "horizontal", filled: false },
+    /* El color va ENTERO en la variante, nunca `bg-edge` en la base y `bg-ink`
+       aqui: cva concatena, no fusiona, asi que las dos clases saldrian juntas en
+       el mismo atributo y quien ganara dependeria del orden en que Tailwind las
+       emita en la hoja. Hoy `.bg-edge` cae antes que `.bg-ink` por puro
+       alfabeto; renombrar el token a `bg-line` o `bg-rail` apagaria el conector
+       sin ningun error visible. */
+    filled: { true: "bg-ink", false: "bg-edge" },
   },
-);
+  defaultVariants: { orientation: "horizontal", filled: false },
+});
 
 export interface StepItem {
   /** Etiqueta corta del paso. Se escribe en capitalizacion normal, no en mayusculas. */
@@ -186,6 +198,19 @@ export interface StepsProps extends Omit<React.ComponentPropsWithoutRef<"ol">, "
   statusLabels?: Record<StepStatus, string>;
 }
 
+/* Satura un indice al rango [0, length-1].
+ *
+ * NaN se filtra a mano y no por descuido: `Math.trunc(NaN)` sigue siendo NaN y
+ * TODA comparacion con NaN es falsa, asi que un `value={NaN}` (el resultado
+ * tipico de `Number(input.value)` o de una division sin datos) atravesaba el
+ * clamp intacto, ningun paso casaba con el indice actual y la lista se quedaba
+ * entera en "pendiente" y sin aria-current. Un fallo mudo justo en lo unico que
+ * el componente comunica. Infinito no necesita caso propio: satura solo. */
+function clampIndex(value: number, length: number): number {
+  if (length <= 0 || Number.isNaN(value)) return 0;
+  return Math.min(Math.max(Math.trunc(value), 0), length - 1);
+}
+
 const DEFAULT_STATUS_LABELS: Record<StepStatus, string> = {
   done: "Completado",
   current: "Paso actual",
@@ -226,8 +251,7 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
   /* Un value fuera de rango dejaria la lista sin ningun paso actual (o con el
      ultimo conector a medias). Se satura aqui una vez y todo lo de abajo
      trabaja con un indice valido. */
-  const current =
-    steps.length === 0 ? 0 : Math.min(Math.max(Math.trunc(value), 0), steps.length - 1);
+  const current = clampIndex(value, steps.length);
 
   const resolved = steps.map<StepStatus>(
     (step, index) =>
@@ -257,20 +281,30 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
         const previousDone = index > 0 && resolved[index - 1] === "done";
         const tappable = Boolean(onStepSelect) && status === "done" && !step.disabled;
 
+        /* Glifo del circulo. El pendiente se queda VACIO en vertical y lleva
+           numero en horizontal, que es como los dibuja el archivo: ver
+           discrepancia 4 de la cabecera. */
+        const glyph =
+          status === "done" ? (
+            <CheckIcon className="size-[15px]" />
+          ) : status === "error" ? (
+            <XIcon className="size-[14px]" />
+          ) : status === "current" ? (
+            currentIndicator === "dot" ? (
+              <span className="size-[9px] rounded-full bg-ink" />
+            ) : (
+              index + 1
+            )
+          ) : isVertical ? null : (
+            index + 1
+          );
+
         /* El circulo queda oculto al lector de pantalla entero: su numero
            repite la posicion que ya da el <ol>, y el check y la x son
            decorativos. El estado se anuncia por el texto sr-only. */
         const circle = (
           <span className={stepCircle({ status })} aria-hidden="true">
-            {status === "done" ? (
-              <CheckIcon className="size-[15px]" />
-            ) : status === "error" ? (
-              <XIcon className="size-[14px]" />
-            ) : status === "current" && currentIndicator === "dot" ? (
-              <span className="size-[9px] rounded-full bg-ink" />
-            ) : (
-              index + 1
-            )}
+            {glyph}
           </span>
         );
 
@@ -301,6 +335,9 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
                     hecho, que es la misma regla vista desde el otro lado. */}
                 {!isLast && (
                   <span
+                    /* Sin rol ni texto: es una linea decorativa. El data-slot
+                       es el unico asidero estable para verificar el llenado. */
+                    data-slot="step-connector"
                     className={stepConnector({
                       orientation: "vertical",
                       filled: status === "done",
@@ -346,6 +383,7 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
           >
             {index > 0 && (
               <span
+                data-slot="step-connector"
                 className={stepConnector({ orientation: "horizontal", filled: previousDone })}
               />
             )}
@@ -393,17 +431,30 @@ export const StepsDots = React.forwardRef<HTMLDivElement, StepsDotsProps>(functi
   { className, count, value = 0, formatLabel, ...props },
   ref,
 ) {
-  const total = Math.max(Math.trunc(count), 0);
-  const current = total === 0 ? 0 : Math.min(Math.max(Math.trunc(value), 0), total - 1);
+  // Mismo filtro de NaN que en Steps: `count={NaN}` dejaba "Paso NaN de NaN".
+  const total = Number.isNaN(count) ? 0 : Math.max(Math.trunc(count), 0);
+  const current = clampIndex(value, total);
   const label = (formatLabel ?? ((c: number, t: number) => `Paso ${c} de ${t}`))(
     total === 0 ? 0 : current + 1,
     total,
   );
 
   return (
-    <div ref={ref} role="group" className={cn("flex items-center gap-2", className)} {...props}>
-      {/* Un solo texto para todo el grupo: anunciar cinco puntos uno a uno seria
-          ruido. Los puntos van aria-hidden por eso mismo. */}
+    <div
+      ref={ref}
+      /* `group` NO calcula su nombre a partir del contenido, asi que el texto
+         sr-only de dentro solo se leia al recorrer la fila: al entrar en el
+         grupo el lector anunciaba "grupo" a secas. El nombre va aqui. `role` y
+         `aria-label` van ANTES del spread para que el consumidor pueda cambiar
+         ambos si envuelve los puntos en otro patron. */
+      role="group"
+      aria-label={label}
+      className={cn("flex items-center gap-2", className)}
+      {...props}
+    >
+      {/* El texto se mantiene ademas del nombre del grupo porque un contenedor
+          cuyo contenido es todo aria-hidden se lo saltan varios lectores en modo
+          exploracion, y entonces el nombre no llega a leerse nunca. */}
       <span className="sr-only">{label}</span>
       {Array.from({ length: total }, (_, index) => (
         <span

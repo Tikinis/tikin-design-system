@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Avatar as AvatarPrimitive } from "radix-ui";
+import * as AvatarPrimitive from "radix-ui/avatar";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -28,8 +28,17 @@ import { cn } from "../lib/cn";
  *   grupo        solapado -12 sobre 40, borde de 2.5 del color del fondo
  *   contador     +N en tinta sobre superficie, Ubuntu Mono 12 sobre 40
  *
- * El prototipo solo acota el tamaño 40/48; el resto de la escala (punto,
- * solapado, texto del contador) se interpola manteniendo la misma proporcion.
+ * El prototipo solo acota los tamaños 40 y 48; el resto de la escala se
+ * interpola, pero NO toda con la misma proporcion:
+ *   - El SOLAPADO si la mantiene: -12 sobre 40 es el 30% del diametro, y toda
+ *     la escala se queda dentro de +-2 puntos de ese 30%.
+ *   - El PUNTO de estado y el TEXTO del contador se apartan hacia arriba en los
+ *     tamaños pequeños. La referencia del prototipo es punto 13 sobre 48 (27%)
+ *     y contador 12 sobre 40 (30%); aqui XS da 8 sobre 24 (33%) y 9 sobre 24
+ *     (37%). Es deliberado: por debajo de 8px el punto deja de leerse como
+ *     punto y la cifra del contador deja de ser legible. En XL pasa lo
+ *     contrario (16 sobre 64 = 25%), porque un punto proporcional ahi seria un
+ *     boton, no un indicador.
  *
  * DOS DESVIACIONES RESPECTO AL PROTOTIPO
  * --------------------------------------
@@ -142,7 +151,8 @@ export interface AvatarProps
  * `alt` o `name`, y la foto interna va con `alt=""`. De este modo el lector de
  * pantalla anuncia lo mismo tanto si la imagen carga como si cae a iniciales,
  * y nunca deletrea "V C". Sin nombre ni alt, el avatar es decorativo y se
- * marca `aria-hidden`: un placeholder gris no aporta nada que anunciar.
+ * marca `aria-hidden`: un placeholder gris no aporta nada que anunciar. Eso si,
+ * solo cuando el consumidor tampoco lo etiqueta ni le da un rol propio.
  */
 export const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   {
@@ -168,13 +178,28 @@ export const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(function Av
   const text = initials ?? (name ? initialsFromName(name) : "");
   const resolvedTone = tone ?? (name ? toneFromName(name) : "neutral");
 
+  // El consumidor tambien puede etiquetar el avatar por fuera (`aria-labelledby`,
+  // que es un mecanismo ARIA tan valido como `aria-label`) o darle un rol propio
+  // (`role="button"` con un onClick). En esos casos el elemento SI pertenece al
+  // arbol de accesibilidad: emitir aria-hidden lo sacaria de el y dejaria un
+  // control con nombre pero mudo para el lector de pantalla (WCAG 4.1.2). Como
+  // `{...props}` se aplica despues, aria-hidden no se "arregla" solo: hay que no
+  // ponerlo.
+  const etiquetadoPorFuera = props["aria-labelledby"] != null || props.role != null;
+
+  const accesibilidad: React.HTMLAttributes<HTMLSpanElement> = label
+    ? // role="img" + aria-label deja el interior fuera del arbol accesible, que
+      // es justo lo que queremos con las iniciales.
+      { role: "img", "aria-label": label }
+    : etiquetadoPorFuera
+      ? {}
+      : { "aria-hidden": true };
+
   return (
     <AvatarPrimitive.Root
       ref={ref}
       className={cn(avatarCircle({ size: resolvedSize, tone: resolvedTone, ring }), className)}
-      // role="img" + aria-label deja el interior fuera del arbol accesible, que
-      // es justo lo que queremos con las iniciales.
-      {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}
+      {...accesibilidad}
       {...props}
     >
       {/* overflow-hidden va en esta capa y no en la raiz porque el punto de
@@ -196,9 +221,18 @@ export const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(function Av
       {online ? (
         // El estado lo comunica el nombre accesible de quien lo consuma (una
         // lista de "en linea"); el punto es la señal visual, no el dato.
+        //
+        // z-10 NO es decorativo. Dentro de un AvatarGroup el punto cae justo en
+        // los 12px inferiores-derechos que tapa el avatar siguiente, que se
+        // pinta despues por orden de documento: sin el z-index, cualquier avatar
+        // "en linea" que no fuese el ultimo del grupo perdia su punto. Ni la
+        // raiz del Avatar ni el envoltorio del grupo llevan z-index, asi que
+        // ninguno crea contexto de apilado y este z-10 se resuelve contra los
+        // hermanos del grupo, que van en `auto`: el punto gana. En un avatar
+        // suelto no cambia nada.
         <span
           aria-hidden="true"
-          className="absolute right-0 bottom-0 size-[var(--tk-avatar-dot)] rounded-full bg-fg-success shadow-[0_0_0_2.5px_var(--tk-avatar-edge,var(--tk-surface))]"
+          className="absolute right-0 bottom-0 z-10 size-[var(--tk-avatar-dot)] rounded-full bg-fg-success shadow-[0_0_0_2.5px_var(--tk-avatar-edge,var(--tk-surface))]"
         />
       ) : null}
     </AvatarPrimitive.Root>

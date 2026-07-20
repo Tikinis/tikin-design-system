@@ -1,3 +1,4 @@
+import * as React from "react";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -59,6 +60,23 @@ describe("Spinner", () => {
     expect(cls).toContain("size-8");
     expect(cls).not.toContain("size-6");
   });
+
+  it("cada tono pinta su pareja de aro y cabeza, sin mezclar la del otro", () => {
+    // Las medidas no se comprueban aqui (jsdom no aplica CSS), pero que un tono
+    // no arrastre los colores del otro si es contrato de la API: si `inverse`
+    // conservara `border-t-ink`, el orden de las clases decidiria el color y el
+    // spinner del boton primario saldria con la cabeza en tinta sobre tinta.
+    const { rerender } = render(<Spinner tone="ink" />);
+    let cls = screen.getByRole("status").className;
+    expect(cls).toContain("border-edge");
+    expect(cls).toContain("border-t-ink");
+
+    rerender(<Spinner tone="inverse" />);
+    cls = screen.getByRole("status").className;
+    expect(cls).toContain("var(--tk-surface)");
+    expect(cls).not.toContain("border-t-ink");
+    expect(cls).not.toContain("border-edge");
+  });
 });
 
 describe("LoadingOverlay", () => {
@@ -85,11 +103,33 @@ describe("LoadingOverlay", () => {
     expect(screen.getByText("Cargando movimientos")).toBeInTheDocument();
   });
 
-  it("no altera el texto visible en JS", () => {
-    // El estilo mono en mayusculas del sistema se aplica por CSS. Aqui el label
-    // es prosa y debe conservar su capitalizacion tal cual.
-    render(<LoadingOverlay showLabel label="Cargando movimientos…" />);
-    expect(screen.getByText("Cargando movimientos…")).toBeInTheDocument();
+  it("showLabel saca el texto de sr-only sin duplicarlo ni transformarlo", () => {
+    // El mismo nodo cambia de clase: si en vez de eso se pintara un segundo
+    // span visible, el lector leeria la espera dos veces. Y el texto viaja
+    // intacto — cualquier mayuscula del sistema se aplica por CSS, nunca con
+    // .toUpperCase(), que romperia lo que se copia al portapapeles.
+    const { rerender } = render(<LoadingOverlay label="Cargando movimientos…" />);
+    expect(screen.getByText("Cargando movimientos…")).toHaveClass("sr-only");
+
+    rerender(<LoadingOverlay showLabel label="Cargando movimientos…" />);
+    const textos = screen.getAllByText("Cargando movimientos…");
+    expect(textos).toHaveLength(1);
+    expect(textos[0]).not.toHaveClass("sr-only");
+  });
+
+  it("el spinner interior toma su tamaño del alcance, y spinnerSize manda sobre eso", () => {
+    // Documento: pantalla completa lleva el M (24) del bloque "PANTALLA
+    // COMPLETA"; el velo por seccion, el S (16) del bloque "INLINE".
+    const aro = () => screen.getByRole("status").querySelector(".animate-spin")!;
+
+    const { rerender } = render(<LoadingOverlay scope="container" />);
+    expect(aro().className).toContain("size-4");
+
+    rerender(<LoadingOverlay scope="screen" portal={false} />);
+    expect(aro().className).toContain("size-6");
+
+    rerender(<LoadingOverlay scope="screen" portal={false} spinnerSize="l" />);
+    expect(aro().className).toContain("size-10");
   });
 
   it("por seccion se queda dentro de su contenedor", () => {
@@ -132,6 +172,68 @@ describe("LoadingOverlay", () => {
 
     unmount();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("esta en el DOM ya en el primer commit, sin esperar a un efecto", () => {
+    // Regresion: con el destino del portal resuelto en useEffect, el primer
+    // render devolvia null y la capa aparecia un fotograma tarde. En una
+    // pantalla de arranque ese fotograma es justo el que enseña la aplicacion
+    // sin tapar. Los efectos de layout corren tras insertar el DOM del commit
+    // y antes de pintar, asi que sondean exactamente ese instante.
+    let pintadoEnElPrimerCommit = false;
+    function Sonda() {
+      React.useLayoutEffect(() => {
+        pintadoEnElPrimerCommit = document.body.querySelector('[data-testid="arranque"]') !== null;
+      }, []);
+      return null;
+    }
+
+    render(
+      <>
+        <LoadingOverlay scope="screen" data-testid="arranque" />
+        <Sonda />
+      </>,
+    );
+    expect(pintadoEnElPrimerCommit).toBe(true);
+  });
+
+  it("acepta un destino de portal propio", () => {
+    // Hay hosts donde document.body no es el sitio (shadow DOM, iframe, lienzo
+    // de una prueba visual). Misma prop que Modal y Tooltip.
+    const destino = document.createElement("div");
+    document.body.appendChild(destino);
+
+    const { unmount } = render(
+      <div data-testid="host">
+        <LoadingOverlay scope="screen" container={destino} />
+      </div>,
+    );
+    const status = screen.getByRole("status");
+    expect(status.parentElement).toBe(destino);
+    // Pasar container implica portal: si no, la prop no haria nada y el bug
+    // seria mudo.
+    expect(screen.getByTestId("host")).not.toContainElement(status);
+
+    unmount();
+    destino.remove();
+  });
+
+  it("el wordmark no se anuncia junto al estado", () => {
+    // Va dentro de la region viva por maquetacion (gap 14 entre marca y aro),
+    // pero es decoracion: sin aria-hidden el lector lee "tikin Cargando".
+    render(<LoadingOverlay scope="screen" portal={false} brand="tikin" label="Cargando" />);
+    expect(screen.getByText("tikin")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("permite portar tambien el velo por seccion", () => {
+    render(
+      <div data-testid="seccion">
+        <LoadingOverlay scope="container" portal />
+      </div>,
+    );
+    const status = screen.getByRole("status");
+    expect(status.parentElement).toBe(document.body);
+    expect(screen.getByTestId("seccion")).not.toContainElement(status);
   });
 
   it("permite desactivar el portal explicitamente", () => {

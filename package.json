@@ -20,7 +20,8 @@
     "registry": "node scripts/generar-registry.mjs && shadcn build --output apps/storybook/public/r && node scripts/alias-registry.mjs apps/storybook/public/r",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "audit:visual": "pnpm build:storybook && node scripts/auditar-stories.mjs apps/storybook/storybook-static"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",

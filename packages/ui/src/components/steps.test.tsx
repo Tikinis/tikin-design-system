@@ -5,9 +5,18 @@ import { Steps, StepsDots, type StepItem } from "./steps";
 
 /* Estos tests cubren COMPORTAMIENTO, no apariencia. La geometria (circulo 30,
  * conector 2px, columna 100, pildora 24x8) se verifica contra el navegador, no
- * aqui: jsdom no aplica CSS, asi que comprobar clases seria tautologico. */
+ * aqui: jsdom no aplica CSS, asi que comprobar clases seria tautologico.
+ *
+ * El color del conector si se mira aqui, y no es una excepcion caprichosa:
+ * llenarlo o no es la regla central del componente y es logica condicional, no
+ * medida. Lo unico que se afirma es cual de las dos clases sale, nunca que pinte
+ * dos pixeles. */
 
 const STEPS: StepItem[] = [{ label: "Monto" }, { label: "Destino" }, { label: "Confirmar" }];
+
+/** Los conectores no tienen rol ni texto: se buscan por su data-slot. */
+const conectores = () =>
+  Array.from(document.querySelectorAll<HTMLElement>("[data-slot='step-connector']"));
 
 describe("Steps", () => {
   it("es una lista ordenada de verdad, con un item por paso", () => {
@@ -63,6 +72,57 @@ describe("Steps", () => {
 
     rerender(<Steps steps={STEPS} value={-5} aria-label="Progreso" />);
     expect(screen.getAllByRole("listitem")[0]).toHaveAttribute("aria-current", "step");
+  });
+
+  it("no se queda sin paso actual con un value que no es numero", () => {
+    // `Number(campo.value)` sobre un campo vacio devuelve NaN, y NaN atravesaba
+    // el clamp entero: ninguna comparacion casaba, la lista quedaba toda
+    // "pendiente" y sin aria-current, sin ningun error que lo delatara.
+    render(<Steps steps={STEPS} value={Number.NaN} aria-label="Progreso" />);
+    const items = screen.getAllByRole("listitem");
+    expect(items[0]).toHaveAttribute("aria-current", "step");
+    expect(items[0]).toHaveTextContent("Paso actual");
+  });
+
+  it("llena el conector cuando el paso de su izquierda esta hecho, y solo entonces", () => {
+    // Es la regla central del componente. Las dos clases de color viven en la
+    // misma variante a proposito: si `bg-edge` volviera a la base de cva, las
+    // dos saldrian juntas y quien ganara dependeria del orden de la hoja de
+    // Tailwind, no del estado.
+    render(<Steps steps={STEPS} value={1} aria-label="Progreso" />);
+
+    // value=1: Monto hecho, Destino actual. Conector 1 (Monto→Destino) lleno,
+    // conector 2 (Destino→Confirmar) vacio.
+    const [primero, segundo] = conectores();
+    expect(conectores()).toHaveLength(2);
+
+    expect(primero).toHaveClass("bg-ink");
+    expect(primero).not.toHaveClass("bg-edge");
+
+    expect(segundo).toHaveClass("bg-edge");
+    expect(segundo).not.toHaveClass("bg-ink");
+  });
+
+  it("un paso con error no llena su conector: el error no hace avanzar el flujo", () => {
+    render(
+      <Steps
+        steps={[{ label: "Monto" }, { label: "Destino", status: "error" }, { label: "Confirmar" }]}
+        value={1}
+        aria-label="Progreso"
+      />,
+    );
+    const [primero, segundo] = conectores();
+    expect(primero).toHaveClass("bg-ink");
+    expect(segundo).toHaveClass("bg-edge");
+  });
+
+  it("en vertical el conector cuelga del paso hecho, con la misma regla", () => {
+    render(<Steps steps={STEPS} value={1} orientation="vertical" aria-label="Progreso" />);
+    const [primero, segundo] = conectores();
+    // El ultimo paso no lleva conector detras en ninguno de los dos ejes.
+    expect(conectores()).toHaveLength(2);
+    expect(primero).toHaveClass("bg-ink");
+    expect(segundo).toHaveClass("bg-edge");
   });
 
   it("sin onStepSelect no renderiza ningun boton: es salida, no control", () => {
@@ -138,6 +198,46 @@ describe("Steps", () => {
     expect(screen.queryByText("$250.000 COP")).not.toBeInTheDocument();
   });
 
+  it("en vertical el paso pendiente deja el anillo vacio, sin numero", () => {
+    // Asi lo dibuja el bloque VERTICAL del documento: alli la etiqueta es un
+    // titulo de 15 que ya ordena la lista, y el numero solo compite con el. En
+    // horizontal la etiqueta es mono 11 y el numero si aporta.
+    const { rerender } = render(
+      <Steps steps={STEPS} value={1} orientation="vertical" aria-label="Progreso" />,
+    );
+    expect(screen.queryByText("3")).not.toBeInTheDocument();
+
+    rerender(<Steps steps={STEPS} value={1} orientation="horizontal" aria-label="Progreso" />);
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  it("currentIndicator=number pinta la cifra del paso actual en vez del punto", () => {
+    // Reproduce el ejemplo horizontal del documento, que dibuja el "2" dentro
+    // del anillo. Por defecto gana el punto y no hay cifra que encontrar.
+    const { rerender } = render(<Steps steps={STEPS} value={1} aria-label="Progreso" />);
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+
+    rerender(<Steps steps={STEPS} value={1} currentIndicator="number" aria-label="Progreso" />);
+    expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("statusLabels sustituye los textos que lee el lector de pantalla", () => {
+    render(
+      <Steps
+        steps={STEPS}
+        value={1}
+        statusLabels={{ done: "Listo", current: "Aqui estas", pending: "Falta", error: "Falló" }}
+        aria-label="Progreso"
+      />,
+    );
+    const items = screen.getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("Listo");
+    expect(items[1]).toHaveTextContent("Aqui estas");
+    expect(items[2]).toHaveTextContent("Falta");
+    // Y el texto por defecto desaparece del todo, no se acumula.
+    expect(screen.queryByText("Completado")).not.toBeInTheDocument();
+  });
+
   it("en vertical los pasos hechos tambien son tocables", async () => {
     const onStepSelect = vi.fn();
     render(
@@ -178,6 +278,25 @@ describe("StepsDots", () => {
     render(<StepsDots count={5} value={2} />);
     // Anunciar cinco puntos uno a uno seria ruido: van todos aria-hidden.
     expect(screen.getByRole("group")).toHaveTextContent("Paso 3 de 5");
+  });
+
+  it("el grupo tiene nombre accesible, no solo texto dentro", () => {
+    // `group` no calcula su nombre a partir del contenido: sin aria-label el
+    // lector anunciaba "grupo" a secas al entrar. toHaveTextContent pasaba
+    // igualmente, por eso hace falta preguntar por el nombre.
+    render(<StepsDots count={5} value={2} />);
+    expect(screen.getByRole("group", { name: "Paso 3 de 5" })).toBeInTheDocument();
+  });
+
+  it("el consumidor puede renombrar el grupo", () => {
+    // aria-label va antes del spread: el de fuera manda.
+    render(<StepsDots count={3} value={0} aria-label="Onboarding" />);
+    expect(screen.getByRole("group", { name: "Onboarding" })).toBeInTheDocument();
+  });
+
+  it("un count que no es numero no produce un texto roto", () => {
+    render(<StepsDots count={Number.NaN} />);
+    expect(screen.getByRole("group", { name: "Paso 0 de 0" })).toBeInTheDocument();
   });
 
   it("satura el valor y admite un formato propio", () => {

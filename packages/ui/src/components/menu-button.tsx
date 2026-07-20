@@ -1,5 +1,6 @@
 import * as React from "react";
-import { DropdownMenu, ToggleGroup } from "radix-ui";
+import * as DropdownMenu from "radix-ui/dropdown-menu";
+import * as ToggleGroup from "radix-ui/toggle-group";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -371,7 +372,16 @@ export const SplitButton = React.forwardRef<HTMLDivElement, SplitButtonProps>(fu
   ref,
 ) {
   return (
-    <div ref={ref} className={cn("inline-flex w-fit items-stretch", className)} {...props}>
+    /* role="group" ata los dos segmentos: sin el, el lector los anuncia como
+       dos botones sueltos y "Más opciones" no se entiende referido a "Enviar".
+       Va ANTES del spread para que el consumidor pueda cambiarlo, y el nombre
+       del grupo lo pone el con aria-label/aria-labelledby por la misma via. */
+    <div
+      ref={ref}
+      role="group"
+      className={cn("inline-flex w-fit items-stretch", className)}
+      {...props}
+    >
       <button
         type="button"
         disabled={disabled}
@@ -470,13 +480,36 @@ const buttonGroupItem = cva(
   },
 );
 
+/* Primer `value` no vacio del arbol de hijos. Sirve para arrancar el grupo con
+   una activa cuando el consumidor no pasa `defaultValue`: el documento dice
+   "siempre hay exactamente una activa", y eso incluye el primer pintado.
+   Baja por fragmentos y envoltorios porque los items casi nunca son hijos
+   directos —suelen venir de un .map() dentro de un <> o de un wrapper—. */
+function primerValorDeItem(children: React.ReactNode): string | undefined {
+  let encontrado: string | undefined;
+  React.Children.forEach(children, (child) => {
+    if (encontrado !== undefined) return;
+    if (!React.isValidElement(child)) return;
+    const props = child.props as { value?: unknown; children?: React.ReactNode };
+    if (typeof props.value === "string" && props.value !== "") {
+      encontrado = props.value;
+      return;
+    }
+    if (props.children !== undefined) encontrado = primerValorDeItem(props.children);
+  });
+  return encontrado;
+}
+
 export interface ButtonGroupProps extends Omit<
   React.ComponentPropsWithoutRef<typeof ToggleGroup.Root>,
   "type" | "value" | "defaultValue" | "onValueChange"
 > {
   /** Valor activo. Controlado. */
   value?: string;
-  /** Valor activo inicial. No controlado. */
+  /**
+   * Valor activo inicial. No controlado. Si se omite arranca activo el primer
+   * `ButtonGroupItem`, porque el grupo nunca se pinta sin opcion activa.
+   */
   defaultValue?: string;
   /** Recibe siempre un valor: el grupo nunca se queda sin opcion activa. */
   onValueChange?: (value: string) => void;
@@ -487,10 +520,14 @@ export interface ButtonGroupProps extends Omit<
  * Segmentado de 2-4 opciones exclusivas de vista o filtro — DIA / SEMANA / MES.
  * Nunca acciones: para eso estan `MenuButton` y `SplitButton`.
  *
- * Siempre hay exactamente una activa. Por eso el estado se controla aqui dentro
- * aunque el consumidor lo use sin `value`: Radix ToggleGroup en modo `single`
- * permite desmarcar la activa (emite ""), y su estado interno cambiaria aunque
- * ignorasemos el evento. Interceptando el "" el grupo no puede quedarse vacio.
+ * Siempre hay exactamente una activa, y eso son dos cosas distintas:
+ *   - Al arrancar: sin `value` ni `defaultValue` se activa el primer item, en
+ *     lugar de pintar un radiogroup sin ninguna opcion marcada.
+ *   - Al usarlo: Radix ToggleGroup en modo `single` permite desmarcar la activa
+ *     (emite ""), y su estado interno cambiaria aunque ignorasemos el evento.
+ *     Por eso el estado vive aqui dentro y el "" se descarta.
+ *
+ * En modo controlado el valor lo manda el padre, tambien si decide vaciarlo.
  */
 export const ButtonGroup = React.forwardRef<
   React.ComponentRef<typeof ToggleGroup.Root>,
@@ -499,7 +536,11 @@ export const ButtonGroup = React.forwardRef<
   { className, size = "m", value, defaultValue, onValueChange, disabled, children, ...props },
   ref,
 ) {
-  const [uncontrolled, setUncontrolled] = React.useState(defaultValue ?? "");
+  // Inicializador perezoso: el primer item solo se busca en el primer render,
+  // asi que reordenar o añadir items despues no mueve la activa del usuario.
+  const [uncontrolled, setUncontrolled] = React.useState(
+    () => defaultValue || primerValorDeItem(children) || "",
+  );
   const isControlled = value !== undefined;
   const current = isControlled ? value : uncontrolled;
 

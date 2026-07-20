@@ -93,6 +93,37 @@ describe("Card", () => {
     expect(card).toHaveAttribute("tabindex", "-1");
   });
 
+  /* Nombrar la tarjeta y poder usarla son dos cosas distintas: un role propio
+     apagaba tambien el foco y el teclado, y quedaba un div con cursor-pointer
+     fuera del orden de tabulacion. */
+  it("con un role propio sigue siendo enfocable y activable con Enter", () => {
+    const onClick = vi.fn();
+    render(
+      <Card interactive role="link" onClick={onClick}>
+        Ir a bolsillos
+      </Card>,
+    );
+    const card = screen.getByRole("link", { name: "Ir a bolsillos" });
+    expect(card).toHaveAttribute("tabindex", "0");
+
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("no roba el Espacio cuando el rol no es de boton", () => {
+    const onClick = vi.fn();
+    render(
+      <Card interactive role="link" onClick={onClick}>
+        Ir
+      </Card>,
+    );
+    // Ningun navegador activa un enlace con Espacio, y quitarselo al usuario
+    // le costaria el scroll de pagina a cambio de nada.
+    const noCancelado = fireEvent.keyDown(screen.getByRole("link"), { key: " " });
+    expect(onClick).not.toHaveBeenCalled();
+    expect(noCancelado).toBe(true);
+  });
+
   it("conserva el onKeyDown del consumidor", () => {
     const onKeyDown = vi.fn();
     render(
@@ -114,6 +145,40 @@ describe("Card", () => {
     const cls = screen.getByTestId("card").className;
     expect(cls).toContain("rounded-none");
     expect(cls).not.toContain("rounded-2xl");
+  });
+
+  /* Segunda excepcion deliberada a "comportamiento, no apariencia": es el unico
+     punto donde el ORDEN de CVA es load-bearing. El pressed generico pinta
+     hueso, que sobre la tarjeta de tinta la borraria; el compoundVariant lo
+     invierte a ink-strong y depende de salir DESPUES en la cadena para que
+     tailwind-merge se quede con el. */
+  it("sobre tinta el pressed sube a ink-strong en vez de aclararse a hueso", () => {
+    render(
+      <Card surface="ink" interactive data-testid="card">
+        Saldo
+      </Card>,
+    );
+    const cls = screen.getByTestId("card").className;
+    expect(cls).toContain("active:bg-ink-strong");
+    expect(cls).not.toContain("active:bg-page");
+  });
+
+  /* El cambio de borde solo tiene donde caer en la superficie que lleva borde:
+     en muted y en ink el preflight deja border-width:0 y la clase era muerta. */
+  it("solo declara el cambio de borde en la superficie que tiene borde", () => {
+    const { rerender } = render(
+      <Card interactive data-testid="card">
+        Mi bolsillo
+      </Card>,
+    );
+    expect(screen.getByTestId("card").className).toContain("hover:border-edge-2");
+
+    rerender(
+      <Card surface="muted" interactive data-testid="card">
+        Mi bolsillo
+      </Card>,
+    );
+    expect(screen.getByTestId("card").className).not.toContain("border-edge-2");
   });
 });
 
@@ -184,6 +249,18 @@ describe("CardMedia", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
+  /* Este test lo hace el COMPILADOR: el @ts-expect-error falla si algun dia
+     `action` vuelve a aceptarse sin `actionLabel`. El cuerpo solo enseña que
+     pasa cuando se cuela: un boton circular con un svg decorativo dentro es,
+     para un lector de pantalla, "boton" y nada mas. */
+  it("no deja pasar una accion sin nombre accesible", () => {
+    render(
+      // @ts-expect-error `action` sin `actionLabel` deja el boton anonimo
+      <CardMedia title="Tu tarjeta" action={<svg aria-hidden="true" />} />,
+    );
+    expect(screen.getByRole("button")).toHaveAccessibleName("");
+  });
+
   /* Excepcion deliberada a "los tests cubren comportamiento, no apariencia":
    * aqui la clase ES el contrato. La media card mezclaba dos regimenes de
    * color — un fondo que se invertia con el tema (surface="ink") bajo un
@@ -242,6 +319,55 @@ describe("CardStat", () => {
     expect(screen.getByText("Ahorro del mes")).toBeInTheDocument();
   });
 
+  /* La tendencia no puede viajar solo en el color de la pildora: sin este
+     texto, "8.1%" a la baja y "8.1%" al alza se leen igual en voz alta y se ven
+     igual en escala de grises. El icono no lo resuelve — es opcional y va
+     aria-hidden. */
+  it("dice la tendencia con palabras, no solo con el color", () => {
+    // getByText compara solo los nodos de texto propios, asi que devuelve la
+    // pildora; toHaveTextContent si mira dentro, sr-only incluido.
+    const { rerender } = render(<CardStat label="Gastos" value="$ 312.000" delta="8.1%" />);
+    expect(screen.getByText("8.1%")).toHaveTextContent("al alza 8.1%");
+
+    rerender(<CardStat label="Gastos" value="$ 312.000" delta="8.1%" trend="down" />);
+    expect(screen.getByText("8.1%")).toHaveTextContent("a la baja 8.1%");
+
+    rerender(<CardStat label="Gastos" value="$ 312.000" delta="8.1%" trend="flat" />);
+    expect(screen.getByText("8.1%")).toHaveTextContent("sin cambio 8.1%");
+  });
+
+  it("deja sustituir o silenciar ese texto cuando el delta ya lo dice", () => {
+    const { rerender } = render(
+      <CardStat label="Gastos" value="$ 312.000" delta="8.1%" trend="down" trendLabel="cae un" />,
+    );
+    expect(screen.getByText("8.1%")).toHaveTextContent("cae un 8.1%");
+
+    rerender(
+      <CardStat
+        label="Gastos"
+        value="$ 312.000"
+        delta="-8.1% este mes"
+        trend="down"
+        trendLabel=""
+      />,
+    );
+    // Nada delante: el delta ya lo dice con palabras y repetirlo seria ruido.
+    expect(screen.getByText("-8.1% este mes")).toHaveTextContent(/^-8\.1% este mes$/);
+  });
+
+  /* La pildora es el unico sitio del componente donde el color depende de una
+     prop, y con `trend` mal cableado los tres casos se pintarian igual. */
+  it("colorea la pildora segun la tendencia", () => {
+    const { rerender } = render(<CardStat label="Gastos" value="$ 1" delta="8.1%" trend="up" />);
+    expect(screen.getByText("8.1%").className).toContain("bg-tint-success");
+
+    rerender(<CardStat label="Gastos" value="$ 1" delta="8.1%" trend="down" />);
+    expect(screen.getByText("8.1%").className).toContain("bg-tint-error");
+
+    rerender(<CardStat label="Gastos" value="$ 1" delta="8.1%" trend="flat" />);
+    expect(screen.getByText("8.1%").className).toContain("bg-surface-2");
+  });
+
   it("sin delta no pinta la pildora de tendencia", () => {
     render(<CardStat data-testid="card" label="Saldo" value="$ 10" trend="down" />);
     expect(screen.getByTestId("card")).toHaveTextContent("$ 10");
@@ -287,5 +413,24 @@ describe("CardMedia · anillo de foco", () => {
        con anchura 0 no hay banda que pintar. Se afirma aqui para que quede
        claro que es sabido y no un descuido. */
     expect(clases).toContain("focus-visible:ring-offset-0");
+  });
+
+  /* El boton de la esquina flota sobre una fotografia arbitraria: un anillo de
+     un solo tono desaparece en cuanto la foto se le parece, y el caso normal de
+     una tarjeta de promocion es una foto clara. */
+  it("da al boton de accion un anillo de dos tonos, no uno solo", () => {
+    render(
+      <CardMedia
+        title="Tu tarjeta"
+        action={<svg aria-hidden="true" />}
+        actionLabel="Ver detalle"
+      />,
+    );
+    const clases = screen.getByRole("button", { name: "Ver detalle" }).className;
+
+    expect(clases).toContain("focus-visible:ring-surface");
+    // El hueco en tinta es el que garantiza el contraste sobre foto clara.
+    expect(clases).toContain("focus-visible:ring-offset-2");
+    expect(clases).toContain("focus-visible:ring-offset-ink");
   });
 });

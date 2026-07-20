@@ -123,12 +123,121 @@ describe("Chip", () => {
     );
     const botones = screen.getAllByRole("button");
     expect(botones).toHaveLength(1);
-    expect(botones[0]).toHaveAccessibleName("Quitar");
+    expect(botones[0]).toHaveAccessibleName("Quitar Bolsillo · Arriendo");
     // El unico <button> del arbol no puede tener otro <button> dentro.
     expect(botones[0]?.querySelector("button")).toBeNull();
 
     await userEvent.click(botones[0]!);
     expect(onRemove).toHaveBeenCalledTimes(1);
+    // El onClick que se pidio junto a onRemove queda huerfano: el contenedor
+    // es un span y colgarselo lo haria pulsable solo con raton.
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("no cuelga onClick de un contenedor que no es boton", async () => {
+    const onClick = vi.fn();
+    render(
+      <>
+        <Chip variant="value" onClick={onClick} data-testid="valor">
+          Arriendo
+        </Chip>
+        <Chip tone="info" onClick={onClick} data-testid="feedback">
+          Info
+        </Chip>
+      </>,
+    );
+
+    for (const id of ["valor", "feedback"]) {
+      const chip = screen.getByTestId(id);
+      // Un span clickeable sin rol ni tabindex es alcanzable con raton e
+      // inalcanzable con teclado: la trampa se corta descartando el manejador.
+      expect(chip.tagName).toBe("SPAN");
+      expect(chip).not.toHaveAttribute("tabindex");
+      await userEvent.click(chip);
+    }
+    expect(onClick).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("el chip deshabilitado que no es boton lo dice y lo parece", () => {
+    render(
+      <Chip variant="action" disabled onRemove={() => {}} data-testid="chip">
+        Arriendo
+      </Chip>,
+    );
+    const chip = screen.getByTestId("chip");
+    // Baja a span por el onRemove, asi que ni :disabled ni el atributo existen.
+    expect(chip.tagName).toBe("SPAN");
+    expect(chip).toHaveAttribute("aria-disabled", "true");
+    // Sin esto el span conservaba cursor-pointer y el hover de la variante,
+    // porque hover:not-disabled: siempre casa en un elemento sin :disabled.
+    expect(chip.className).toContain("cursor-not-allowed");
+    expect(chip.className).not.toContain("cursor-pointer");
+    expect(chip.className).not.toContain("hover:not-disabled:bg-surface-2");
+  });
+
+  it("el chip habilitado no se anuncia como deshabilitado", () => {
+    render(
+      <Chip variant="value" onRemove={() => {}} data-testid="chip">
+        Arriendo
+      </Chip>,
+    );
+    expect(screen.getByTestId("chip")).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("el className del consumidor gana al anillo de foco y al apagado", () => {
+    render(
+      <>
+        <Chip variant="action" className="focus-visible:ring-offset-surface" data-testid="foco">
+          Agregar
+        </Chip>
+        <Chip
+          variant="value"
+          disabled
+          onRemove={() => {}}
+          className="cursor-default"
+          data-testid="apagado"
+        >
+          Arriendo
+        </Chip>
+      </>,
+    );
+    // El anillo y el estado apagado se pintan antes que className, si no el
+    // consumidor no podria repintarlos.
+    const foco = screen.getByTestId("foco").className;
+    expect(foco).toContain("focus-visible:ring-offset-surface");
+    expect(foco).not.toContain("focus-visible:ring-offset-page");
+
+    const apagado = screen.getByTestId("apagado").className;
+    expect(apagado).toContain("cursor-default");
+    expect(apagado).not.toContain("cursor-not-allowed");
+  });
+
+  it("deriva el nombre del boton de quitar del label", () => {
+    const { rerender } = render(
+      <Chip variant="value" onRemove={() => {}}>
+        Bolsillo · Arriendo
+      </Chip>,
+    );
+    // Varios chips removibles conviven en una fila de filtros aplicados: con
+    // "Quitar" a secas el lector no distingue cual quita que.
+    expect(screen.getByRole("button")).toHaveAccessibleName("Quitar Bolsillo · Arriendo");
+
+    // Un label que no es texto plano no puede derivarse: vuelve al generico.
+    rerender(
+      <Chip variant="value" onRemove={() => {}}>
+        <span>Arriendo</span>
+      </Chip>,
+    );
+    expect(screen.getByRole("button")).toHaveAccessibleName("Quitar");
+
+    // Y removeLabel siempre manda.
+    rerender(
+      <Chip variant="value" onRemove={() => {}} removeLabel="Quitar el filtro de arriendo">
+        Bolsillo · Arriendo
+      </Chip>,
+    );
+    expect(screen.getByRole("button")).toHaveAccessibleName("Quitar el filtro de arriendo");
   });
 
   it("el boton de quitar se alcanza y se activa con teclado", async () => {
@@ -153,7 +262,7 @@ describe("Chip", () => {
         Arriendo
       </Chip>,
     );
-    const quitar = screen.getByRole("button", { name: "Quitar" });
+    const quitar = screen.getByRole("button", { name: "Quitar Arriendo" });
     expect(quitar).toBeDisabled();
     await userEvent.click(quitar);
     expect(onRemove).not.toHaveBeenCalled();

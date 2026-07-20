@@ -2,6 +2,7 @@ import * as React from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import * as PopoverPrimitive from "radix-ui/popover";
 import { FilterChip, type FilterOption } from "./filter-chip";
 
 beforeAll(() => {
@@ -98,9 +99,26 @@ describe("FilterChip", () => {
   });
 
   it("no pone el label en mayusculas en JS, solo por CSS", () => {
-    // Importa para el texto accesible y para lo que se copia al portapapeles.
+    /* Lo que se comprueba es el DOM: el texto llega tal cual se escribio, que es
+       lo que se copia al portapapeles y lo que lee quien inspeccione el nodo.
+       NO es una garantia de accesibilidad — Chromium y WebKit meten el
+       `text-transform` en el nombre accesible — sino de que la caja vive en la
+       hoja de estilos y no en el JS. */
     render(<FilterChip>Filtrar por estado</FilterChip>);
     expect(screen.getByRole("button")).toHaveTextContent("Filtrar por estado");
+  });
+
+  it("respeta un type explicito en vez de forzar button", async () => {
+    // El `type ?? "button"` es un valor por defecto, no un candado: si el
+    // consumidor pide submit, el chip envia.
+    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <FilterChip type="submit">Filter</FilterChip>
+      </form>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /filter/i }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it("deshabilitado no dispara onClick ni es alcanzable con Tab", async () => {
@@ -142,6 +160,55 @@ describe("FilterChip", () => {
     const ref = React.createRef<HTMLButtonElement>();
     render(<FilterChip ref={ref}>Filter</FilterChip>);
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+  });
+});
+
+/* Sin `options` el chip es solo el disparador y el panel lo pone el consumidor.
+ * El modo recomendado es componerlo con Popover.Trigger asChild: entonces la
+ * relacion disparador-panel — aria-controls incluido — la cablea Radix. Esto
+ * exige forwardRef y que los aria propios vayan ANTES del spread de props, asi
+ * que el test protege las dos cosas. */
+describe("FilterChip · disparador de un panel ajeno", () => {
+  it("compone con Popover.Trigger asChild y deja que Radix cablee la relacion", async () => {
+    render(
+      <PopoverPrimitive.Root>
+        <PopoverPrimitive.Trigger asChild>
+          <FilterChip>Filter</FilterChip>
+        </PopoverPrimitive.Trigger>
+        <PopoverPrimitive.Portal>
+          <PopoverPrimitive.Content>Panel del consumidor</PopoverPrimitive.Content>
+        </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>,
+    );
+
+    const chip = screen.getByRole("button", { name: /filter/i });
+    expect(chip).toHaveAttribute("aria-haspopup", "dialog");
+    expect(chip).toHaveAttribute("aria-expanded", "false");
+    // data-state, para que el consumidor pueda estilar en sincronia.
+    expect(chip).toHaveAttribute("data-state", "closed");
+
+    await userEvent.click(chip);
+    const panel = await screen.findByRole("dialog");
+    expect(panel).toHaveTextContent("Panel del consumidor");
+    expect(chip).toHaveAttribute("aria-expanded", "true");
+    /* La relacion disparador-panel, que es lo que el chip solo no puede cablear:
+       Radix la publica mientras el panel esta montado. */
+    expect(chip.getAttribute("aria-controls")).toBe(panel.id);
+    expect(chip).toHaveAttribute("data-state", "open");
+  });
+
+  it("los aria que pone el consumidor ganan a los del chip", async () => {
+    // Panel propio del consumidor, sin Radix: el chip no puede conocer su id,
+    // asi que aria-controls tiene que poder entrar por props.
+    render(
+      <FilterChip open aria-controls="mi-panel" aria-haspopup="listbox">
+        Filter
+      </FilterChip>,
+    );
+    const chip = screen.getByRole("button");
+    expect(chip).toHaveAttribute("aria-controls", "mi-panel");
+    expect(chip).toHaveAttribute("aria-haspopup", "listbox");
+    expect(chip).toHaveAttribute("aria-expanded", "true");
   });
 });
 

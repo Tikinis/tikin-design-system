@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cva } from "class-variance-authority";
 import { cn } from "../lib/cn";
+import { Keypad, type KeypadKey } from "./keypad";
 
 /* Seccion 44 · PIN — MIXTO.
  *
@@ -24,6 +25,14 @@ import { cn } from "../lib/cn";
  *                       documento suelen venir ampliadas respecto al canon.
  *                       La separacion de los puntos SI se toma del bloque
  *                       canonico (12), no de la demo (16).
+ *                       Esas medidas son EXACTAMENTE las del componente
+ *                       `Keypad` de este mismo directorio, asi que el teclado
+ *                       del PIN no se redibuja: se COMPONE. Copiarlo garantizaba
+ *                       que divergieran (y ya divergian: faltaban `w-full` y
+ *                       `leading-none`) y dejaba fuera lo que el teclado del
+ *                       sistema ya resuelve — rejilla con nombre accesible,
+ *                       foco itinerante, flechas y hueco de esquina oculto al
+ *                       lector.
  *
  * TRES REGLAS DE USO QUE MANDAN SOBRE LA APARIENCIA
  * -------------------------------------------------
@@ -108,17 +117,6 @@ const pinPunto = cva(
   },
 );
 
-const pinTecla = cva([
-  "flex h-[52px] items-center justify-center rounded-lg",
-  // Las cifras van en DM Mono: es la familia de numeros del sistema y ademas
-  // asegura que todas las teclas ocupen lo mismo.
-  "font-num text-[22px] font-medium text-ink",
-  "cursor-pointer transition-colors duration-140 ease-out select-none",
-  "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
-  "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
-  "disabled:cursor-not-allowed disabled:text-ink-500",
-]);
-
 const pinBiometria = cva([
   "inline-flex h-control-m items-center gap-2 rounded-md px-4",
   // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
@@ -137,28 +135,10 @@ const tonoMensaje = {
 } as const;
 
 /* Iconos dibujados a mano. packages/ui no depende de @phosphor-icons y este
- * encargo no puede añadir dependencias; el prototipo usa ph-backspace y
- * ph-fill ph-fingerprint. Heredan currentColor y van ocultos al lector: el
- * nombre accesible lo pone el aria-label de cada boton. */
-function BorrarGlifo() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="22"
-      height="22"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9L3 12z" />
-      <path d="m17 9-6 6M11 9l6 6" />
-    </svg>
-  );
-}
-
+ * encargo no puede añadir dependencias; el prototipo usa ph-fill ph-fingerprint.
+ * Heredan currentColor y van ocultos al lector: el nombre accesible lo pone el
+ * aria-label de cada boton. El glifo de borrar ya no vive aqui: lo pone `Keypad`
+ * con su propia tecla. */
 function HuellaGlifo() {
   return (
     <svg
@@ -222,8 +202,6 @@ function soloDigitos(texto: string): string {
   return texto.replace(/\D/g, "");
 }
 
-const TECLAS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
-
 export type PinFeedback = "default" | "error" | "success";
 
 export interface PinInputProps extends Omit<React.ComponentPropsWithoutRef<"div">, "onChange"> {
@@ -273,6 +251,15 @@ export interface PinInputProps extends Omit<React.ComponentPropsWithoutRef<"div"
   disabled?: boolean;
   /** Nombre del campo real, por si el PIN viaja dentro de un formulario. */
   name?: string;
+  /**
+   * Pista de autorrelleno del campo real.
+   *
+   * Por defecto `current-password`, no `one-time-code`: esto es la clave de
+   * acceso de la app, no un codigo de un solo uso — con la pista de OTP el
+   * sistema ofrece el ultimo SMS en vez de la clave guardada. Para pedir una
+   * clave nueva pasa `new-password`, y para un OTP de verdad usa `OtpInput`.
+   */
+  autoComplete?: string;
   autoFocus?: boolean;
   /** Nombre accesible cuando no hay `label` visible. */
   "aria-label"?: string;
@@ -308,6 +295,7 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
     errorClearDelay = RETARDO_LIMPIEZA_ERROR,
     disabled = false,
     name,
+    autoComplete = "current-password",
     autoFocus,
     onKeyDown,
     "aria-label": ariaLabel,
@@ -413,9 +401,12 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
     campoRef.current?.focus();
   };
 
-  /* Las teclas en pantalla son botones de verdad, asi que entran en el orden de
-   * tabulacion. Con el foco en una de ellas, teclear una cifra en el teclado
-   * fisico no llegaria al campo: este handler lo reencamina. */
+  /* Las teclas en pantalla y la biometria son botones de verdad y pueden tener
+   * el foco. Con el foco fuera del campo, teclear una cifra en el teclado
+   * fisico no llegaria a el: este handler lo reencamina. Dentro de la rejilla
+   * la cifra ya la consume `Keypad`, que hace preventDefault; por eso lo
+   * primero que se mira aqui es `defaultPrevented`, para no escribirla dos
+   * veces. */
   const alPulsarTeclaEnRaiz = (evento: React.KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(evento);
     if (disabled || evento.defaultPrevented) return;
@@ -431,10 +422,28 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
     }
   };
 
+  /* El veredicto es sobre un intento COMPLETO, asi que solo pinta mientras la
+   * clave sigue llena. En cuanto se vacia — la limpieza automatica del error, o
+   * un borrado a mano — vuelven el lleno y el vacio de siempre.
+   *
+   * Sin esta condicion, `feedback="error"` teñia los cuatro puntos de rojo
+   * pasara lo que pasara: tras la autolimpieza seguian en rojo y el usuario
+   * reescribia su clave a ciegas, porque teclear no movia ningun punto. El
+   * componente limpiaba el valor pero no salia del estado visual de error, y
+   * salir de el dependia de que el consumidor devolviera `feedback` a
+   * "default". Con "success" pasaba lo mismo al reves: cuatro puntos verdes con
+   * la clave vacia. La reaccion al error — shake y limpieza — sigue colgando de
+   * la transicion; esto es solo el pintado. */
+  const veredictoVigente = pin.length === length;
+
+  /** Un ReactNode vacio no es mensaje: ni pinta iconos ni describe al campo. */
+  const hayMensaje = hint != null && hint !== "";
+
   const estadoDelPunto = (indice: number) => {
-    if (feedback === "error") return "error" as const;
-    if (feedback === "success") return "exito" as const;
-    return indice < pin.length ? ("lleno" as const) : ("vacio" as const);
+    if (indice >= pin.length) return "vacio" as const;
+    if (veredictoVigente && feedback === "error") return "error" as const;
+    if (veredictoVigente && feedback === "success") return "exito" as const;
+    return "lleno" as const;
   };
 
   return (
@@ -474,14 +483,15 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
           // Con teclado propio, `none` evita que el del sistema lo tape sin
           // dejar el campo de solo lectura: pegar y autorrellenar siguen vivos.
           inputMode={keypad ? "none" : "numeric"}
-          autoComplete="one-time-code"
+          autoComplete={autoComplete}
           autoFocus={autoFocus}
           disabled={disabled}
-          /* `maxLength` solo mientras NO se esta reintentando. Con el limite
-             puesto el navegador se come la pulsacion cuando el campo esta
-             lleno y `onChange` ni se dispara, asi que no habria forma de
-             detectar que el usuario quiere empezar de nuevo. */
-          maxLength={reintentando ? undefined : length}
+          /* Sin `maxLength`. El navegador lo aplica sobre el texto EN CRUDO,
+             antes de que `soloDigitos` quite lo que no es cifra: con un limite
+             de 4, pegar "12-34" se truncaba a "12-3" y entraban tres digitos.
+             El filtrado y el recorte ya los hace `aplicarValor`, asi que el
+             atributo solo aportaba ese truncado prematuro — y ademas se comia
+             la pulsacion con el campo lleno, dejando sin señal el reintento. */
           value={pin}
           onChange={(evento) => {
             const crudo = soloDigitos(evento.target.value);
@@ -492,7 +502,10 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
           }}
           aria-label={label === undefined ? (ariaLabel ?? "Clave de acceso") : undefined}
           aria-labelledby={label !== undefined ? idEtiqueta : undefined}
-          aria-describedby={idMensaje}
+          /* Solo cuando hay algo que describir: el hueco del mensaje se reserva
+             siempre, y apuntar a un elemento vacio hace que el lector anuncie
+             el campo con una descripcion que no existe. */
+          aria-describedby={hayMensaje ? idMensaje : undefined}
           aria-invalid={feedback === "error" || undefined}
           className="peer absolute inset-0 z-10 w-full cursor-default rounded-full opacity-0 outline-none disabled:cursor-not-allowed"
         />
@@ -509,59 +522,44 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
       </div>
 
       {/* El hueco se reserva siempre (min-h 18) para que aparecer o quitar el
-          mensaje no desplace el teclado bajo el dedo del usuario. */}
+          mensaje no desplace el teclado bajo el dedo del usuario.
+
+          `role="status"` ya implica aria-live="polite" y aria-atomic: ponerlos
+          otra vez no añadia nada. El mismo nodo hace de descripcion del campo y
+          de region viva a proposito — dos nodos con el mismo texto es peor: el
+          lector lo diria dos veces siempre, no solo al cambiar. */}
       <span
         id={idMensaje}
         role="status"
-        aria-live="polite"
         className={cn(
           "inline-flex min-h-[18px] items-center gap-1.5 text-center text-[12.5px]",
           tonoMensaje[feedback],
         )}
       >
-        {hint != null && hint !== "" && feedback === "error" && <AvisoGlifo />}
-        {hint != null && hint !== "" && feedback === "success" && <CorrectoGlifo />}
+        {hayMensaje && feedback === "error" && <AvisoGlifo />}
+        {hayMensaje && feedback === "success" && <CorrectoGlifo />}
         {hint}
       </span>
 
+      {/* El teclado del sistema, no una copia. `Keypad` gobierna un monto y
+          aqui el valor lo lleva el PIN, asi que se toma por `onKeyPress` — que
+          avisa de TODA pulsacion — y se le deja el monto fijo en vacio. De
+          regalo vienen la rejilla con nombre accesible, el foco itinerante (una
+          sola parada de tabulacion en vez de once), las flechas y el hueco de
+          la esquina oculto al lector. */}
       {keypad && (
-        <div className="grid w-full max-w-[300px] grid-cols-3 gap-2">
-          {TECLAS.map((tecla) => (
-            <button
-              key={tecla}
-              type="button"
-              disabled={disabled}
-              className={pinTecla()}
-              // Sin esto el navegador saca el foco del campo al pulsar, y el
-              // anillo de foco de los puntos parpadearia en cada cifra.
-              onMouseDown={(evento) => evento.preventDefault()}
-              onClick={() => escribirDigito(tecla)}
-            >
-              {tecla}
-            </button>
-          ))}
-          {/* Hueco de la esquina inferior izquierda: el 0 va centrado. */}
-          <div />
-          <button
-            type="button"
-            disabled={disabled}
-            className={pinTecla()}
-            onMouseDown={(evento) => evento.preventDefault()}
-            onClick={() => escribirDigito("0")}
-          >
-            0
-          </button>
-          <button
-            type="button"
-            disabled={disabled}
-            aria-label="Borrar"
-            className={pinTecla()}
-            onMouseDown={(evento) => evento.preventDefault()}
-            onClick={borrarDigito}
-          >
-            <BorrarGlifo />
-          </button>
-        </div>
+        <Keypad
+          value=""
+          disabled={disabled}
+          // El mousedown se corta en el contenedor, no en cada tecla: la accion
+          // por defecto se cancela igual desde el ascenso del evento, y asi el
+          // foco no sale del campo ni parpadea el anillo de los puntos.
+          onMouseDown={(evento) => evento.preventDefault()}
+          onKeyPress={(tecla: KeypadKey) => {
+            if (tecla === "backspace") borrarDigito();
+            else if (/^\d$/.test(tecla)) escribirDigito(tecla);
+          }}
+        />
       )}
 
       {onBiometric && (

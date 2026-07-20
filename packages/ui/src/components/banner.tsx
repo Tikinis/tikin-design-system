@@ -70,6 +70,10 @@ const CLARO = [
   "[--tk-banner-x:var(--tk-600)]",
   "[--tk-banner-x-fg-hover:var(--tk-ink)]",
   "[--tk-banner-x-bg-hover:color-mix(in_oklab,var(--tk-ink)_10%,transparent)]",
+  // El bloque en vivo del documento da a la X un par hover/press
+  // (0.14 / 0.24 sobre la franja de tinta); aqui se traslada a tinta sobre
+  // fondo claro manteniendo la misma proporcion entre los dos estados.
+  "[--tk-banner-x-bg-active:color-mix(in_oklab,var(--tk-ink)_18%,transparent)]",
   // Accion subrayada, sin caja: es lo que dibuja el documento en los tonos
   // claros. El hover se resuelve bajando la opacidad porque sin padding no hay
   // superficie que teñir.
@@ -95,14 +99,24 @@ const banner = cva(
         promo: [
           "bg-ink text-surface",
           "[--tk-banner-bg:var(--tk-ink)]",
-          "[--tk-banner-icon:var(--colours-limegreen-400)]",
-          // Ver cabecera: en oscuro la franja se aclara y el lima deja de leerse.
-          "dark:[--tk-banner-icon:var(--tk-tint-success)]",
+          /* Ver cabecera: en oscuro la franja se aclara y el lima deja de leerse.
+           * El valor por tema va por una variable APARTE, igual que hace tabs.tsx
+           * con `--tk-tab-soft-active`: si el tono publicase dos veces
+           * `--tk-banner-icon` bajo modificadores distintos, tailwind-merge solo
+           * descartaria la version sin modificador y en oscuro seguiria mandando
+           * la nuestra — el consumidor no podria repintar el icono. Con la
+           * indireccion, un `[--tk-banner-icon:...]` del consumidor sustituye a
+           * la declaracion base y gana en los dos temas. */
+          "[--tk-banner-icon:var(--tk-banner-icon-tema,var(--colours-limegreen-400))]",
+          "dark:[--tk-banner-icon-tema:var(--tk-tint-success)]",
           "[--tk-banner-muted:color-mix(in_oklab,var(--tk-surface)_75%,transparent)]",
           "[--tk-banner-ring:var(--tk-surface)]",
           "[--tk-banner-x:color-mix(in_oklab,var(--tk-surface)_70%,transparent)]",
           "[--tk-banner-x-fg-hover:var(--tk-surface)]",
           "[--tk-banner-x-bg-hover:color-mix(in_oklab,var(--tk-surface)_15%,transparent)]",
+          // data-press="rgba(255,255,255,0.24)" del bloque en vivo, en semantico:
+          // sobre la franja de tinta el blanco del prototipo es --tk-surface.
+          "[--tk-banner-x-bg-active:color-mix(in_oklab,var(--tk-surface)_24%,transparent)]",
           // CTA en pill claro. Hover y pressed salen de los data-hover/data-press
           // del bloque en vivo del documento.
           "[--tk-banner-action-bg:var(--tk-surface)]",
@@ -270,8 +284,10 @@ export interface BannerProps
    */
   description?: React.ReactNode;
   /**
-   * Sustituye el icono del tono. Hereda el color pleno via currentColor y puede
-   * recortar su marca interior con `var(--tk-banner-bg)`.
+   * Sustituye el icono del tono. Va envuelto en un hueco que publica el color
+   * pleno del tono, asi que un glifo con `fill="currentColor"` sale del color
+   * que le toca y puede recortar su marca interior con `var(--tk-banner-bg)`.
+   * Se puede repintar poniendole un color propio al nodo.
    */
   icon?: React.ReactNode;
   /** Oculta el icono por completo. */
@@ -292,6 +308,12 @@ export interface BannerProps
    * Pinta la X y avisa al pulsarla. El banner NO se oculta solo: quien lo usa
    * decide si desaparece o si se puede volver a mostrar — el propio documento
    * demuestra el caso con un boton MOSTRAR DE NUEVO.
+   *
+   * La "salida animada" que menciona el pie del bloque en vivo es por tanto del
+   * consumidor, no del componente: animar la salida exige retrasar el
+   * desmontaje, y quien monta es quien puede retrasarlo. Si el Banner se
+   * quedase montado para animarse, quitaria a la pantalla el control de su
+   * propio arbol. La story "En vivo · descartable" enseña el patron.
    *
    * Se ignora con `tone="critical"`: los avisos bloqueantes no se descartan.
    */
@@ -350,6 +372,17 @@ export const Banner = React.forwardRef<HTMLDivElement, BannerProps>(function Ban
    * Se puede sobreescribir con la prop `role`. */
   const rolFinal = role ?? (tonoFinal === "critical" ? "alert" : "status");
 
+  /* Una cadena vacia NO es una segunda linea. Es el caso tipico cuando el texto
+   * viene de una API o de un estado sin cargar, y comprobar solo undefined/null
+   * pintaba un <span> vacio y ademas descolgaba icono, accion y X hacia arriba
+   * con el `items-start` del formato de doble linea. Se comprueban los vacios
+   * uno a uno en vez de por veracidad para no perder un `0` legitimo. */
+  const tieneDescripcion =
+    description !== undefined &&
+    description !== null &&
+    description !== false &&
+    description !== "";
+
   return (
     <div
       ref={ref}
@@ -359,7 +392,7 @@ export const Banner = React.forwardRef<HTMLDivElement, BannerProps>(function Ban
         banner({
           tone: tonoFinal,
           rounded,
-          align: description !== undefined && description !== null ? "start" : "center",
+          align: tieneDescripcion ? "start" : "center",
           className,
         }),
       )}
@@ -373,25 +406,36 @@ export const Banner = React.forwardRef<HTMLDivElement, BannerProps>(function Ban
             className="size-[18px] shrink-0 animate-spin rounded-full border-2 border-[color-mix(in_oklab,currentColor_25%,transparent)] border-t-current"
             aria-hidden="true"
           />
+        ) : icon !== undefined && icon !== null ? (
+          /* El icono del consumidor va en un hueco que publica el color pleno
+           * del tono. Sin el, `currentColor` dentro del icono seria el color del
+           * MENSAJE (surface en promo, ink en los claros) y un glifo que siguiera
+           * la documentacion saldria blanco o tinta en vez de lima, lavanda,
+           * verde, ambar o rojo. `shrink-0` es el `flex:none` que el prototipo
+           * pone en el icono y que la rama por defecto ya llevaba: sin el, un
+           * icono ancho se aplasta cuando el mensaje es largo.
+           *
+           * Sin `aria-hidden` a proposito: el nodo es del consumidor y puede
+           * querer nombre propio. El glifo por defecto si es decorativo porque el
+           * mensaje ya dice lo mismo. */
+          <span className="inline-flex shrink-0 text-[var(--tk-banner-icon)]">{icon}</span>
         ) : (
-          (icon ?? (
-            <svg
-              viewBox="0 0 20 20"
-              width="18"
-              height="18"
-              className="shrink-0 text-[var(--tk-banner-icon)]"
-              aria-hidden="true"
-            >
-              <Glifo />
-            </svg>
-          ))
+          <svg
+            viewBox="0 0 20 20"
+            width="18"
+            height="18"
+            className="shrink-0 text-[var(--tk-banner-icon)]"
+            aria-hidden="true"
+          >
+            <Glifo />
+          </svg>
         ))}
 
       {/* min-w-0 es obligatorio: sin el, un hijo flex no baja de su ancho de
           contenido y un mensaje largo desbordaria el banner en vez de partirse. */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm">{children}</span>
-        {description !== undefined && description !== null && (
+        {tieneDescripcion && (
           <span className="text-[12.5px] leading-[1.5] text-[var(--tk-banner-muted)]">
             {description}
           </span>
@@ -414,6 +458,10 @@ export const Banner = React.forwardRef<HTMLDivElement, BannerProps>(function Ban
             "inline-flex size-[30px] shrink-0 cursor-pointer items-center justify-center rounded-sm",
             "bg-transparent text-[var(--tk-banner-x)] transition-colors duration-140 ease-out",
             "hover:bg-[var(--tk-banner-x-bg-hover)] hover:text-[var(--tk-banner-x-fg-hover)]",
+            // El bloque en vivo da a la X los dos estados (data-hover y
+            // data-press), igual que a la accion. Sin el pressed, la X se queda
+            // muda al pulsarla en pantalla tactil, donde no hay hover.
+            "active:bg-[var(--tk-banner-x-bg-active)]",
             // El foco no esta en el prototipo: sin el no hay forma de saber
             // donde esta el teclado. El anillo toma el color del texto del tono
             // porque sobre la franja de tinta un anillo en tinta seria invisible.
@@ -465,7 +513,11 @@ export const BannerAction = React.forwardRef<HTMLButtonElement, BannerActionProp
           "hover:not-disabled:bg-[var(--tk-banner-action-bg-hover,transparent)]",
           "hover:not-disabled:opacity-[var(--tk-banner-action-opacity-hover,1)]",
           "active:not-disabled:bg-[var(--tk-banner-action-bg-active,transparent)]",
-          "outline-none focus-visible:ring-2 focus-visible:ring-[var(--tk-banner-ring,var(--tk-ink))] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tk-banner-bg)]",
+          // Los dos colores del foco llevan fallback: fuera de un Banner nadie
+          // publica --tk-banner-*, y sin fallback el offset cae al initial-value
+          // de --tw-ring-offset-color, que es #fff — un halo blanco de 2px en
+          // tema oscuro. Suelto, la accion se apoya en el fondo de la pagina.
+          "outline-none focus-visible:ring-2 focus-visible:ring-[var(--tk-banner-ring,var(--tk-ink))] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tk-banner-bg,var(--tk-bg))]",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}

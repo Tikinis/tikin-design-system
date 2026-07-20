@@ -7,8 +7,15 @@ import {
   FileUploadList,
   FileUploadThumbnail,
   type FileKind,
+  type FileRejectionReason,
   type FileUploadStatus,
 } from "./file-upload";
+/* Los dos bloques que el documento dibuja pero que NO son API nueva —foto de
+ * perfil y progreso global— se documentan aqui componiendo componentes que ya
+ * existen. Es lo que promete la cabecera de file-upload.tsx. */
+import { Avatar } from "./avatar";
+import { Button } from "./button";
+import { Progress } from "./progress";
 
 const meta: Meta<typeof FileUpload> = {
   title: "Componentes/FileUpload",
@@ -104,11 +111,19 @@ export const EstadosDeArchivo: Story = {
         onResume={() => {}}
       />
       <FileUploadItem name="soporte-pago.pdf" status="done" meta="240 KB · listo" />
-      <FileUploadItem name="foto.png" status="error" meta="supera 10 MB" onRetry={() => {}} />
+      <FileUploadItem
+        name="foto.png"
+        status="error"
+        meta="supera 10 MB"
+        reason="size"
+        onRetry={() => {}}
+      />
+      {/* El error de formato conserva la hoja del tipo, como el documento. */}
       <FileUploadItem
         name="archivo.zip"
         status="error"
         meta="formato no permitido"
+        reason="type"
         onRemove={() => {}}
       />
     </FileUploadList>
@@ -243,6 +258,15 @@ export const FlujoCompleto: Story = {
       status: FileUploadStatus;
       value: number;
       meta?: string;
+      reason?: FileRejectionReason;
+    };
+
+    /* Cada motivo de descarte se traduce a lenguaje del usuario. El componente
+       da el motivo; el texto es del consumidor, que es quien sabe su limite. */
+    const MOTIVO: Record<FileRejectionReason, string> = {
+      size: "supera 10 MB",
+      type: "formato no permitido",
+      count: "solo se admite uno",
     };
     const [filas, setFilas] = React.useState<Fila[]>([]);
     const siguienteId = React.useRef(0);
@@ -291,27 +315,134 @@ export const FlujoCompleto: Story = {
                 name: file.name,
                 status: "error" as FileUploadStatus,
                 value: 0,
-                meta: reason === "size" ? "supera 10 MB" : "formato no permitido",
+                meta: MOTIVO[reason],
+                reason,
               })),
             ])
           }
         />
 
         {filas.length > 0 && (
-          <FileUploadList>
-            {filas.map((fila) => (
-              <FileUploadItem
-                key={fila.id}
-                name={fila.name}
-                status={fila.status}
-                value={fila.value}
-                meta={fila.meta}
-                onRemove={() => setFilas((prev) => prev.filter((f) => f.id !== fila.id))}
-              />
-            ))}
-          </FileUploadList>
+          <>
+            <FileUploadList>
+              {filas.map((fila) => (
+                <FileUploadItem
+                  key={fila.id}
+                  name={fila.name}
+                  status={fila.status}
+                  value={fila.value}
+                  meta={fila.meta}
+                  reason={fila.reason}
+                  onRemove={() => setFilas((prev) => prev.filter((f) => f.id !== fila.id))}
+                />
+              ))}
+            </FileUploadList>
+
+            {/* El afijo LIMPIAR + contador del bloque EN VIVO. Es del
+                consumidor, no del componente: solo el sabe que significa
+                "limpiar" en su formulario. */}
+            <div className="flex items-center gap-2.5">
+              <Button variant="ghost" size="xs" onClick={() => setFilas([])}>
+                Limpiar
+              </Button>
+              <span className="font-mono text-[11px] text-ink-600">
+                {filas.length === 1 ? "1 archivo" : `${filas.length} archivos`}
+              </span>
+            </div>
+          </>
         )}
       </div>
     );
   },
+};
+
+/* -------------------------------------------------------------------------
+ * Composicion: los dos bloques que el documento dibuja y que NO son API nueva
+ * ----------------------------------------------------------------------- */
+
+/* Glifo de camara con la geometria de Phosphor (viewBox 256, trazo 16). Vive
+   en la story y no en el componente: solo lo usa esta composicion. */
+const CamaraGlyph = () => (
+  <svg
+    viewBox="0 0 256 256"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={16}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className="size-[14px]"
+  >
+    <path d="M208 208H48a16 16 0 0 1-16-16V88a16 16 0 0 1 16-16h32l16-24h64l16 24h32a16 16 0 0 1 16 16v104a16 16 0 0 1-16 16Z" />
+    <circle cx="128" cy="132" r="36" />
+  </svg>
+);
+
+/**
+ * FOTO DE PERFIL. El recorte circular es `Avatar`, no una copia suya: duplicarlo
+ * aqui crearia dos fuentes de verdad para la misma pieza. La camara es el propio
+ * `FileUpload` con otra piel — sigue siendo un boton con su input y su teclado.
+ */
+export const FotoDePerfil: Story = {
+  name: "Foto de perfil",
+  parameters: { controls: { disable: true } },
+  render: function FotoDePerfilStory() {
+    const [src, setSrc] = React.useState<string>();
+
+    return (
+      <div className="flex items-center gap-4">
+        <span className="relative inline-flex">
+          <Avatar name="Nicolas Garcia" src={src} size="xl" />
+          <FileUpload
+            accept="image/jpeg,image/png"
+            // La pista ya la da el texto de al lado; repetirla seria ruido.
+            hint={null}
+            aria-label="Cambiar foto de perfil"
+            onFilesAccepted={([file]) => {
+              if (file) setSrc(URL.createObjectURL(file));
+            }}
+            /* 26 sobre un anillo de 2.5 del color de la superficie, como el
+               prototipo. El anillo va por box-shadow para no descuadrar el 26. */
+            className="absolute right-0 bottom-0 size-[26px] gap-0 rounded-full border-0 bg-ink p-0 text-surface shadow-[0_0_0_2.5px_var(--tk-surface)] hover:not-disabled:border-0"
+          >
+            <CamaraGlyph />
+          </FileUpload>
+        </span>
+
+        <div className="flex flex-col gap-1">
+          <span className="font-display text-[15px] font-medium text-ink">Cambiar foto</span>
+          <span className="text-[12.5px] text-ink-600">JPG o PNG cuadrada, mín. 200×200</span>
+        </div>
+      </div>
+    );
+  },
+};
+
+/**
+ * MULTI-ARCHIVO · PROGRESO GLOBAL. Composicion pura: una `Progress` del sistema
+ * y dos `Button`. No hay API nueva que inventar para un lote.
+ */
+export const ProgresoGlobal: Story = {
+  name: "Progreso global",
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="flex flex-col gap-3 rounded-[14px] border border-edge p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-display text-[15px] font-medium text-ink">Subiendo 3 archivos</span>
+        <span className="font-mono text-xs text-ink-600">2 de 3 · 78%</span>
+      </div>
+
+      {/* 6 de alto, la unica medida en la que el lote se separa de la fila. */}
+      <Progress value={78} aria-label="Progreso del lote" className="h-1.5" />
+
+      <div className="flex gap-2">
+        <Button family="compact" className="flex-1">
+          Subir todo
+        </Button>
+        <Button family="compact" variant="secondary">
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  ),
 };

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { compile } from "tailwindcss";
-import { SwitchField, Toggle } from "./toggle";
+import { SwitchField, Toggle, type SwitchFieldProps, type ToggleProps } from "./toggle";
 
 /* Radix mide el control con ResizeObserver para dimensionar el input espejo que
  * hace viajar el valor en un <form>. jsdom no lo implementa. El stub va aqui y
@@ -116,6 +116,24 @@ describe("Toggle", () => {
     const ref = { current: null as HTMLButtonElement | null };
     render(<Toggle aria-label="X" ref={ref} />);
     expect(ref.current).toBe(screen.getByRole("switch"));
+  });
+
+  it("no admite asChild ni en Toggle ni en SwitchField", () => {
+    /* Test de TIPOS, no de runtime: quien lo comprueba es `tsc --noEmit`, no
+       vitest. Si `asChild` volviera a colarse, la asignacion dejaria de ser un
+       error, el `@ts-expect-error` sobraria y la compilacion fallaria.
+
+       Hace falta por dos motivos. Uno, el sintoma en runtime es mudo: Radix
+       sustituiria la raiz por el thumb y el interruptor quedaria inerte, sin
+       aviso. Y dos, la defensa es menos obvia de lo que parece — las props de
+       Switch.Root traen firma de indice, asi que un `Omit<…, "asChild">` a
+       secas NO cierra nada y hace falta ademas `asChild?: never`. Este test es
+       lo unico que impide "simplificar" el tipo y reabrir el agujero. */
+    // @ts-expect-error asChild no forma parte de la API publica de Toggle
+    const deToggle: ToggleProps = { asChild: true };
+    // @ts-expect-error SwitchFieldProps hereda la exclusion de ToggleProps
+    const deSwitchField: SwitchFieldProps = { title: "X", asChild: true };
+    expect([deToggle, deSwitchField]).toHaveLength(2);
   });
 });
 
@@ -266,9 +284,67 @@ function valorGanador(el: Element, css: string, propiedad: string): string | und
   return ganador;
 }
 
+/** Escala inyectada al compilar las medidas. Tailwind NO emite las utilidades de
+ *  tamaño ni de inset si no conoce `--spacing`, y aqui no hay cascada de tokens
+ *  que la aporte. Coincide con la real (packages/tokens/src/theme.css), pero no
+ *  hace falta que coincida: las comprobaciones que la usan son relativas —
+ *  comparan el area pulsable contra el alto del propio track — y no clavan
+ *  pixeles sueltos. */
+const SPACING_PX = 4;
+
+/** Pasa a pixeles lo que Tailwind emite para una medida: `0px`, `24px` o
+ *  `calc(var(--spacing) * N)`. */
+function aPixeles(valor: string): number {
+  const enUnidades = /var\(--spacing\)\s*\*\s*(-?[\d.]+)/.exec(valor);
+  if (enUnidades) return Number(enUnidades[1]) * SPACING_PX;
+  const enPx = /(-?[\d.]+)px/.exec(valor);
+  return enPx ? Number(enPx[1]) : Number.NaN;
+}
+
+/** Inset vertical del `::after` que agranda el area tactil, resuelto desde el
+ *  CSS compilado. Negativo = el area pulsable sobresale del track por cada lado.
+ *  Es lo mismo que hace `valorGanador`, pero recortando el `::after` del
+ *  selector antes de casarlo: el pseudo-elemento no existe en jsdom. */
+function insetVerticalDelAreaTactil(track: Element, css: string): number {
+  let ganador = Number.NaN;
+  let pesoGanador = -1;
+
+  reglasDePrimerNivel(css).forEach(({ selector, cuerpo }, orden) => {
+    if (!selector.endsWith("::after")) return;
+    const declaracion = /(?:^|;)\s*inset-block\s*:\s*([^;]+)/.exec(cuerpo);
+    if (!declaracion) return;
+    if (!track.matches(selector.slice(0, -"::after".length))) return;
+    const peso = especificidad(selector) + orden;
+    if (peso >= pesoGanador) {
+      pesoGanador = peso;
+      ganador = aPixeles(declaracion[1]!.trim());
+    }
+  });
+  return ganador;
+}
+
 async function cssDe(...elementos: Element[]): Promise<string> {
   const compilador = await compile("@tailwind utilities;", { base: process.cwd() });
   return compilador.build(elementos.flatMap((el) => [...el.classList]));
+}
+
+/** Como `cssDe`, pero declarando la escala. Solo lo necesitan las medidas: los
+ *  colores del componente van en valores arbitrarios y se emiten sin tema. */
+async function cssConEscalaDe(...elementos: Element[]): Promise<string> {
+  const compilador = await compile(`@theme { --spacing: ${SPACING_PX}px; }\n@tailwind utilities;`, {
+    base: process.cwd(),
+  });
+  return compilador.build(elementos.flatMap((el) => [...el.classList]));
+}
+
+/** Alto visible del track y alto de su zona pulsable, resueltos desde el CSS
+ *  compilado del propio elemento. */
+async function medirAreaTactil(track: Element) {
+  const css = await cssConEscalaDe(track);
+  const alto = aPixeles(valorGanador(track, css, "height") ?? "");
+  const inset = insetVerticalDelAreaTactil(track, css);
+  // inset negativo = el ::after sobresale; de ahi el signo de la suma.
+  return { alto, pulsable: alto - 2 * inset };
 }
 
 describe("Toggle · cascada de color", () => {
@@ -321,6 +397,67 @@ describe("Toggle · cascada de color", () => {
     expect(valorGanador(track, css, "background-color")).toBe("var(--toggle-track-bg-on)");
     expect(valorGanador(track, css, "--tw-shadow")).toContain("--toggle-track-stroke-on");
     expect(valorGanador(thumb, css, "background-color")).toBe("var(--toggle-thumb-bg-on)");
+  });
+});
+
+describe("Toggle · area tactil", () => {
+  /* El area pulsable es la unica medida del componente que NO es cosmetica:
+     decide donde aterriza un click. Y tiene un techo tan real como su suelo,
+     que es lo que se colaba. */
+
+  it("los tres tamaños comparten un mismo alto pulsable: el del track L", async () => {
+    /* Suelo: el minimo de area tactil son 24x24 CSS px y M (20) y S (16) no
+       llegan solos, de ahi el pseudo-elemento.
+       Techo: 24px es tambien lo que mide una fila de SwitchField sin
+       descripcion —titulo `text-base`, line-height 24, igual que el track L—,
+       asi que pasarse saca el area invisible de su propia fila. */
+    const medidas = { l: 0, m: 0, s: 0 };
+    for (const size of ["l", "m", "s"] as const) {
+      const { unmount } = render(<Toggle aria-label="X" size={size} />);
+      const medida = await medirAreaTactil(screen.getByRole("switch"));
+      expect(medida.alto).not.toBeNaN();
+      expect(medida.pulsable).not.toBeNaN();
+      medidas[size] = medida.pulsable;
+      if (size === "l") {
+        // L ya mide el minimo: no debe ensancharse ni un pixel.
+        expect(medida.pulsable).toBe(medida.alto);
+      } else {
+        // M y S si: su track se queda corto.
+        expect(medida.alto).toBeLessThan(medidas.l);
+      }
+      unmount();
+    }
+    expect(medidas.m).toBe(medidas.l);
+    expect(medidas.s).toBe(medidas.l);
+  });
+
+  it("en una lista con gap-3 el area de una fila no invade la vecina", async () => {
+    /* Regresion del bug real: con un ensanche unico de 8px por lado el area
+       sobresalia 8px por arriba y por abajo de una fila de 24px; dos filas
+       contiguas separadas por `gap-3` (12px) se solapaban 4px y, sin z-index
+       que las ordene, en esa banda gana la posterior en el DOM — pulsar el
+       borde inferior de un interruptor conmutaba el de la fila de abajo.
+       Se mide sobre la composicion real para que el test siga a SwitchField si
+       algun dia cambia su tamaño por defecto. */
+    const HUECO_ENTRE_FILAS = 12; // gap-3, tal como lo usa la story FilaDeAjuste
+    const ALTO_DE_FILA = 24; // titulo sin descripcion
+
+    render(
+      <div className="flex flex-col gap-3">
+        <SwitchField title="Primera" />
+        <SwitchField title="Segunda" />
+      </div>,
+    );
+    const filas = screen.getAllByRole("switch");
+    const desbordes = await Promise.all(
+      filas.map(async (track) => {
+        const { pulsable } = await medirAreaTactil(track);
+        return Math.max(0, (pulsable - ALTO_DE_FILA) / 2);
+      }),
+    );
+
+    expect(desbordes).toHaveLength(2);
+    expect(desbordes[0]! + desbordes[1]!).toBeLessThanOrEqual(HUECO_ENTRE_FILAS);
   });
 });
 

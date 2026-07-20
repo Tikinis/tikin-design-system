@@ -27,9 +27,12 @@ import { cn } from "../lib/cn";
  *                select h34 · px 12 · r9 · anillo inset 1px --tk-border-2 · caret 13 --tk-600
  *                rango mono 13 --tk-600 · flechas 36 con borde, gap 4
  *   cargar mas   boton w100% · h44 · r12 · borde 1px --tk-ink · mono 14 · ls .02em · gap 8
- *                spinner 16 borde 2px --tk-border-2 con tapa --tk-ink
+ *                pulsado fondo --tk-border
+ *                spinner 16 borde 2px --tk-border-2 con tapa --tk-ink · giro .7s lineal
  *                contador mono 12 --tk-600 · barra h4 r999 sobre --tk-surface-2, relleno tinta
- *   sentinel     spinner 18 borde 2px --tk-border con tapa --tk-ink · texto mono 12 --tk-600
+ *                                            transicion de ancho .4s con curva `ease`
+ *   sentinel     spinner 18 borde 2px --tk-border con tapa --tk-ink · giro .7s lineal
+ *                texto mono 12 --tk-600
  *
  * TRES DECISIONES QUE SE APARTAN DE LO DIBUJADO, Y POR QUE
  * -------------------------------------------------------
@@ -416,7 +419,12 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(functio
       {...props}
     >
       {format === "numbers" && (
-        <ul className="flex flex-wrap items-center gap-1.5">
+        /* role="list" redundante A PROPOSITO: el reset de Tailwind quita la
+           viñeta y WebKit le retira entonces la semantica de lista, asi que sin
+           el atributo VoiceOver no diria "lista de N elementos" y el usuario
+           perderia de cuantas paginas se habla. Misma razon que en file-upload
+           y en steps. */
+        <ul role="list" className="flex flex-wrap items-center gap-1.5">
           <li>{prev}</li>
           {getPaginationRange(current, total, siblingCount).map((entry, index) =>
             entry === "ellipsis" ? (
@@ -573,8 +581,10 @@ export const PaginationJump = React.forwardRef<HTMLDivElement, PaginationJumpPro
     },
     ref,
   ) {
-    const total = Math.max(Math.trunc(totalPages), 1);
-    const current = Math.min(Math.max(Math.trunc(page), 1), total);
+    const total = Math.max(Math.trunc(totalPages), 0);
+    /* Un listado vacio no tiene pagina 1: se dice 0, igual que hacen Pagination
+       y PaginationBar, en vez de inventarse una pagina a la que no se puede ir. */
+    const current = total === 0 ? 0 : Math.min(Math.max(Math.trunc(page), 1), total);
 
     const [draft, setDraft] = React.useState(() => String(current));
     /* Sincronizar `draft` con la pagina de fuera se hace ajustando estado
@@ -591,6 +601,12 @@ export const PaginationJump = React.forwardRef<HTMLDivElement, PaginationJumpPro
       const parsed = Number.parseInt(draft, 10);
       if (Number.isNaN(parsed)) {
         // Basura escrita: se vuelve a lo ultimo valido en vez de saltar al 1.
+        setDraft(String(current));
+        return;
+      }
+      if (total === 0) {
+        // Sin paginas no hay destino: notificar un 1 inexistente haria que el
+        // consumidor pidiese datos de una pagina que no existe.
         setDraft(String(current));
         return;
       }
@@ -661,7 +677,10 @@ export interface PaginationBarProps extends Omit<
   pageSizeLabel?: string;
   /** Texto del rango. Por defecto "41–60 de 128". */
   formatRange?: (from: number, to: number, total: number) => React.ReactNode;
-  /** Textos de las flechas. */
+  /**
+   * Textos accesibles: `root` nombra el grupo, `previous`/`next` las flechas y
+   * `status` el resumen "Página X de Y" que solo oye el lector de pantalla.
+   */
   labels?: Partial<Pick<PaginationLabels, "root" | "previous" | "next" | "status">>;
 }
 
@@ -715,6 +734,12 @@ export const PaginationBar = React.forwardRef<HTMLDivElement, PaginationBarProps
           "flex flex-wrap items-center justify-between gap-4 rounded-[14px] border border-edge px-4 py-3",
           className,
         )}
+        /* Grupo con nombre, no landmark de navegacion: un pie de tabla convive
+           con otros en la misma pantalla y cuatro landmarks homonimos ensucian
+           la lista del lector. `role` y `aria-label` van ANTES del spread para
+           que el consumidor pueda cambiarlos. */
+        role="group"
+        aria-label={text.root}
         {...props}
       >
         {onPageSizeChange && (
@@ -767,6 +792,12 @@ export const PaginationBar = React.forwardRef<HTMLDivElement, PaginationBarProps
             onClick={() => go(current + 1)}
           />
         </div>
+
+        {/* El rango dice cuantas filas se ven, no en que pagina estas: sin este
+            resumen el lector no tiene forma de saberlo. Va estatico y fuera del
+            role=status de arriba para no anunciar dos cosas en cada cambio. Con
+            la tabla vacia se calla: no se esta en ninguna pagina. */}
+        {rows > 0 && <span className="sr-only">{text.status(current, totalPages)}</span>}
       </div>
     );
   },
@@ -783,7 +814,7 @@ export interface LoadMoreProps extends React.ComponentPropsWithoutRef<"div"> {
   total: number;
   /** Se llama al pulsar. Sin ella el boton no hace nada. */
   onLoadMore?: () => void;
-  /** Sustituye el label por un spinner y bloquea la pulsacion. */
+  /** Añade un spinner JUNTO al label — no lo sustituye — y bloquea la pulsacion. */
   loading?: boolean;
   /** Texto del boton. Se pone en mayusculas por CSS. */
   label?: React.ReactNode;
@@ -833,7 +864,9 @@ export const LoadMore = React.forwardRef<HTMLDivElement, LoadMoreProps>(function
             "font-mono text-sm tracking-[0.02em] text-ink uppercase",
             "cursor-pointer transition-colors duration-140 ease-out select-none",
             FOCUS_RING,
-            "hover:not-aria-busy:bg-surface-2",
+            // El prototipo declara el pulsado (data-press) ademas del hover, y
+            // es el mismo par que usan chip, filter-chip y menu-button.
+            "hover:not-aria-busy:bg-surface-2 active:not-aria-busy:bg-edge",
             loading && "cursor-wait",
           )}
           /* Mismo criterio que Button: durante la carga NO se pone `disabled`,
@@ -852,7 +885,15 @@ export const LoadMore = React.forwardRef<HTMLDivElement, LoadMoreProps>(function
           {loading && (
             <span
               aria-hidden="true"
-              className="size-4 shrink-0 animate-spin rounded-full border-2 border-edge-2 border-t-ink"
+              className={cn(
+                "size-4 shrink-0 rounded-full border-2 border-edge-2 border-t-ink",
+                // animate-spin de Tailwind gira a 1s; el prototipo pide 0.7s
+                // lineal, como el Spinner del sistema.
+                "animate-spin [animation-duration:0.7s]",
+                // Un aro congelado se lee como interfaz rota, no como respeto
+                // por la preferencia: se ralentiza en vez de pararse.
+                "motion-reduce:[animation-duration:2.1s]",
+              )}
             />
           )}
           {label}
@@ -870,7 +911,10 @@ export const LoadMore = React.forwardRef<HTMLDivElement, LoadMoreProps>(function
         // arriba, y un progressbar duplicado solo añade ruido al lector.
         <div aria-hidden="true" className="h-1 w-full overflow-hidden rounded-pill bg-surface-2">
           <div
-            className="h-full bg-ink transition-[width] duration-400 ease-out motion-reduce:transition-none"
+            /* `ease` literal del prototipo (transition: width .4s ease), que no
+               es el ease-out del resto del sistema: aqui la barra avanza sola y
+               una curva simetrica disimula mejor el salto de porcentaje. */
+            className="h-full bg-ink transition-[width] duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none"
             style={{ width: `${percent}%` }}
           />
         </div>
@@ -960,7 +1004,13 @@ export const LoadMoreSentinel = React.forwardRef<HTMLDivElement, LoadMoreSentine
           >
             <span
               aria-hidden="true"
-              className="size-[18px] shrink-0 animate-spin rounded-full border-2 border-edge border-t-ink"
+              className={cn(
+                "size-[18px] shrink-0 rounded-full border-2 border-edge border-t-ink",
+                // 0.7s lineal como el resto de aros del sistema; animate-spin a
+                // secas giraria a 1s.
+                "animate-spin [animation-duration:0.7s]",
+                "motion-reduce:[animation-duration:2.1s]",
+              )}
             />
             {label}
           </div>

@@ -70,7 +70,9 @@ describe("DatePicker", () => {
     expect(dia(rejilla, "2026-07-09")).toHaveAttribute("aria-current", "date");
     // aria-selected vive en la celda, que es quien tiene rol de gridcell.
     expect(dia(rejilla, "2026-07-20").closest("td")).toHaveAttribute("aria-selected", "true");
-    expect(dia(rejilla, "2026-07-09").closest("td")).toHaveAttribute("aria-selected", "false");
+    /* Y SOLO en esa: con aria-selected="false" en las 35 celdas el lector
+       anuncia "no seleccionado" en cada dia que se recorre con las flechas. */
+    expect(dia(rejilla, "2026-07-09").closest("td")).not.toHaveAttribute("aria-selected");
   });
 
   it("en modo simple elige la fecha, la emite y cierra", async () => {
@@ -228,7 +230,7 @@ describe("DatePicker", () => {
     expect(dia(rejilla, "2026-07-08").closest("td")).toHaveAttribute("aria-selected", "true");
     expect(dia(rejilla, "2026-07-10").closest("td")).toHaveAttribute("aria-selected", "true");
     // El dia interior queda en la banda, pero no es un extremo elegido.
-    expect(dia(rejilla, "2026-07-09").closest("td")).toHaveAttribute("aria-selected", "false");
+    expect(dia(rejilla, "2026-07-09").closest("td")).not.toHaveAttribute("aria-selected");
   });
 
   it("con confirm no emite nada hasta pulsar la accion", async () => {
@@ -290,7 +292,7 @@ describe("DatePicker", () => {
 
     // Y al reabrir el borrador descartado no puede seguir seleccionado.
     const reabierta = await abrir();
-    expect(dia(reabierta, "2026-07-12").closest("td")).toHaveAttribute("aria-selected", "false");
+    expect(dia(reabierta, "2026-07-12").closest("td")).not.toHaveAttribute("aria-selected");
     expect(screen.getByRole("button", { name: /confirmar/i })).toBeDisabled();
   });
 
@@ -355,10 +357,22 @@ describe("DatePicker", () => {
     render(
       <DatePicker today={HOY} minDate={new Date(2026, 6, 1)} maxDate={new Date(2026, 6, 31)} />,
     );
-    await abrir();
+    const rejilla = await abrir();
 
-    expect(screen.getByRole("button", { name: "Mes anterior" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Mes siguiente" })).toBeDisabled();
+    const previa = screen.getByRole("button", { name: "Mes anterior" });
+    expect(previa).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Mes siguiente" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+
+    /* Apagada con aria-disabled y no con el atributo `disabled`: un boton
+       deshabilitado deja de ser enfocable, asi que al llegar navegando al mes
+       de minDate la flecha se apagaria bajo el propio foco y este caeria al
+       <body>, fuera de un panel que ademas es no modal por defecto. */
+    await userEvent.click(previa);
+    expect(rejilla).toHaveAccessibleName(/julio 2026/i);
+    expect(previa).toHaveFocus();
   });
 
   it("los presets aplican su rango completo", async () => {
@@ -431,5 +445,116 @@ describe("DatePicker", () => {
     render(<DatePicker today={HOY} disabled />);
     await userEvent.click(screen.getByRole("button"));
     expect(screen.queryByRole("grid")).not.toBeInTheDocument();
+  });
+
+  it("tampoco abre con disparador propio cuando esta deshabilitado", async () => {
+    /* El tipo del componente promete props de <button>, asi que `disabled`
+       tiene que apagar tambien el disparador que pone el consumidor. */
+    render(
+      <DatePicker today={HOY} disabled>
+        <button type="button">Fecha</button>
+      </DatePicker>,
+    );
+    const disparador = screen.getByRole("button", { name: "Fecha" });
+    expect(disparador).toBeDisabled();
+
+    await userEvent.click(disparador);
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument();
+  });
+
+  it("compone className y props sueltas sobre el disparador propio", async () => {
+    render(
+      <DatePicker today={HOY} className="w-full" id="campo-fecha" data-testid="disparador">
+        <button type="button" className="border-dashed">
+          Fecha
+        </button>
+      </DatePicker>,
+    );
+    const disparador = screen.getByTestId("disparador");
+    expect(disparador).toHaveAttribute("id", "campo-fecha");
+    expect(disparador.className).toContain("w-full");
+    // Lo que declara el hijo no se pierde por componer: manda el consumidor.
+    expect(disparador.className).toContain("border-dashed");
+
+    // Y sigue siendo el disparador del popover.
+    await userEvent.click(disparador);
+    expect(await screen.findByRole("grid")).toBeInTheDocument();
+  });
+
+  it("pinta la banda del rango en la celda: extremos redondeados y centro plano", async () => {
+    /* La banda es logica pura de `bandaDe` y se puede afirmar por clases sin
+       depender de CSS. El redondeo de los extremos solo existe si la tabla NO
+       va en border-collapse: por especificacion, una tabla colapsada ignora el
+       border-radius de sus celdas y los extremos saldrian cuadrados. */
+    render(
+      <DatePicker
+        mode="range"
+        today={HOY}
+        defaultValue={{ from: new Date(2026, 6, 8), to: new Date(2026, 6, 15) }}
+      />,
+    );
+    const rejilla = await abrir();
+
+    const celda = (iso: string) => dia(rejilla, iso).closest("td")!.className;
+    expect(celda("2026-07-08")).toContain("rounded-l-");
+    expect(celda("2026-07-11")).toContain("bg-lime");
+    expect(celda("2026-07-11")).not.toContain("rounded-");
+    expect(celda("2026-07-15")).toContain("rounded-r-");
+    // Fuera del rango no hay banda.
+    expect(celda("2026-07-16")).not.toContain("bg-lime");
+
+    expect(rejilla.className).toContain("border-separate");
+    expect(rejilla.className).not.toContain("border-collapse");
+  });
+
+  it("un extremo del rango fuera del mes visible no se queda en gris de fuera de mes", async () => {
+    /* Variante y estado pintan los dos el color del texto. Sin resolver el
+       conflicto por tailwind-merge, la celda emite `text-ink-400 text-surface`
+       y quien gana depende del orden de la hoja compilada. */
+    render(
+      <DatePicker
+        mode="range"
+        today={HOY}
+        defaultValue={{ from: new Date(2026, 5, 29), to: new Date(2026, 6, 3) }}
+      />,
+    );
+    const rejilla = await abrir();
+    // Se abre en junio, donde el 3 de julio es un dia de relleno y ademas fin.
+    expect(rejilla).toHaveAccessibleName(/junio 2026/i);
+
+    /* Se miran las clases sueltas: el gris tiene que desaparecer del color
+       plano, pero seguir vivo bajo `aria-disabled:`, que es otro estado. */
+    const fin = dia(rejilla, "2026-07-03");
+    expect(fin.classList.contains("text-surface")).toBe(true);
+    expect(fin.classList.contains("text-ink-400")).toBe(false);
+    expect(fin.classList.contains("aria-disabled:text-ink-400")).toBe(true);
+
+    // Y un interior de banda fuera de mes se queda en on-accent, no en gris.
+    const interior = dia(rejilla, "2026-07-01");
+    expect(interior.classList.contains("text-on-accent")).toBe(true);
+    expect(interior.classList.contains("text-ink-400")).toBe(false);
+  });
+
+  it("weekStartsOn mueve la primera columna y con ella Inicio y Fin", async () => {
+    render(<DatePicker today={HOY} weekStartsOn={0} />);
+    const rejilla = await abrir();
+
+    const cabeceras = rejilla.querySelectorAll("thead th");
+    expect(cabeceras[0]).toHaveTextContent(/domingo/i);
+
+    // Con la semana en domingo, la del jueves 9 va del domingo 5 al sabado 11.
+    await waitFor(() => expect(dia(rejilla, "2026-07-09")).toHaveFocus());
+    await userEvent.keyboard("{Home}");
+    expect(dia(rejilla, "2026-07-05")).toHaveFocus();
+    await userEvent.keyboard("{End}");
+    expect(dia(rejilla, "2026-07-11")).toHaveFocus();
+  });
+
+  it("locale cambia los nombres de mes y de dia", async () => {
+    render(<DatePicker today={HOY} locale="en-US" />);
+    const rejilla = await abrir();
+
+    expect(rejilla).toHaveAccessibleName(/july 2026/i);
+    expect(rejilla.querySelectorAll("thead th")[0]).toHaveTextContent(/monday/i);
   });
 });

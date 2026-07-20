@@ -136,28 +136,49 @@ export const ConRadio: Story = {
  * usa decide si desaparece, si se puede volver a mostrar o si vuelve al
  * recargar — igual que el bloque en vivo del documento, que ofrece MOSTRAR DE
  * NUEVO.
+ *
+ * La **salida animada** que pide el pie de ese bloque vive aqui, en el
+ * consumidor, y no dentro del componente: animar la salida obliga a retrasar el
+ * desmontaje, y solo quien monta el banner puede retrasarlo. Si el Banner se
+ * quedase montado para animarse, la pantalla perderia el control de su arbol.
  */
 export const EnVivo: Story = {
   name: "En vivo · descartable",
   parameters: { controls: { disable: true } },
   render: function EnVivo() {
-    const [visible, setVisible] = React.useState(true);
+    const [estado, setEstado] = React.useState<"visible" | "saliendo" | "oculto">("visible");
+
+    // El desmontaje espera a que termine la transicion. Va por temporizador y no
+    // por onTransitionEnd porque un usuario con "reducir movimiento" no dispara
+    // el evento y el banner se quedaria colgado a medio salir.
+    React.useEffect(() => {
+      if (estado !== "saliendo") return;
+      const salida = window.setTimeout(() => setEstado("oculto"), 180);
+      return () => window.clearTimeout(salida);
+    }, [estado]);
 
     return (
       <div className="w-[640px] max-w-full overflow-hidden rounded-xl border border-edge">
-        {visible ? (
-          <Banner
-            action={<BannerAction onClick={() => setVisible(false)}>Pedir</BannerAction>}
-            onDismiss={() => setVisible(false)}
+        {estado !== "oculto" ? (
+          <div
+            className={[
+              "transition-[opacity,transform] duration-[180ms] ease-out motion-reduce:transition-none",
+              estado === "saliendo" ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100",
+            ].join(" ")}
           >
-            Tu tarjeta física Tikin ya está disponible.
-          </Banner>
+            <Banner
+              action={<BannerAction onClick={() => setEstado("saliendo")}>Pedir</BannerAction>}
+              onDismiss={() => setEstado("saliendo")}
+            >
+              Tu tarjeta física Tikin ya está disponible.
+            </Banner>
+          </div>
         ) : (
           <div className="flex items-center justify-center gap-2.5 bg-page p-4">
             <span className="text-[13px] text-ink-600">Banner descartado.</span>
             <button
               type="button"
-              onClick={() => setVisible(true)}
+              onClick={() => setEstado("visible")}
               className="h-[30px] cursor-pointer rounded-sm border border-edge-2 px-3.5 font-mono text-xs tracking-[0.02em] text-ink uppercase hover:bg-surface-2"
             >
               Mostrar de nuevo
@@ -202,6 +223,13 @@ export const MatrizDeTonos: Story = {
       <Banner
         rounded
         tone="promo"
+        /* .tk-static congela VALORES de tokens, pero no quita la clase .dark del
+           ancestro, asi que el `dark:` que ajusta el icono del promo seguiria
+           aplicandose aqui y la matriz mostraria un icono casi blanco en vez del
+           lima del documento. En una matriz congelada el valor se fija a mano:
+           esta declaracion sustituye a la del tono via tailwind-merge y manda en
+           los dos temas. */
+        className="[--tk-banner-icon:var(--colours-limegreen-400)]"
         action={<BannerAction>Invitar</BannerAction>}
         onDismiss={() => {}}
       >

@@ -107,24 +107,24 @@ export const Lista: Story = {
     },
   },
   render: () => (
-    <div
-      className="flex w-[240px] flex-col gap-[14px]"
-      role="status"
-      aria-label="Cargando contactos"
-    >
+    <div className="flex w-[240px] flex-col gap-[14px]">
+      {/* El rotulo va FUERA de la region viva: dentro, el lector lo leeria
+          pegado al anuncio ("lista Cargando contactos"). */}
       <span className={rotulo}>lista</span>
-      {[
-        ["60%", "40%"],
-        ["70%", "35%"],
-      ].map(([a, b]) => (
-        <div key={a} className="flex items-center gap-3">
-          <Skeleton shape="circle" width={40} />
-          <div className="flex flex-1 flex-col gap-[6px]">
-            <Skeleton height={10} width={a} />
-            <Skeleton height={10} width={b} />
+      <div className="flex flex-col gap-[14px]" role="status" aria-label="Cargando contactos">
+        {[
+          ["60%", "40%"],
+          ["70%", "35%"],
+        ].map(([a, b]) => (
+          <div key={a} className="flex items-center gap-3">
+            <Skeleton shape="circle" width={40} />
+            <div className="flex flex-1 flex-col gap-[6px]">
+              <Skeleton height={10} width={a} />
+              <Skeleton height={10} width={b} />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   ),
 };
@@ -191,17 +191,22 @@ function CrossFade() {
       <button
         type="button"
         onClick={() => setCargando((v) => !v)}
-        className="h-10 shrink-0 cursor-pointer rounded-md px-[18px] font-mono text-[13px] tracking-[0.02em] text-ink shadow-[inset_0_0_0_1px_var(--tk-ink)] hover:bg-surface-2"
+        className="h-10 shrink-0 cursor-pointer rounded-md px-[18px] font-mono text-[13px] tracking-[0.02em] text-ink uppercase shadow-[inset_0_0_0_1px_var(--tk-ink)] hover:bg-surface-2"
       >
-        {cargando ? "CARGAR" : "REINICIAR"}
+        {cargando ? "Cargar" : "Reiniciar"}
       </button>
 
       <div className="relative w-[280px] rounded-xl border border-edge p-[18px]">
+        {/* La capa de skeleton solo es region viva MIENTRAS carga. Dejar el
+            role="status" puesto tras el fundido deja una region viva anonima y
+            vacia en el DOM para siempre; y ya invisible, debe salir tambien del
+            arbol de accesibilidad. */}
         <div
           className="pointer-events-none absolute inset-[18px] flex flex-col gap-[14px] transition-opacity duration-300"
           style={{ opacity: cargando ? 1 : 0 }}
-          role="status"
+          role={cargando ? "status" : undefined}
           aria-label={cargando ? "Cargando perfil" : undefined}
+          aria-hidden={cargando ? undefined : true}
         >
           <div className="flex items-center gap-3">
             <Skeleton shape="circle" width={44} />
@@ -233,8 +238,8 @@ function CrossFade() {
             Saldo disponible
           </span>
           <span className="font-num text-[26px] font-medium text-ink">$ 4.250.000</span>
-          <span className="flex h-11 items-center justify-center rounded-lg bg-ink font-mono text-sm tracking-[0.02em] text-surface">
-            ENVIAR
+          <span className="flex h-11 items-center justify-center rounded-lg bg-ink font-mono text-sm tracking-[0.02em] text-surface uppercase">
+            Enviar
           </span>
         </div>
       </div>
@@ -377,16 +382,32 @@ export const AnuncioAccesible: Story = {
     controls: { disable: true },
     docs: {
       description: {
-        story:
-          "Sin `label` el bloque lleva `aria-hidden`: un lector no debe describir cajas grises. Ponlo UNA vez por grupo, en el contenedor exterior; repetido en veinte lineas anuncia veinte veces lo mismo.",
+        story: [
+          "Sin `label` el bloque lleva `aria-hidden`: un lector no debe describir cajas grises.",
+          "",
+          "Una espera se anuncia UNA vez. El prop `label` es para cuando un solo bloque ES toda la espera (izquierda). Cuando la espera es un grupo, el anuncio va en el div que lo envuelve y los bloques de dentro se quedan decorativos (derecha): poner el `label` en uno de los tres hermanos convertiria a ese en region viva y dejaria a los otros dos mudos.",
+        ].join("\n"),
       },
     },
   },
   render: () => (
-    <div className="flex w-[280px] flex-col gap-4">
-      <Skeleton label="Cargando movimientos" height={12} width="60%" />
-      <Skeleton height={12} width="90%" />
-      <Skeleton height={12} width="70%" />
+    <div className="flex flex-wrap gap-10">
+      <div className="flex w-[240px] flex-col gap-3">
+        <span className={rotulo}>bloque suelto · label</span>
+        {/* Un unico bloque es toda la espera: aqui el label si va en el propio
+            Skeleton, que se convierte en la region viva. */}
+        <Skeleton label="Cargando saldo" height={34} width="70%" />
+      </div>
+
+      <div className="flex w-[240px] flex-col gap-3">
+        <span className={rotulo}>grupo · contenedor</span>
+        <div className="flex flex-col gap-3" role="status" aria-label="Cargando movimientos">
+          {/* Sin label: decorativos. El anuncio ya lo hace el contenedor. */}
+          <Skeleton height={10} width="60%" />
+          <Skeleton height={10} width="90%" />
+          <Skeleton height={10} width="70%" />
+        </div>
+      </div>
     </div>
   ),
 };
@@ -420,7 +441,7 @@ export const MatrizDeEspecificacion: Story = {
   parameters: { controls: { disable: true } },
   render: () => {
     const filas = [
-      { shape: "line", medida: "alto 12 · ancho 100%", radio: "6 · xs" },
+      { shape: "line", medida: "alto 10 · ancho 100%", radio: "6 · xs" },
       { shape: "circle", medida: "40 × 40", radio: "50%" },
       { shape: "block", medida: "alto 56 · ancho 100%", radio: "10 · md" },
     ] as const;

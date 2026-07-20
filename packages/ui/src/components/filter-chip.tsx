@@ -5,7 +5,7 @@ import * as React from "react";
  * como `any`. Las subrutas si reexportan los tipos buenos. Mismo runtime. */
 import * as PopoverPrimitive from "radix-ui/popover";
 import * as CheckboxPrimitive from "radix-ui/checkbox";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
 /* Seccion 22 · Filter — EXTENSION construida con los tokens del sistema.
@@ -66,7 +66,13 @@ const filterChip = cva(
          popover cerrado se dibuja como default, solo con el badge. */
       open: {
         false: "border-edge-2 bg-surface text-ink hover:not-disabled:bg-surface-2",
-        true: "border-ink bg-surface-2 text-ink hover:not-disabled:bg-edge",
+        /* Sin hover propio a proposito: el documento no dibuja hover sobre
+           OPEN / ACTIVE, y el unico token libre — --tk-border — es justo el del
+           pressed. Pintarlo al pasar el puntero dejaria abierto+hover y
+           abierto+pulsado del mismo color, o sea al usuario sin acuse de la
+           pulsacion sobre un chip ya abierto. El chip abierto ya se distingue
+           por el borde de tinta. */
+        true: "border-ink bg-surface-2 text-ink",
       },
     },
     /* El pressed es comun a los dos estados y va despues del eje para ganarle
@@ -75,8 +81,6 @@ const filterChip = cva(
     defaultVariants: { open: false },
   },
 );
-
-type FilterChipVariants = VariantProps<typeof filterChip>;
 
 /* Panel flotante: r16, borde en --tk-border, padding 8, sombra md, filas
    separadas 2. El min-width 230 del documento es suelo, no ancho fijo: el
@@ -169,12 +173,13 @@ export interface FilterOption {
   disabled?: boolean;
 }
 
+/* Sin `VariantProps<typeof filterChip>` en el extends: el unico eje de la cva es
+   `open`, que ya se declara abajo con su documentacion propia — heredarlo daba el
+   tipo vacio y hacia creer que existian mas ejes de variante. */
 export interface FilterChipProps
   /* `value` y `defaultValue` de <button> son string | number | string[] y aqui
        significan otra cosa — los filtros aplicados — asi que se reescriben. */
-  extends
-    Omit<React.ComponentPropsWithoutRef<"button">, "color" | "value" | "defaultValue">,
-    Omit<FilterChipVariants, "open"> {
+  extends Omit<React.ComponentPropsWithoutRef<"button">, "color" | "value" | "defaultValue"> {
   /**
    * Opciones del popover. En cuanto se pasan, el componente monta el panel
    * entero — cabecera, lista marcable y el par LIMPIAR / APLICAR — y gobierna
@@ -216,6 +221,11 @@ export interface FilterChipProps
    *
    * Si se omite y no hay `options`, el chip no anuncia ningun popover — util
    * cuando el filtro se aplica al instante y no hay panel que abrir.
+   *
+   * El `aria-controls` no lo pone el chip porque sin panel propio no conoce el
+   * id del ajeno: pasalo como prop, o compon con `Popover.Trigger asChild` y lo
+   * cablea Radix — los aria de aqui van ANTES del spread, asi que el consumidor
+   * y el Trigger siempre ganan.
    */
   open?: boolean;
   /** Apertura inicial del panel. No controlada. Solo con `options`. */
@@ -264,14 +274,23 @@ export interface FilterChipProps
  * la cuenta de los que estan puestos y acciones LIMPIAR / APLICAR. Para una
  * sola dimension con pocas opciones no uses esto: usa un segmented control.
  *
+ * NO confundir con `Chip variant="filter"` (seccion 09): aquel es una etiqueta
+ * de 36 en caja normal con eje `selected`, para pintar un filtro YA aplicado y
+ * quitarlo; este es el disparador de 40 en mono y mayusculas que ABRE el
+ * popover donde se eligen. Suelen convivir: FilterChip arriba, Chips debajo.
+ *
  * Reglas de cierre del documento: el panel cierra al APLICAR o al hacer click
  * fuera; LIMPIAR deja el grupo en cero SIN cerrar. Lo que se marca dentro es un
  * borrador — si el panel se cierra sin confirmar, se descarta y el badge no se
  * mueve. Con `applyOnSelect` no hay borrador: cada marca ya es definitiva.
  *
  * El label se escribe en caja normal y se pone en MAYUSCULAS por CSS, nunca con
- * `.toUpperCase()` en JS, para que el texto que anuncia el lector de pantalla y
- * el que se copia al portapapeles conserven su capitalizacion.
+ * `.toUpperCase()` en JS: asi el DOM, lo que se copia al portapapeles y lo que
+ * lee el consumidor por `textContent` conservan la capitalizacion que se
+ * escribio, y la caja queda donde se cambia — la hoja de estilos.
+ * Ojo, no es una medida de accesibilidad: Chromium y WebKit aplican
+ * `text-transform` al calcular el nombre accesible, asi que el lector dira
+ * "FILTER" igualmente.
  */
 export const FilterChip = React.forwardRef<HTMLButtonElement, FilterChipProps>(function FilterChip(
   {
@@ -414,7 +433,10 @@ export const FilterChip = React.forwardRef<HTMLButtonElement, FilterChipProps>(f
               oculta al lector y el sentido lo pone el texto de al lado. */}
           <span
             aria-hidden="true"
-            className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-(--radius-pill) bg-ink px-[5px] font-meta text-[11px] text-surface tabular-nums"
+            /* Sin margen propio: el chip "CON CONTEO" del documento separa
+               icono, label y badge con el mismo gap de 8. Un `ml` extra dejaba
+               10 entre label y badge. */
+            className="inline-flex h-5 min-w-5 items-center justify-center rounded-(--radius-pill) bg-ink px-[5px] font-meta text-[11px] text-surface tabular-nums"
           >
             {total}
           </span>

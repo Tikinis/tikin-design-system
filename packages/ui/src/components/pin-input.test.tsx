@@ -219,6 +219,96 @@ describe("PinInput", () => {
     expect(estados()).toEqual(["exito", "exito", "exito", "exito"]);
   });
 
+  it("tras la autolimpieza los puntos salen del rojo aunque el feedback siga en error", async () => {
+    /* El veredicto es sobre un intento completo. Antes el rojo no dependia de
+       la clave: tras limpiarse sola seguian los cuatro puntos en rojo y, al
+       teclear de nuevo, tampoco se movian — el usuario reescribia a ciegas
+       salvo que el consumidor devolviera `feedback` a "default". */
+    function Terco() {
+      const [pin, setPin] = React.useState("1234");
+      // Consumidor que NO resetea el feedback: el caso que se quedaba colgado.
+      return (
+        <PinInput
+          keypad={false}
+          value={pin}
+          feedback="error"
+          errorClearDelay={10}
+          onChange={setPin}
+        />
+      );
+    }
+    render(<Terco />);
+    expect(estados()).toEqual(["error", "error", "error", "error"]);
+
+    await waitFor(() => expect(estados()).toEqual(["vacio", "vacio", "vacio", "vacio"]));
+
+    await userEvent.type(campo(), "12");
+    expect(estados()).toEqual(["lleno", "lleno", "vacio", "vacio"]);
+  });
+
+  it("no pinta el veredicto sobre una clave incompleta", () => {
+    // Cuatro puntos verdes con la clave a medias anunciarian un acierto que no
+    // ha ocurrido.
+    render(<PinInput value="12" feedback="success" />);
+    expect(estados()).toEqual(["lleno", "lleno", "vacio", "vacio"]);
+  });
+
+  it("acepta un codigo pegado con separadores", async () => {
+    // `maxLength` del DOM contaba el texto EN CRUDO, antes del filtrado: con un
+    // limite de 4 el navegador cortaba "12-34" en "12-3" y entraban 3 cifras.
+    const onComplete = vi.fn();
+    render(<PinInput keypad={false} onComplete={onComplete} />);
+
+    await userEvent.click(campo());
+    await userEvent.paste("12-34");
+
+    expect(campo()).toHaveValue("1234");
+    expect(onComplete).toHaveBeenCalledWith("1234");
+    expect(estados()).toEqual(["lleno", "lleno", "lleno", "lleno"]);
+  });
+
+  it("solo pide el teclado del sistema cuando no hay teclado propio", () => {
+    // Con teclado en pantalla, `none` evita que el del sistema lo tape; sin el,
+    // hace falta el numerico o el usuario se queda sin cifras en movil.
+    const { rerender } = render(<PinInput />);
+    expect(campo()).toHaveAttribute("inputmode", "none");
+
+    rerender(<PinInput keypad={false} />);
+    expect(campo()).toHaveAttribute("inputmode", "numeric");
+  });
+
+  it("pide la clave guardada, no un codigo de un solo uso", () => {
+    // `one-time-code` haria que el sistema ofreciera el ultimo SMS en vez de la
+    // clave de la app. Para un OTP de verdad esta OtpInput.
+    const { rerender } = render(<PinInput />);
+    expect(campo()).toHaveAttribute("autocomplete", "current-password");
+
+    rerender(<PinInput autoComplete="new-password" />);
+    expect(campo()).toHaveAttribute("autocomplete", "new-password");
+  });
+
+  it("no describe el campo con un mensaje que no existe", () => {
+    // El hueco del mensaje se reserva siempre; apuntarle sin texto deja al
+    // lector anunciando una descripcion vacia.
+    render(<PinInput />);
+    expect(campo()).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("el teclado en pantalla es un grupo con una sola parada de tabulacion", () => {
+    /* Once paradas entre el campo y la biometria eran once de mas: el teclado
+       fisico ya escribe en el campo. Lo resuelve el `Keypad` del sistema, que
+       trae grupo con nombre y foco itinerante. */
+    render(<PinInput />);
+    // Se busca por el contrato del teclado (`data-key`), no por su rol: el
+    // patron ARIA concreto es asunto suyo y este test no debe congelarlo.
+    const teclas = Array.from(document.querySelectorAll<HTMLElement>("[data-key]"));
+    expect(teclas).toHaveLength(11);
+    expect(teclas.filter((t) => t.getAttribute("tabindex") === "0")).toHaveLength(1);
+
+    const rejilla = teclas[0]?.parentElement?.closest("[aria-label]");
+    expect(rejilla).toHaveAccessibleName();
+  });
+
   it("anuncia el mensaje por una region viva", async () => {
     render(<PinInput hint="Clave incorrecta" feedback="error" clearOnError={false} />);
     const mensaje = screen.getByRole("status");

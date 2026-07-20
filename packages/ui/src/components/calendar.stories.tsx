@@ -27,8 +27,18 @@ const meta = {
           "| `Calendar / Arrow Button` · 2:156649 · 8 variantes | `CalendarNavButton` |",
           "",
           "Esas tres son **CANONICAS**. El montaje del mes, la cabecera con el nombre del mes y toda la",
-          "navegacion por teclado son **EXTENSION**: no hay ningun nodo de mes en el archivo y la seccion 13",
-          "se limita a instanciar las piezas de arriba. No cites `Calendar` como especificacion aprobada.",
+          "navegacion por teclado son **EXTENSION**: no hay ningun nodo de Figma con el mes montado.",
+          "La seccion 13 instancia ademas una cuarta tarjeta, `Date picker · rueda iOS (dark)` (2:156583),",
+          "que se deja **fuera a proposito**: su export es un raster plano, el picker nativo de iOS pegado en",
+          "el archivo, no una pieza construible con tokens.",
+          "",
+          "El mes montado si esta especificado, pero en la **seccion 23 · Date picker**: titulo, fila de",
+          "cabeceras, rejilla, modo rango, presets y sheet movil. Al citar especificacion del mes, cita esa.",
+          "",
+          "**Hoy — discrepancia declarada.** La prosa de la seccion 23 dice «hoy se marca con borde»;",
+          "el nodo `Calendar / Day Button` con `variant=current` lo pinta con **relleno de acento**, igual que",
+          "el hover. Manda el bloque DEL ARCHIVO, asi que aqui va relleno. Se anota porque el conflicto es",
+          "real y no se ve desde el codigo.",
           "",
           "**Geometria canonica** — dia 32x32 r8, texto 14/20 · cabecera 32x21, texto 12/16 · flecha 32x32 r8, glifo 16.",
           "",
@@ -198,9 +208,14 @@ export const PiezasSueltas: Story = {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <span className={CELL_LABEL}>Day header · 32 × 21</span>
+        {/* `role="presentation"` a proposito: el rol por defecto de la pieza es
+            columnheader, valido dentro de una rejilla pero ARIA invalido en una
+            muestra suelta como esta, que no tiene ni fila ni tabla. */}
         <div className="flex gap-1">
           {["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"].map((name) => (
-            <CalendarWeekday key={name}>{name}</CalendarWeekday>
+            <CalendarWeekday key={name} role="presentation">
+              {name}
+            </CalendarWeekday>
           ))}
         </div>
       </div>

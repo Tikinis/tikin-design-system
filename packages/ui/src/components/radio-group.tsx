@@ -1,5 +1,5 @@
 import * as React from "react";
-import { RadioGroup as RadixRadioGroup } from "radix-ui";
+import * as RadixRadioGroup from "radix-ui/radio-group";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -26,6 +26,18 @@ import { cn } from "../lib/cn";
  *   hover      inset 1.5px --tk-ink
  *   disabled   inset 1.5px --tk-border     + fondo --tk-surface-2
  *   error      inset 1.5px rojo            + fondo rojo transparente
+ *
+ * DOS DIVERGENCIAS ANOTADAS A PROPOSITO
+ * 1. El fondo de error usa --colours-purered-transparent (alpha 0.05) donde el
+ *    prototipo escribe el literal rgba(255,46,46,0.06). Se prefiere el token
+ *    para que el dia que se retoque el alpha cambie en todo el sistema a la vez;
+ *    la diferencia de 0.01 de alpha es imperceptible.
+ * 2. El anillo OFF hereda --tk-400 del prototipo y ese par no llega al 3:1 que
+ *    pide WCAG 1.4.11 para indicadores no textuales: ~1.8:1 en claro
+ *    (191,191,191 sobre --tk-bg) y ~1.9:1 en oscuro (92,92,92 sobre --tk-bg).
+ *    Se respeta el prototipo porque es una decision de diseño, no un error de
+ *    transcripcion, pero queda escrito: subirlo exige tocar el token, no este
+ *    fichero, para no descuadrar el resto de controles que usan el mismo gris.
  *
  * POR QUE LA FILA ENTERA ES EL <button>
  * El documento pide que "cada fila entera es clicable". La alternativa clasica
@@ -106,24 +118,37 @@ const radioItem = cva(
   },
 );
 
-/* El ancho de la opcion lo decide el grupo, no la opcion: en columna la fila
- * entera debe ser clicable de borde a borde, y en fila cada una se ciñe a su
- * contenido. El selector apunta a [role=radio] y no a `> *` porque Radix cuela
- * ademas un <input> espejo como hermano cuando hay un <form> alrededor. */
+/* `orientation` es una extension nuestra: el prototipo solo dibuja el grupo en
+ * columna. De ahi que solo `vertical` tenga medida del archivo (gap 14 = 3.5).
+ * El 24 de horizontal no sale del prototipo, es la parada de la escala que deja
+ * respirar dos opciones cortas en la misma linea; queda anotado para que nadie
+ * lo lea como una cota del documento. */
 const radioGroup = cva("flex", {
   variants: {
     orientation: {
-      vertical: "flex-col gap-3.5 [&>[role=radio]]:w-full",
+      vertical: "flex-col gap-3.5",
       horizontal: "flex-row flex-wrap items-center gap-6",
     },
   },
   defaultVariants: { orientation: "vertical" },
 });
 
-/* El grupo comunica el estado de error a sus hijos. Sin esto el consumidor
- * tendria que repetir `invalid` en cada opcion y podria dejarlas desparejadas.
- */
-const RadioGroupContext = React.createContext<{ invalid: boolean }>({ invalid: false });
+/* El grupo comunica a sus hijos el estado de error y la disposicion. `invalid`
+ * por contexto evita que el consumidor tenga que repetirlo opcion por opcion y
+ * pueda dejarlas desparejadas.
+ *
+ * `orientation` viaja por contexto —y no como un selector de hijo directo del
+ * tipo [&>[role=radio]]:w-full— porque la regla "cada fila entera es clicable"
+ * no puede depender de la forma del arbol: en cuanto el consumidor envuelve una
+ * opcion (una fila con un badge al lado, un Fragment dentro de un div, un
+ * separador) el selector deja de casar y la fila se ciñe a su texto sin ningun
+ * aviso. Aplicado desde la propia opcion, el ancho sobrevive a cualquier
+ * anidamiento y ademas queda por delante de `className`, asi que el consumidor
+ * que quiera ceñir una fila concreta puede seguir haciendolo con `w-auto`. */
+const RadioGroupContext = React.createContext<{
+  invalid: boolean;
+  orientation: "vertical" | "horizontal";
+}>({ invalid: false, orientation: "vertical" });
 
 export interface RadioGroupProps
   extends
@@ -150,20 +175,37 @@ export const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(func
   ref,
 ) {
   const labelId = React.useId();
+  const layout = orientation ?? "vertical";
+  const context = React.useMemo(() => ({ invalid, orientation: layout }), [invalid, layout]);
 
   /* `orientation` controla SOLO la disposicion visual y no se reenvia a Radix a
    * proposito. Radix la usa para el roving focus: al fijarla, las flechas del
    * eje contrario dejan de mover el foco. El patron ARIA de radiogroup espera
    * que las cuatro flechas funcionen (Abajo/Derecha avanzan, Arriba/Izquierda
-   * retroceden), asi que dejamos a Radix en su modo de dos ejes. */
+   * retroceden), asi que dejamos a Radix en su modo de dos ejes.
+   *
+   * El precio de no reenviarla es que Radix emite aria-orientation={undefined},
+   * y el valor implicito de role=radiogroup es "vertical": un grupo dispuesto en
+   * horizontal se anunciaria al reves de como se ve. Lo declaramos aqui a mano.
+   * Solo en horizontal: en vertical el implicito ya es el correcto y escribirlo
+   * seria ruido.
+   *
+   * aria-invalid tambien va en el grupo, no solo en cada opcion. Quien llega al
+   * grupo tabulando aterriza en el <div role=radiogroup>; sin esto no percibiria
+   * el error hasta enfocar una opcion. radiogroup soporta aria-invalid por
+   * especificacion, asi que es su sitio natural.
+   *
+   * Ambos van ANTES del spread para que el consumidor pueda sobreescribirlos. */
   const root = (
     <RadixRadioGroup.Root
       ref={ref}
       className={cn(radioGroup({ orientation, className }))}
       aria-labelledby={label ? labelId : undefined}
+      aria-orientation={layout === "horizontal" ? "horizontal" : undefined}
+      aria-invalid={invalid || undefined}
       {...props}
     >
-      <RadioGroupContext.Provider value={{ invalid }}>{children}</RadioGroupContext.Provider>
+      <RadioGroupContext.Provider value={context}>{children}</RadioGroupContext.Provider>
     </RadixRadioGroup.Root>
   );
 
@@ -214,7 +256,14 @@ export const Radio = React.forwardRef<HTMLButtonElement, RadioProps>(function Ra
   return (
     <RadixRadioGroup.Item
       ref={ref}
-      className={cn(radioItem({ appearance, invalid: isInvalid, className }))}
+      className={cn(
+        radioItem({ appearance, invalid: isInvalid }),
+        /* En columna la fila ocupa todo el ancho para que sea clicable de borde
+         * a borde; en fila cada opcion se ciñe a su contenido. `className` va
+         * detras, asi que sigue mandando el consumidor. */
+        group.orientation === "vertical" && "w-full",
+        className,
+      )}
       /* Sin descripcion el nombre accesible sale del contenido del boton y no
        * hace falta tocarlo. Con descripcion hay que separarlos: si no, el lector
        * de pantalla leeria "Envio estandar Llega en minutos 0" como nombre. */

@@ -1,0 +1,246 @@
+#!/usr/bin/env node
+/**
+ * Barrido visual de TODAS las stories, en claro y en oscuro.
+ *
+ *     pnpm build:storybook
+ *     node scripts/auditar-stories.mjs apps/storybook/storybook-static
+ *
+ * Existe porque medir un componente suelto no escala a 37, y mirarlos a ojo
+ * uno por uno no es repetible. Esto recorre cada story en los dos temas y busca
+ * las cuatro formas en que un sistema de diseño se rompe sin que nadie se
+ * entere:
+ *
+ *   1. Variables CSS sin resolver — un `var(--tk-loquesea)` mal escrito no
+ *      falla, simplemente no pinta. Es el fallo mas silencioso de todos.
+ *   2. Texto invisible — tinta y fondo iguales o casi. Es lo que paso con el
+ *      menu abierto en hover (contraste 1.06:1) y con la media card en oscuro.
+ *   3. Colores fijos que no invierten — si un elemento se pinta EXACTAMENTE
+ *      igual en claro y en oscuro teniendo color de fondo propio, o es
+ *      deliberado (acentos de marca, `.tk-static`) o se colo un literal.
+ *   4. Errores de consola.
+ *
+ * No sustituye a mirar el resultado: detecta lo mecanico, no si algo es feo.
+ */
+
+import { chromium } from "playwright";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { createServer } from "node:http";
+import { stat, readFile } from "node:fs/promises";
+
+const dir = resolve(process.argv[2] ?? "apps/storybook/storybook-static");
+
+const MIME = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".map": "application/json",
+};
+
+/** Servidor estatico minimo: file:// no vale, Storybook hace fetch de su index. */
+function servir(raiz) {
+  return new Promise((listo) => {
+    const s = createServer(async (req, res) => {
+      try {
+        const ruta = join(raiz, decodeURIComponent(req.url.split("?")[0]));
+        const info = await stat(ruta).catch(() => null);
+        const final = info?.isDirectory() ? join(ruta, "index.html") : ruta;
+        const cuerpo = await readFile(final);
+        const ext = final.slice(final.lastIndexOf("."));
+        res.writeHead(200, { "content-type": MIME[ext] ?? "application/octet-stream" });
+        res.end(cuerpo);
+      } catch {
+        res.writeHead(404).end("no encontrado");
+      }
+    });
+    s.listen(0, () => listo({ servidor: s, puerto: s.address().port }));
+  });
+}
+
+/** Luminancia relativa segun WCAG, para el contraste. */
+function luminancia([r, g, b]) {
+  const c = [r, g, b].map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+
+function contraste(a, b) {
+  const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
+
+/* Lo que se ejecuta DENTRO de la pagina de cada story. Devuelve datos crudos;
+   el analisis se hace fuera, en Node, para poder razonar con calma. */
+function recolectar() {
+  const rgb = (s) => {
+    const m = /rgba?\(([^)]+)\)/.exec(s);
+    if (!m) return null;
+    const p = m[1]
+      .split(/[,\s/]+/)
+      .filter(Boolean)
+      .map(Number);
+    // Transparente: el color efectivo lo pone lo de debajo, no se puede juzgar.
+    if (p.length > 3 && p[3] < 0.9) return null;
+    return [p[0], p[1], p[2]];
+  };
+
+  const fondoEfectivo = (el) => {
+    let n = el;
+    while (n && n !== document.documentElement) {
+      const c = rgb(getComputedStyle(n).backgroundColor);
+      if (c) return c;
+      n = n.parentElement;
+    }
+    return rgb(getComputedStyle(document.body).backgroundColor) ?? [255, 255, 255];
+  };
+
+  const varsSinResolver = [];
+  const textos = [];
+  const fondos = [];
+
+  for (const el of document.querySelectorAll("*")) {
+    const cs = getComputedStyle(el);
+
+    // 1. Variables sin resolver: el valor calculado conserva el var() literal.
+    for (const prop of ["color", "background-color", "border-color", "box-shadow", "fill"]) {
+      const v = cs.getPropertyValue(prop);
+      if (v && v.includes("var(--")) {
+        varsSinResolver.push({ etiqueta: el.tagName.toLowerCase(), prop, valor: v.slice(0, 90) });
+      }
+    }
+
+    const propio = rgb(cs.backgroundColor);
+    if (propio) fondos.push({ sel: el.tagName.toLowerCase(), color: propio });
+
+    // 2. Texto: solo elementos con texto propio y visibles.
+    const texto = [...el.childNodes]
+      .filter((n) => n.nodeType === 3)
+      .map((n) => n.textContent.trim())
+      .join("");
+    if (!texto) continue;
+    if (cs.visibility === "hidden" || cs.display === "none" || cs.opacity === "0") continue;
+    const caja = el.getBoundingClientRect();
+    if (caja.width < 2 || caja.height < 2) continue;
+
+    const tinta = rgb(cs.color);
+    if (!tinta) continue;
+    textos.push({
+      texto: texto.slice(0, 40),
+      tinta,
+      fondo: fondoEfectivo(el),
+      tam: parseFloat(cs.fontSize),
+      peso: cs.fontWeight,
+    });
+  }
+
+  return { varsSinResolver, textos, fondos };
+}
+
+const { servidor, puerto } = await servir(dir);
+const base = `http://127.0.0.1:${puerto}`;
+
+const indice = JSON.parse(readFileSync(join(dir, "index.json"), "utf8"));
+const stories = Object.values(indice.entries ?? indice.stories ?? {}).filter(
+  (e) => e.type !== "docs",
+);
+
+const navegador = await chromium.launch();
+const problemas = [];
+let revisadas = 0;
+
+for (const story of stories) {
+  for (const tema of ["Claro", "Oscuro"]) {
+    const pagina = await navegador.newPage({ viewport: { width: 900, height: 700 } });
+    const errores = [];
+    pagina.on("console", (m) => m.type() === "error" && errores.push(m.text()));
+    pagina.on("pageerror", (e) => errores.push(String(e)));
+
+    const url = `${base}/iframe.html?id=${story.id}&globals=theme:${tema}&viewMode=story`;
+    try {
+      await pagina.goto(url, { waitUntil: "networkidle", timeout: 20000 });
+      // Las animaciones de entrada (stagger, count-up) necesitan asentarse.
+      await pagina.waitForTimeout(350);
+      const datos = await pagina.evaluate(recolectar);
+
+      for (const v of datos.varsSinResolver) {
+        problemas.push({
+          story: story.id,
+          tema,
+          tipo: "var-sin-resolver",
+          detalle: `<${v.etiqueta}> ${v.prop}: ${v.valor}`,
+        });
+      }
+
+      for (const t of datos.textos) {
+        const ratio = contraste(t.tinta, t.fondo);
+        // Umbral WCAG AA: 3:1 para texto grande, 4.5:1 para el resto.
+        const grande = t.tam >= 24 || (t.tam >= 18.66 && Number(t.peso) >= 700);
+        const minimo = grande ? 3 : 4.5;
+        if (ratio < minimo) {
+          problemas.push({
+            story: story.id,
+            tema,
+            tipo: ratio < 1.5 ? "texto-invisible" : "contraste-bajo",
+            detalle: `"${t.texto}" ${ratio.toFixed(2)}:1 (min ${minimo}) ${t.tam}px`,
+          });
+        }
+      }
+
+      for (const e of errores) {
+        problemas.push({ story: story.id, tema, tipo: "error-consola", detalle: e.slice(0, 140) });
+      }
+
+      revisadas++;
+    } catch (e) {
+      problemas.push({ story: story.id, tema, tipo: "no-carga", detalle: String(e).slice(0, 140) });
+    }
+    await pagina.close();
+  }
+}
+
+await navegador.close();
+servidor.close();
+
+/* Informe. Se agrupa por tipo porque un mismo defecto suele aparecer en muchas
+   stories a la vez y leerlo story por story esconde el patron. */
+const porTipo = {};
+for (const p of problemas) (porTipo[p.tipo] ??= []).push(p);
+
+console.log(`\n${stories.length} stories × 2 temas = ${revisadas} vistas revisadas\n`);
+
+if (!problemas.length) {
+  console.log("Sin problemas mecanicos. Esto NO dice que se vea bien: solo que");
+  console.log("no hay variables sin resolver, texto ilegible ni errores.\n");
+} else {
+  for (const [tipo, lista] of Object.entries(porTipo).sort((a, b) => b[1].length - a[1].length)) {
+    console.log(`\n### ${tipo} — ${lista.length}`);
+    const vistos = new Set();
+    for (const p of lista) {
+      const clave = `${p.story}|${p.detalle}`;
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      if (vistos.size > 12) {
+        console.log(`  … y ${lista.length - 12} mas`);
+        break;
+      }
+      console.log(`  [${p.tema}] ${p.story}\n      ${p.detalle}`);
+    }
+  }
+  console.log("");
+}
+
+// Solo lo que impide leer la interfaz rompe el build.
+const graves = problemas.filter((p) =>
+  ["var-sin-resolver", "texto-invisible", "no-carga", "error-consola"].includes(p.tipo),
+);
+if (graves.length) {
+  console.error(`${graves.length} problemas graves.\n`);
+  process.exit(1);
+}

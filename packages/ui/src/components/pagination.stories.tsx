@@ -52,9 +52,17 @@ type Story = StoryObj<typeof meta>;
 export const Numerica: Story = {
   name: "Numérica",
   render: function Numerica(args) {
-    const [page, setPage] = React.useState(args.page);
     // El componente es controlado: el estado vive en quien lo usa.
-    React.useEffect(() => setPage(args.page), [args.page]);
+    const [page, setPage] = React.useState(args.page);
+    /* La sincronizacion con el control de Storybook se hace ajustando estado
+       DURANTE el render, no en un useEffect: con el efecto la story pintaria
+       primero un fotograma con la pagina vieja. Mismo criterio que usa por
+       dentro PaginationJump. */
+    const [argsPage, setArgsPage] = React.useState(args.page);
+    if (args.page !== argsPage) {
+      setArgsPage(args.page);
+      setPage(args.page);
+    }
     return <Pagination {...args} page={page} onPageChange={setPage} />;
   },
 };
@@ -82,13 +90,15 @@ export const Extremos: Story = {
         <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
           Primera página · anterior en tope
         </span>
-        <Pagination page={1} totalPages={12} />
+        {/* Nombre propio: dos <nav> homonimos en la misma pagina no se pueden
+            distinguir en la lista de landmarks. */}
+        <Pagination page={1} totalPages={12} aria-label="Paginación · primera página" />
       </div>
       <div className="flex flex-col gap-2">
         <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
           Última página · siguiente en tope
         </span>
-        <Pagination page={12} totalPages={12} />
+        <Pagination page={12} totalPages={12} aria-label="Paginación · última página" />
       </div>
     </div>
   ),
@@ -304,17 +314,40 @@ export const MatrizDeFormatos: Story = {
   name: "Matriz de formatos",
   parameters: { controls: { disable: true } },
   render: () => {
+    /* Cada <Pagination> es un landmark <nav>. Con el nombre por defecto los
+       cuatro se llamarian «Paginación» y serian indistinguibles en la lista de
+       landmarks del lector: aqui se rotula cada uno con su formato. */
     const filas = [
-      { titulo: "Numérica · web", node: <Pagination page={3} totalPages={12} /> },
+      {
+        titulo: "Numérica · web",
+        node: <Pagination page={3} totalPages={12} aria-label="Paginación · numérica" />,
+      },
       {
         titulo: "Numérica · rango colapsado por los dos lados",
-        node: <Pagination page={24} totalPages={48} />,
+        node: <Pagination page={24} totalPages={48} aria-label="Paginación · rango colapsado" />,
       },
       {
         titulo: "Prev / next con label",
-        node: <Pagination page={3} totalPages={12} format="labels" />,
+        node: (
+          <Pagination
+            page={3}
+            totalPages={12}
+            format="labels"
+            aria-label="Paginación · prev / next con label"
+          />
+        ),
       },
-      { titulo: "Compacto", node: <Pagination page={3} totalPages={12} format="compact" /> },
+      {
+        titulo: "Compacto",
+        node: (
+          <Pagination
+            page={3}
+            totalPages={12}
+            format="compact"
+            aria-label="Paginación · compacto"
+          />
+        ),
+      },
       { titulo: "Saltar a página", node: <PaginationJump page={3} totalPages={12} /> },
       {
         titulo: "Rango + tamaño de página",

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Dialog as DialogPrimitive } from "radix-ui";
+import * as DialogPrimitive from "radix-ui/dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -150,7 +150,13 @@ export const ModalContent = React.forwardRef<HTMLDivElement, ModalContentProps>(
               "rounded-2xl bg-surface p-6 text-ink outline-none",
               "shadow-[0_20px_40px_-12px_rgba(0,0,0,0.4)]",
               // scale .94 -> 1 + fade, del pie de la demo del documento.
-              "transition-[opacity,transform] duration-140 ease-out",
+              // `scale` va LISTADO APARTE de `transform`: en Tailwind 4 la
+              // utilidad scale-* no compila a `transform: scale()` sino a la
+              // propiedad independiente `scale: .94`, que una lista con solo
+              // `transform` no cubre — el fade transicionaba y la escala
+              // saltaba de golpe. `transform` se mantiene para no romper la
+              // transicion de un consumidor que si use translate/rotate.
+              "transition-[opacity,transform,scale] duration-140 ease-out",
               "starting:scale-[0.94] starting:opacity-0",
               "motion-reduce:transition-none",
               className,
@@ -284,14 +290,24 @@ const modalAction = cva(
       },
       /* Rojo SOLO en la accion irreversible. --tk-fg-error invierte con el tema
        * (196,0,0 en claro / 255,138,138 en oscuro) y text-surface le acompaña,
-       * asi que el contraste se mantiene en ambos modos. El hover y el pressed
-       * suben por la escala de marca purered, que NO invierte: son el mismo rojo
-       * en los dos temas y por eso solo se usan como estado momentaneo. */
+       * asi que el contraste se mantiene en ambos modos.
+       *
+       * El hover y el pressed se DERIVAN de --tk-fg-error mezclandolo con
+       * --tk-ink, no de la escala de marca purered: purered-600/700 son el mismo
+       * rojo saturado en los dos temas (255,46,46 / 255,0,0) y con texto blanco
+       * se quedaban en 3.7:1 y 4.0:1, por debajo del 4.5:1 de AA para 14px.
+       * Mezclar con la tinta empuja el color hacia el extremo del tema — mas
+       * oscuro en claro, mas claro en oscuro — asi que el estado momentaneo
+       * SIEMPRE gana contraste contra la superficie, nunca lo pierde. Misma
+       * tecnica que los estados de error de link.tsx. */
       {
         variant: "primary",
         tone: "danger",
-        class:
-          "bg-fg-error text-surface hover:not-disabled:bg-red active:not-disabled:bg-[var(--colours-purered-700)]",
+        class: [
+          "bg-fg-error text-surface",
+          "hover:not-disabled:bg-[color-mix(in_srgb,var(--tk-fg-error)_88%,var(--tk-ink))]",
+          "active:not-disabled:bg-[color-mix(in_srgb,var(--tk-fg-error)_78%,var(--tk-ink))]",
+        ].join(" "),
       },
       {
         variant: "ghost",
@@ -374,7 +390,7 @@ export interface BottomSheetContentProps extends React.ComponentPropsWithoutRef<
  */
 export const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentProps>(
   function BottomSheetContent(
-    { className, overlayClassName, container, showHandle = true, children, ...props },
+    { className, overlayClassName, container, showHandle = true, style, children, ...props },
     ref,
   ) {
     const [dragging, setDragging] = React.useState(false);
@@ -444,16 +460,28 @@ export const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetCo
               // Safe-area SUMADA al padding, no sustituyendolo: en un movil sin
               // gesto de home env() vale 0 y quedan los 20 del documento.
               "pb-[calc(20px+env(safe-area-inset-bottom))]",
-              // Sube desde abajo. Durante el arrastre la transicion estorbaria:
-              // la hoja iria por detras del dedo.
-              "transition-transform duration-140 ease-out starting:translate-y-full",
+              // Sube desde abajo con asentamiento de resorte, como pide el pie
+              // de la demo. La curva es la misma familia que ya usan toggle y
+              // checkbox para el "spring", pero SIN rebote: un overshoot en
+              // translateY levantaria la hoja por encima de bottom:0 y dejaria
+              // ver una franja de scrim bajo el borde inferior.
+              // Durante el arrastre la transicion estorbaria: la hoja iria por
+              // detras del dedo.
+              "transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] starting:translate-y-full",
               dragging && "transition-none",
               "motion-reduce:transition-none",
               className,
             )}
             // El transform en linea gana al de la clase mientras se arrastra;
-            // en reposo vale undefined y manda la transicion de entrada.
-            style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
+            // en reposo manda la transicion de entrada.
+            //
+            // El style del consumidor se FUSIONA, no se pisa ni pisa: `style`
+            // sale del destructuring (no viaja en `...props`), asi que ya no
+            // puede llegar despues y borrar el translateY del gesto — con el
+            // spread detras, cualquier consumidor que pasara `style` dejaba la
+            // hoja quieta bajo el dedo. Del arrastre solo se impone `transform`;
+            // el resto de sus declaraciones siguen aplicandose.
+            style={dragY ? { ...style, transform: `translateY(${dragY}px)` } : style}
             {...props}
           >
             {showHandle ? (
@@ -561,6 +589,12 @@ export const BottomSheetItem = React.forwardRef<HTMLButtonElement, BottomSheetIt
         ref={ref}
         type={type ?? "button"}
         className={cn(
+          // Grupo CON NOMBRE: cada trozo de la fila fija su propio color, y una
+          // clase propia gana siempre al color heredado, asi que `disabled:` en
+          // el boton no llegaba a los hijos y una fila deshabilitada se pintaba
+          // identica a una activa. El nombre evita secuestrar un `group-*` que
+          // el consumidor haya declarado en un ancestro de la hoja.
+          "group/tk-sheet-item",
           "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left",
           "transition-colors duration-140 ease-out",
           "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
@@ -574,19 +608,26 @@ export const BottomSheetItem = React.forwardRef<HTMLButtonElement, BottomSheetIt
         {icon ? (
           <span
             aria-hidden="true"
-            className="flex size-[38px] shrink-0 items-center justify-center rounded-pill bg-surface-2 text-ink [&_svg]:size-[19px]"
+            className="flex size-[38px] shrink-0 items-center justify-center rounded-pill bg-surface-2 text-ink group-disabled/tk-sheet-item:text-ink-400 [&_svg]:size-[19px]"
           >
             {icon}
           </span>
         ) : null}
         <span className="flex min-w-0 flex-col gap-px">
-          <span className="truncate text-sm text-ink">{title}</span>
+          <span className="truncate text-sm text-ink group-disabled/tk-sheet-item:text-ink-400">
+            {title}
+          </span>
           {description ? (
-            <span className="truncate text-xs text-ink-600">{description}</span>
+            <span className="truncate text-xs text-ink-600 group-disabled/tk-sheet-item:text-ink-400">
+              {description}
+            </span>
           ) : null}
         </span>
         {endIcon ? (
-          <span aria-hidden="true" className="ml-auto shrink-0 text-ink-500 [&_svg]:size-[15px]">
+          <span
+            aria-hidden="true"
+            className="ml-auto shrink-0 text-ink-500 group-disabled/tk-sheet-item:text-ink-400 [&_svg]:size-[15px]"
+          >
             {endIcon}
           </span>
         ) : null}

@@ -140,6 +140,46 @@ describe("OtpInput", () => {
     expect(input).toHaveValue("314279");
   });
 
+  /* readOnly SI es enfocable y SI entra en el orden de tabulacion. Si se
+   * plegara con disabled se quedaria sin casilla activa y, como el caret nativo
+   * va a opacidad 0, tabular hasta el no dibujaria absolutamente nada. */
+  it("en solo lectura el foco sigue siendo visible: marca la casilla activa", async () => {
+    render(<OtpInput readOnly value="314" />);
+
+    await userEvent.tab();
+
+    expect(screen.getByRole("textbox")).toHaveFocus();
+    // La activa es la primera vacia, la cuarta.
+    expect(cells()[3]).toHaveAttribute("data-active");
+  });
+
+  it("en solo lectura la casilla se pinta en reposo, no como deshabilitada", () => {
+    render(<OtpInput readOnly value="314279" />);
+    const cell = cells()[0]!;
+
+    expect(cell.className).not.toContain("bg-surface-2");
+    expect(cell.className).not.toContain("cursor-not-allowed");
+    expect(cell.className).toContain("border-edge-2");
+  });
+
+  it("en solo lectura no dibuja caret: parpadear invitaria a teclear", async () => {
+    render(<OtpInput readOnly value="314" />);
+
+    await userEvent.tab();
+
+    const activa = cells()[3]!;
+    expect(activa).toHaveAttribute("data-active");
+    expect(activa.querySelector("span")).toBeNull();
+  });
+
+  it("deshabilitado si pierde la casilla activa: no es enfocable", async () => {
+    render(<OtpInput disabled defaultValue="314" />);
+
+    await userEvent.tab();
+
+    expect(cells().some((cell) => cell.hasAttribute("data-active"))).toBe(false);
+  });
+
   it("controlado: el valor lo manda el padre, no el teclado", async () => {
     const onValueChange = vi.fn();
     render(<OtpInput value="31" onValueChange={onValueChange} />);
@@ -189,6 +229,28 @@ describe("OtpInput", () => {
     expect(document.getElementById(messageId!)).toHaveTextContent(
       "Código incorrecto. Te quedan 2 intentos.",
     );
+  });
+
+  /* La region live tiene que estar registrada ANTES de que llegue el texto: un
+   * aria-live que se monta en el mismo commit que su contenido no se anuncia en
+   * la mayoria de lectores, y el mensaje de error solo aparece al fallar. */
+  it("monta la region del mensaje aunque todavia no haya mensaje", () => {
+    const { container } = render(<OtpInput />);
+    const live = container.querySelector('[aria-live="polite"]');
+
+    expect(live).not.toBeNull();
+    expect(live).toBeEmptyDOMElement();
+  });
+
+  it("el mensaje aparece dentro de la region live que ya existia", () => {
+    const { container, rerender } = render(<OtpInput value="999999" />);
+    const live = container.querySelector('[aria-live="polite"]');
+
+    rerender(<OtpInput value="999999" feedback="error" message="Código incorrecto." />);
+
+    // Mismo nodo, no uno nuevo: si se remontara, el anuncio se perderia.
+    expect(container.querySelector('[aria-live="polite"]')).toBe(live);
+    expect(live).toHaveTextContent("Código incorrecto.");
   });
 
   it("conserva el aria-describedby del consumidor junto al del mensaje", () => {
@@ -241,6 +303,9 @@ describe("OtpInput", () => {
     // Si el rojo sigue ahi, las dos reglas compiten en la cascada.
     expect(cell.className).not.toContain("border-red");
     expect(cell.className).not.toContain("bg-red-tint");
+    // El prototipo dibuja el deshabilitado a 0.5px tambien cuando hay feedback.
+    expect(cell.className).toContain("border-[0.5px]");
+    expect(cell.className).not.toContain("border-[1px]");
   });
 
   it("el fondo del feedback sustituye al fondo base de la casilla", () => {
@@ -249,8 +314,44 @@ describe("OtpInput", () => {
 
     expect(cell.className).toContain("bg-red-tint");
     expect(cell.className).not.toContain("bg-[var(--textfield-bg-default)]");
-    // El grosor del borde no es un conflicto: vive en otro grupo que el color.
+  });
+
+  /* El prototipo especifica 1px para error y para exito, y 0.5px para el resto.
+   * Heredar el 0.5px de la base pintaba la mitad del grosor. */
+  it.each([
+    ["error", "border-red"],
+    ["success", "border-fg-success"],
+  ] as const)("el feedback %s engorda el borde a 1px", (feedback, colorClass) => {
+    render(<OtpInput feedback={feedback} value="314279" />);
+    const cell = cells()[0]!;
+
+    expect(cell.className).toContain("border-[1px]");
+    expect(cell.className).not.toContain("border-[0.5px]");
+    expect(cell.className).toContain(colorClass);
+  });
+
+  it("en reposo la casilla se queda en el 0.5px de la base", () => {
+    render(<OtpInput value="314279" />);
+    const cell = cells()[0]!;
+
     expect(cell.className).toContain("border-[0.5px]");
+    expect(cell.className).not.toContain("border-[1px]");
+  });
+
+  it("en exito marca el tono del mensaje y no marca aria-invalid", () => {
+    render(<OtpInput feedback="success" value="314279" message="Verificado" />);
+    const input = screen.getByRole("textbox");
+
+    expect(input).not.toHaveAttribute("aria-invalid");
+    const messageId = input.getAttribute("aria-describedby");
+    expect(document.getElementById(messageId!)).toHaveTextContent("Verificado");
+  });
+
+  it("permite sobreescribir estilos del bloque por wrapperClassName", () => {
+    render(<OtpInput wrapperClassName="items-center" data-testid="otp" />);
+    // El bloque es el abuelo del input: control -> input.
+    const bloque = screen.getByTestId("otp").parentElement?.parentElement;
+    expect(bloque?.className).toContain("items-center");
   });
 
   it("permite sobreescribir estilos del control por className", () => {

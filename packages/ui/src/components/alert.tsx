@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as Slot from "radix-ui/slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -40,7 +41,18 @@ import { cn } from "../lib/cn";
  * pintarlos directamente. Motivo: los glifos son de relleno solido y necesitan
  * recortar la marca interior con el color del FONDO del alert. Sin la variable,
  * el icono tendria que recibir el tono por prop y un icono personalizado del
- * consumidor no podria hacer ese recorte. */
+ * consumidor no podria hacer ese recorte.
+ *
+ * OJO AL ACOPLAMIENTO: `bg-tint-*` y `[--tk-alert-bg:...]` salen juntos del
+ * mismo variant, pero tailwind-merge solo sabe que `bg-surface` pisa a
+ * `bg-tint-info`; la variable se quedaria apuntando al tint viejo y la marca
+ * interior del glifo se pintaria de un color que ya no es el fondo. Quien
+ * cambie el fondo por className tiene que cambiar las dos cosas:
+ *
+ *   <Alert className="bg-surface [--tk-alert-bg:var(--tk-surface)]">
+ *
+ * Eso si funciona sin ambiguedad de orden en el CSS, porque tailwind-merge
+ * trata las propiedades arbitrarias como grupo y se queda con la ultima. */
 const alert = cva(
   [
     "flex items-start gap-3 overflow-hidden rounded-lg px-4 py-[14px]",
@@ -159,8 +171,14 @@ export interface AlertProps
    */
   title?: React.ReactNode;
   /**
-   * Sustituye el icono de tono por otro. Hereda el color pleno del hue via
-   * currentColor y puede recortar su marca interior con `var(--tk-alert-bg)`.
+   * Sustituye el icono de tono por otro. Se pinta dentro del mismo hueco que el
+   * glifo por defecto, asi que hereda el color pleno del hue via currentColor,
+   * no se encoge y queda oculto al lector de pantalla; puede recortar su marca
+   * interior con `var(--tk-alert-bg)`.
+   *
+   * Es decorativo por definicion: si el icono aporta informacion que no esta en
+   * el titulo ni en el cuerpo, esa informacion va en el texto, porque el alert
+   * es una region viva y anunciarla dos veces interrumpe dos veces.
    */
   icon?: React.ReactNode;
   /** Oculta el icono por completo. */
@@ -223,7 +241,20 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert
   return (
     <div ref={ref} role={rolFinal} className={cn(alert({ tone, className }))} {...props}>
       {!hideIcon &&
-        (icon ?? (
+        (icon !== undefined && icon !== null ? (
+          /* El icono del consumidor va envuelto, no suelto. Suelto heredaba la
+             tinta del contenedor en vez del color pleno del hue, se encogia por
+             debajo de 20px con cuerpos largos (es un hijo flex sin shrink-0) y,
+             si era un icono con nombre accesible, lo anunciaba dentro de la
+             region viva duplicando el mensaje. El wrapper le da las tres cosas
+             que el glifo por defecto ya tenia. */
+          <span
+            className="mt-px flex shrink-0 items-start text-[var(--tk-alert-fg)]"
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
+        ) : (
           <svg
             viewBox="0 0 20 20"
             width="20"
@@ -267,7 +298,10 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert
             // Hover y foco no estan en el prototipo: sin ellos el boton no da
             // ninguna señal de que es pulsable ni de donde esta el foco.
             "hover:text-ink",
-            "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--tk-alert-bg)]",
+            // El offset lleva fallback por la misma razon que en calendar.tsx:
+            // sin el, --tw-ring-offset-color cae a su initial-value (#fff) y el
+            // halo se pinta blanco fijo, ilegible en tema oscuro.
+            "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--tk-alert-bg,var(--tk-bg))]",
           )}
         >
           <GlifoCerrar />
@@ -279,7 +313,18 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert
 
 /* -------------------------------------------------------------------------- */
 
-export type AlertActionProps = React.ComponentPropsWithoutRef<"button">;
+export interface AlertActionProps extends React.ComponentPropsWithoutRef<"button"> {
+  /**
+   * Renderiza el hijo en vez de un `<button>`, heredando los estilos. Es la
+   * misma puerta que abren `Button`, `Card` y `ListItem`.
+   *
+   * Hace falta de verdad aqui: la accion canonica de la seccion ("VERIFICAR")
+   * lleva a otra pantalla, y una navegacion tiene que ser un `<a href>` para
+   * conservar el click derecho, abrir en pestaña nueva y que el lector de
+   * pantalla anuncie "enlace" y no "boton".
+   */
+  asChild?: boolean;
+}
 
 /**
  * Boton de accion del Alert — EXTENSION, medidas del prototipo de la seccion 25.
@@ -294,26 +339,33 @@ export type AlertActionProps = React.ComponentPropsWithoutRef<"button">;
  * al portapapeles.
  */
 export const AlertAction = React.forwardRef<HTMLButtonElement, AlertActionProps>(
-  function AlertAction({ className, type, children, ...props }, ref) {
+  function AlertAction({ className, type, asChild = false, disabled, children, ...props }, ref) {
+    const Comp = asChild ? Slot.Root : "button";
+
     return (
-      <button
+      <Comp
         ref={ref}
-        // Sin type explicito un <button> envia el formulario que lo contenga, y
-        // un alert de validacion vive justo dentro de formularios.
-        type={type ?? "button"}
         className={cn(
           "inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md px-4",
           "bg-ink whitespace-nowrap text-surface",
           "font-mono text-xs font-normal tracking-[0.02em] uppercase",
           "transition-colors duration-140 ease-out hover:not-disabled:bg-ink-800",
-          "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tk-alert-bg)]",
+          // --tk-alert-bg solo existe dentro de un Alert y AlertAction se
+          // exporta suelto. Sin el fallback, --tw-ring-offset-color cae a su
+          // initial-value (#fff) y deja un halo blanco fijo en tema oscuro.
+          "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tk-alert-bg,var(--tk-bg))]",
           "disabled:cursor-not-allowed disabled:bg-edge disabled:text-ink-400",
           className,
         )}
+        // Sin type explicito un <button> envia el formulario que lo contenga, y
+        // un alert de validacion vive justo dentro de formularios. Con asChild
+        // no se ponen ninguno de los dos: el hijo puede ser un <a>, donde `type`
+        // significa otra cosa y `disabled` no existe.
+        {...(asChild ? {} : { type: type ?? "button", disabled })}
         {...props}
       >
         {children}
-      </button>
+      </Comp>
     );
   },
 );

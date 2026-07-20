@@ -32,6 +32,8 @@ const meta = {
           "**Seleccion en tinta**: la activa se marca con tinta (pildora, tarjeta o subrayado) — nunca con lima ni otro acento. Inactivas en `ink-600`, hover a tinta.",
           "",
           "**Labels**: mono 13 (14 en el segmentado del archivo), MAYUSCULAS por CSS, +2% tracking. Maximo una palabra por pestaña; el ancho lo da el contenido, no se estiran a partes iguales.",
+          "",
+          "**`SegmentedControl` no es un `tablist`**: comparte la piel del segmentado pero se monta sobre Radix RadioGroup, porque filtra una lista que ya esta en pantalla y no tiene paneles que intercambiar. Un `tab` sin `tabpanel` al que apuntar no es conforme con la APG.",
         ].join("\n"),
       },
     },
@@ -159,12 +161,22 @@ export const Underline: Story = {
 /** Con icono de 16 y contador en la activa, tal y como lo describe el documento. */
 export const ConIconoYContador: Story = {
   name: "Con icono y contador",
-  parameters: { controls: { disable: true } },
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "El contador cuenta para el nombre accesible de la pestaña (`Todos 12 recibos`). Escondido con `aria-hidden` el numero desaparece para el lector de pantalla, que es justo el dato que el documento quiere destacar.",
+      },
+    },
+  },
   render: () => (
     <Tabs defaultValue="todos" variant="segmented">
       <TabsList aria-label="Filtrar recibos">
-        <TabsTrigger value="todos" startIcon={<IconoRecibo />}>
-          Todos <span aria-hidden="true">12</span>
+        {/* El aria-label repite literalmente el texto visible ("Todos 12") y le
+            añade la unidad: es lo que exige "label in name" del control por voz. */}
+        <TabsTrigger value="todos" startIcon={<IconoRecibo />} aria-label="Todos 12 recibos">
+          Todos <span className="font-num">12</span>
         </TabsTrigger>
         <TabsTrigger value="pendientes">Pendientes</TabsTrigger>
         <TabsTrigger value="pagados">Pagados</TabsTrigger>
@@ -239,7 +251,7 @@ export const ControlSegmentadoSuelto: Story = {
     docs: {
       description: {
         story:
-          "El uso del archivo: filtrar la misma lista. Como no hay paneles, `controls` apunta al id de la lista; sin ese dato el componente quita el `aria-controls` en vez de dejarlo apuntando a un panel que no existe.",
+          'El uso del archivo: filtrar la misma lista. Como no hay paneles que intercambiar, el control es un `radiogroup` y sus opciones son `radio`, no `tab`: un `tab` sin `tabpanel` al que apuntar no es conforme con la APG. `controls` pone el `aria-controls` del grupo sobre la lista que filtra. El riel es la raiz, asi que `className` y la ref llegan a un unico elemento: `<SegmentedControl className="w-full">` ocupa todo el ancho.',
       },
     },
   },
@@ -295,6 +307,10 @@ export const MatrizDeEspecificacion: Story = {
               </span>
               <span className="ml-auto font-meta text-xs text-ink-500">{fila.medidas}</span>
             </div>
+            {/* Los paneles no son decorativos: Radix emite siempre
+                `aria-controls` en cada pestaña, asi que una matriz sin
+                `TabsContent` dejaria nueve referencias ARIA apuntando a ids que
+                no existen. */}
             <Tabs defaultValue="activa" variant={fila.variant}>
               <TabsList aria-label={fila.variant}>
                 <TabsTrigger value="activa">Activa</TabsTrigger>
@@ -303,6 +319,12 @@ export const MatrizDeEspecificacion: Story = {
                   Off
                 </TabsTrigger>
               </TabsList>
+              {["activa", "inactiva", "off"].map((estado) => (
+                <TabsContent key={estado} value={estado} className="pt-3 text-ink-600">
+                  Estado <strong className="font-normal text-ink">{estado}</strong> de la piel{" "}
+                  {fila.variant}.
+                </TabsContent>
+              ))}
             </Tabs>
           </div>
         ))}

@@ -1,12 +1,13 @@
 import * as React from "react";
-import { Tabs as TabsPrimitive } from "radix-ui";
+import * as RadixRadioGroup from "radix-ui/radio-group";
+import * as TabsPrimitive from "radix-ui/tabs";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
 /* Seccion 08 · Tabs & controles — MIXTO.
  *
- * Tres pieles sobre la misma primitiva (Radix Tabs), con procedencias
- * distintas que NO se pueden confundir:
+ * Tres pieles para las pestañas con paneles, con procedencias distintas que NO
+ * se pueden confundir:
  *
  *   segmented   CANONICO · del archivo de Figma. Riel r12 sobre superficie con
  *               borde de 1px, altura 40, padding 4; la activa es un bloque gris
@@ -23,6 +24,15 @@ import { cn } from "../lib/cn";
  * REGLA DE SELECCION: la activa se marca SIEMPRE en tinta (pildora, tarjeta o
  * subrayado). Nunca en lima ni en ningun otro acento. Inactivas en ink-600,
  * hover a tinta.
+ *
+ * DOS PRIMITIVAS, UNA PIEL
+ * -----------------------
+ * `Tabs` monta Radix Tabs porque hay paneles que intercambiar. `SegmentedControl`
+ * NO: el uso del archivo es filtrar una lista que ya esta en pantalla, asi que
+ * monta Radix RadioGroup y sus opciones son `role="radio"`, no `role="tab"`.
+ * Un `tab` sin `tabpanel` al que apuntar no es conforme con la APG, y disfrazarlo
+ * borrando el `aria-controls` que Radix pone solo tapaba el sintoma. Comparten la
+ * geometria del archivo (`segmentedSkin`), no la semantica.
  *
  * DESVIACIONES DELIBERADAS RESPECTO AL PROTOTIPO
  * ----------------------------------------------
@@ -64,46 +74,74 @@ const tabsList = cva("flex", {
   defaultVariants: { variant: "segmented" },
 });
 
-const tabsTrigger = cva(
-  [
-    "relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
-    // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
-    "font-mono font-normal tracking-[0.02em] uppercase",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
-    "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2",
-    "disabled:cursor-not-allowed disabled:text-ink-400",
-    // Icono 16 en el segmentado del archivo; se mantiene en las extensiones.
-    "[&_svg]:size-4 [&_svg]:shrink-0",
-  ],
-  {
-    variants: {
-      variant: {
-        segmented: [
-          "rounded-md px-3 py-1.5 text-sm",
-          "text-ink-600 hover:not-disabled:text-ink",
-          // activa: bloque gris 238 = surface-3, que en oscuro sube a 58.
-          "data-[state=active]:bg-surface-3 data-[state=active]:text-ink",
-          // El offset del anillo tiene que ser del color del riel, no de la
-          // pagina, o se ve un halo claro dentro del segmentado.
-          "focus-visible:ring-offset-surface",
-        ],
-        soft: [
-          "rounded-sm px-6 py-[9px] text-[13px]",
-          "text-ink-600 hover:not-disabled:text-ink",
-          "data-[state=active]:bg-surface data-[state=active]:text-ink data-[state=active]:shadow-xs",
-          "focus-visible:ring-offset-surface-2",
-        ],
-        underline: [
-          "-mb-px border-b-2 border-transparent px-0.5 pt-2.5 pb-3 text-[13px]",
-          "text-ink-600 hover:not-disabled:text-ink",
-          "data-[state=active]:border-ink data-[state=active]:text-ink",
-          "focus-visible:ring-offset-page",
-        ],
-      },
+/* Base comun a las tres pieles Y al control segmentado. Se extrae porque
+ * SegmentedControlItem ya no pasa por TabsTrigger: sale de otra primitiva. */
+const triggerBase = [
+  "relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
+  // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
+  "font-mono font-normal tracking-[0.02em] uppercase",
+  "cursor-pointer transition-colors duration-140 ease-out select-none",
+  "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2",
+  "disabled:cursor-not-allowed disabled:text-ink-400",
+  // Icono 16 en el segmentado del archivo; se mantiene en las extensiones.
+  "[&_svg]:size-4 [&_svg]:shrink-0",
+];
+
+/* Geometria y color del segmentado del archivo SIN el estado seleccionado: cada
+ * primitiva de Radix nombra ese estado a su manera (`data-state=active` en Tabs,
+ * `data-state=checked` en RadioGroup), y Tailwind necesita la clase literal en
+ * el fuente, asi que la linea del estado se escribe en cada sitio. */
+const segmentedSkin = [
+  "rounded-md px-3 py-1.5 text-sm",
+  "text-ink-600 hover:not-disabled:text-ink",
+  // El offset del anillo tiene que ser del color del riel, no de la pagina, o
+  // se ve un halo claro dentro del segmentado.
+  "focus-visible:ring-offset-surface",
+];
+
+const tabsTrigger = cva(triggerBase, {
+  variants: {
+    variant: {
+      segmented: [
+        ...segmentedSkin,
+        // activa: bloque gris 238 = surface-3, que en oscuro sube a 58.
+        "data-[state=active]:bg-surface-3 data-[state=active]:text-ink",
+      ],
+      soft: [
+        "rounded-sm px-6 py-[9px] text-[13px]",
+        "text-ink-600 hover:not-disabled:text-ink",
+        /* La activa es una tarjeta ELEVADA sobre el riel. En claro eso es
+         * surface (255) sobre surface-2 (243), pero la escala se invierte en
+         * oscuro: alli surface es 27 y surface-2 es 36, asi que reusar surface
+         * dejaria la activa MAS OSCURA que el riel y se leeria como un hueco.
+         * En oscuro la elevacion la da surface-3 (58).
+         * Va por variable propia y no por un `dark:bg-...` para no partir el
+         * override del consumidor: con dos clases de fondo bajo modificadores
+         * distintos, tailwind-merge solo descartaria una y en oscuro seguiria
+         * mandando la nuestra. Asi un `data-[state=active]:bg-*` del consumidor
+         * gana en los dos temas. */
+        "[--tk-tab-soft-active:var(--tk-surface)] dark:[--tk-tab-soft-active:var(--tk-surface-3)]",
+        "data-[state=active]:bg-[var(--tk-tab-soft-active)] data-[state=active]:text-ink data-[state=active]:shadow-xs",
+        "focus-visible:ring-offset-surface-2",
+      ],
+      underline: [
+        "-mb-px border-b-2 border-transparent px-0.5 pt-2.5 pb-3 text-[13px]",
+        "text-ink-600 hover:not-disabled:text-ink",
+        "data-[state=active]:border-ink data-[state=active]:text-ink",
+        "focus-visible:ring-offset-page",
+      ],
     },
-    defaultVariants: { variant: "segmented" },
   },
-);
+  defaultVariants: { variant: "segmented" },
+});
+
+/* Misma piel que la variante `segmented`, pero para la primitiva RadioGroup:
+ * alli el estado seleccionado se llama `checked`. */
+const segmentedControlItem = [
+  ...triggerBase,
+  ...segmentedSkin,
+  "data-[state=checked]:bg-surface-3 data-[state=checked]:text-ink",
+];
 
 export interface TabsProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {
   /**
@@ -172,6 +210,13 @@ export interface TabsTriggerProps
  * `.toUpperCase()`: asi el nombre accesible y lo que se copia al portapapeles
  * conservan su capitalizacion. El ancho lo da el contenido; las pestañas no se
  * estiran a partes iguales.
+ *
+ * El contador que pide el documento va dentro del boton y CUENTA para el nombre
+ * accesible ("Todos 12"). No lo escondas con `aria-hidden`: el numero es el
+ * dato. Si ademas quieres la unidad, ponla en un `aria-label` que contenga el
+ * texto visible ("Todos 12 recibos") — un `<span class="sr-only">` aparte no
+ * sirve, porque el algoritmo de nombre accesible recorta los espacios de cada
+ * nodo y quedaria "12recibos".
  */
 export const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
   function TabsTrigger({ className, variant, startIcon, children, ...props }, ref) {
@@ -216,29 +261,32 @@ export const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(fu
   );
 });
 
-/* El segmentado del archivo se usa casi siempre para filtrar una lista que ya
- * esta en pantalla, no para intercambiar paneles. En ese caso el `aria-controls`
- * que Radix pone en cada tab apuntaria a un id que no existe, que es peor que no
- * ponerlo. Por eso se resuelve por contexto: si el consumidor declara `controls`
- * apuntamos ahi, y si no, se quita el atributo. */
-const SegmentedControlsContext = React.createContext<string | undefined>(undefined);
+/* CONTROL SEGMENTADO — POR QUE RADIOGROUP Y NO TABS
+ * -------------------------------------------------
+ * El segmentado del archivo se usa para filtrar una lista que YA esta en
+ * pantalla, no para intercambiar paneles. Un `role="tab"` sin `tabpanel` al que
+ * apuntar no es conforme con la APG: el lector de pantalla anuncia una pestaña y
+ * el usuario busca una region que no existe. Montarlo sobre Radix Tabs y borrar
+ * despues el `aria-controls` tapaba el sintoma y ademas dependia del orden en el
+ * que Radix hace el spread de props, que es un detalle interno sin contrato.
+ *
+ * RadioGroup da la semantica correcta (grupo de opciones excluyentes sobre el
+ * mismo contenido) y el mismo comportamiento de teclado: una sola parada de
+ * tabulador, flechas con vuelta y deshabilitadas saltadas.
+ *
+ * QUE SE PIERDE: `activationMode="manual"`. En un radiogroup la flecha SIEMPRE
+ * selecciona, igual que en los radios nativos. Si necesitas que la flecha solo
+ * mueva el foco, lo que quieres son pestañas con paneles: `<Tabs
+ * variant="segmented" activationMode="manual">`.
+ */
 
 export interface SegmentedControlProps extends Omit<
-  React.ComponentPropsWithoutRef<"div">,
-  "defaultValue" | "onChange" | "dir"
+  React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Root>,
+  "asChild" | "orientation"
 > {
-  /** Valor seleccionado (modo controlado). */
-  value?: string;
-  /** Valor inicial (modo no controlado). */
-  defaultValue?: string;
-  onValueChange?: (value: string) => void;
-  dir?: "ltr" | "rtl";
-  /** `manual` exige Enter/Espacio para cambiar de valor; por defecto la flecha ya cambia. */
-  activationMode?: "automatic" | "manual";
   /**
-   * id del elemento que este control filtra (la lista, la tabla, la tarjeta).
-   * Sin el, las pestañas se quedan sin `aria-controls` en vez de apuntar a un
-   * panel inexistente.
+   * id de la region que este control filtra (la lista, la tabla, la tarjeta).
+   * Es azucar sobre `aria-controls` del grupo: si lo pasas a mano, manda el tuyo.
    */
   controls?: string;
 }
@@ -250,61 +298,52 @@ export interface SegmentedControlProps extends Omit<
  * r10. Pensado para filtrar la misma lista ("TODOS · PENDIENTES · PAGADOS"),
  * con el contador dentro de la activa.
  *
- * `className` y la ref van al riel, que es el elemento visible del control; la
- * raiz de Radix solo envuelve para dar el contexto de seleccion.
+ * Es un `radiogroup`, no un `tablist`: sus opciones son `role="radio"`. El riel
+ * ES la raiz, asi que `className` y la ref van a un unico elemento y `w-fit` se
+ * puede sustituir desde fuera (`<SegmentedControl className="w-full">` ocupa
+ * todo el ancho).
  *
  * Si lo que necesitas es intercambiar paneles, usa `<Tabs variant="segmented">`
  * con `TabsContent`: ahi la relacion pestaña ↔ panel la cablea Radix.
  */
 export const SegmentedControl = React.forwardRef<HTMLDivElement, SegmentedControlProps>(
-  function SegmentedControl(
-    {
-      className,
-      value,
-      defaultValue,
-      onValueChange,
-      dir,
-      activationMode,
-      controls,
-      children,
-      ...listProps
-    },
-    ref,
-  ) {
+  function SegmentedControl({ className, controls, ...props }, ref) {
     return (
-      <TabsPrimitive.Root
-        value={value}
-        defaultValue={defaultValue}
-        onValueChange={onValueChange}
-        dir={dir}
-        activationMode={activationMode}
-        className="w-fit"
-      >
-        <SegmentedControlsContext.Provider value={controls}>
-          <TabsPrimitive.List
-            ref={ref}
-            className={cn(tabsList({ variant: "segmented" }), className)}
-            {...listProps}
-          >
-            {children}
-          </TabsPrimitive.List>
-        </SegmentedControlsContext.Provider>
-      </TabsPrimitive.Root>
+      <RadixRadioGroup.Root
+        ref={ref}
+        // aria-controls va ANTES del spread porque es solo el valor por defecto
+        // que deriva de `controls`: un aria-controls explicito del consumidor
+        // tiene que ganar.
+        aria-controls={controls}
+        className={cn(tabsList({ variant: "segmented" }), className)}
+        {...props}
+      />
     );
   },
 );
 
-export type SegmentedControlItemProps = Omit<TabsTriggerProps, "variant">;
+export interface SegmentedControlItemProps extends Omit<
+  React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Item>,
+  "asChild"
+> {
+  /** Icono antes del label, a 16px. En el segmentado del archivo va con gap 6. */
+  startIcon?: React.ReactNode;
+}
 
-/** Opcion del control segmentado. Siempre en la piel del archivo. */
+/**
+ * Opcion del control segmentado. Siempre en la piel del archivo.
+ *
+ * El contador de la activa va dentro del propio boton y cuenta para el nombre
+ * accesible; no lo escondas con `aria-hidden` o el dato desaparece del lector de
+ * pantalla. Para darle unidad, `aria-label="Todos 12 recibos"`.
+ */
 export const SegmentedControlItem = React.forwardRef<HTMLButtonElement, SegmentedControlItemProps>(
-  function SegmentedControlItem(props, ref) {
-    const controls = React.useContext(SegmentedControlsContext);
+  function SegmentedControlItem({ className, startIcon, children, ...props }, ref) {
     return (
-      // aria-controls va ANTES del spread para que el consumidor pueda
-      // sobreescribirlo. Cuando vale undefined, React no emite el atributo — y
-      // eso es justo lo que borra el id inexistente que pone Radix.
-      <TabsTrigger ref={ref} variant="segmented" aria-controls={controls} {...props} />
+      <RadixRadioGroup.Item ref={ref} className={cn(segmentedControlItem, className)} {...props}>
+        {startIcon}
+        {children}
+      </RadixRadioGroup.Item>
     );
   },
 );

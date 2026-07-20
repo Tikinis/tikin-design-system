@@ -57,7 +57,13 @@ const otpCell = cva(
     /* 48 x 56 y radio 12, literales del prototipo. No hay escala de tamaños:
        el documento solo define esta geometria. */
     "relative flex h-14 w-12 shrink-0 items-center justify-center rounded-lg",
-    // 0.5px es literal, igual que en el TextField; no es un redondeo de 1px.
+    /* 0.5px es literal, igual que en el TextField; no es un redondeo de 1px.
+       El FONDO es una desviacion deliberada del prototipo: sus casillas en
+       reposo solo declaran borde y radio, asi que heredarian --tk-surface. Se
+       usa el mismo token que el TextField porque este OTP se declara construido
+       con sus colores, y un campo del sistema se distingue de la tarjeta que lo
+       contiene. Cambiarlo desalinearia OTP y TextField puestos uno al lado del
+       otro, que es el caso real de una pantalla de verificacion. */
     "border-[0.5px] bg-[var(--textfield-bg-default)]",
     // DM Mono 500 a 22px. tabular-nums para que el 1 ocupe lo mismo que el 8.
     "font-num text-[22px] leading-none font-medium text-ink tabular-nums",
@@ -70,9 +76,17 @@ const otpCell = cva(
         default: "border-edge-2",
         /* purered-600 es exactamente el rgb(255,46,46) del prototipo, y
            purered-transparent su 5% (el prototipo pinta 4%: la diferencia es
-           imperceptible y preferimos el token). */
-        error: "border-red bg-red-tint",
-        success: "border-fg-success bg-tint-success",
+           imperceptible y preferimos el token).
+
+           El grosor sube de 0.5 a 1px porque el prototipo lo pide asi en los
+           dos casos (`border:1px solid rgb(255,46,46)` y
+           `border:1px solid var(--tk-fg-success)`). Aqui SI se puede tocar
+           border-width, al reves que en el foco: feedback no es un estado
+           transitorio, no va y viene mientras se escribe, asi que el medio
+           pixel que se come del area de contenido no produce ningun salto
+           visible de la cifra. */
+        error: "border-[1px] border-red bg-red-tint",
+        success: "border-[1px] border-fg-success bg-tint-success",
       },
 
       /* La casilla activa NO engorda el borde de 0.5 a 1.5px como el prototipo:
@@ -87,7 +101,11 @@ const otpCell = cva(
          OJO: ese "gana" solo es cierto si la salida de cva pasa por cn(); ver
          la nota del punto de uso mas abajo. */
       disabled: {
-        true: "cursor-not-allowed border-edge bg-surface-2 text-ink-500",
+        /* border-[0.5px] explicito, no heredado de la base: si `feedback` es
+           error o exito ya subio el grosor a 1px, y tailwind-merge se queda con
+           la ultima de cada grupo. Sin repetirlo aqui, una casilla inerte con
+           feedback saldria a 1px cuando el prototipo la dibuja a 0.5px. */
+        true: "cursor-not-allowed border-[0.5px] border-edge bg-surface-2 text-ink-500",
         false: "",
       },
     },
@@ -225,8 +243,17 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
   /* Casilla activa = la primera vacia. Cuando el codigo esta completo se queda
      en la ultima, para que el foco siga teniendo un sitio visible. */
   const activeIndex = Math.min(code.length, length - 1);
-  const inert = disabled || readOnly === true;
-  const showActive = focused && !inert;
+
+  /* readOnly NO se pliega con disabled, aunque los dos rechacen escritura. Un
+     campo de solo lectura SI es enfocable y SI entra en el orden de tabulacion.
+     Si compartiera el gris apagado del deshabilitado y ademas se quedara sin
+     casilla activa, al tabular hasta el no se dibujaria nada: el caret nativo
+     va a opacidad 0 y no hay ningun otro indicador de foco en el componente. El
+     usuario de teclado perderia la posicion — WCAG 2.4.7 Focus Visible.
+     Solo `disabled` apaga la casilla y el cursor; readOnly se pinta en reposo,
+     que es lo que la historia SoloLectura promete: enseñar el codigo. */
+  const readOnlyField = readOnly === true;
+  const showActive = focused && !disabled;
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const next = onlyDigits(event.target.value).slice(0, length);
@@ -263,9 +290,19 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
   }, []);
 
   return (
-    <div className={cn("flex w-fit flex-col gap-2", wrapperClassName)}>
+    /* Sin `gap` aqui a proposito: la separacion del mensaje va como `mt-2` del
+       propio mensaje. El nodo del mensaje esta SIEMPRE montado (ver abajo) y un
+       gap se lo cobraria tambien cuando esta vacio, metiendo 8px muertos a todo
+       consumidor que no pase `message`. Con margen propio, vacio no ocupa. */
+    <div className={cn("flex w-fit flex-col", wrapperClassName)}>
       <div
-        className={cn("relative w-fit", inert ? "cursor-not-allowed" : "cursor-text", className)}
+        className={cn(
+          "relative w-fit",
+          // En solo lectura el cursor sigue siendo de texto: se puede
+          // seleccionar y copiar el codigo, solo no reescribirlo.
+          disabled ? "cursor-not-allowed" : "cursor-text",
+          className,
+        )}
       >
         {/* Cubre toda la fila: pulsar en cualquier casilla enfoca el campo sin
             necesidad de un onClick que reenvie el foco a mano. Va absoluto, asi
@@ -308,7 +345,7 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
           className={cn(
             "absolute inset-0 h-full w-full opacity-0",
             "border-none bg-transparent outline-none",
-            inert ? "cursor-not-allowed" : "cursor-text",
+            disabled ? "cursor-not-allowed" : "cursor-text",
           )}
           {...props}
         />
@@ -319,9 +356,11 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
           {Array.from({ length }, (_, index) => {
             const digit = code[index];
             const isActive = showActive && index === activeIndex;
-            // Con el codigo completo la ultima casilla sigue activa pero ya no
-            // lleva caret: se solaparia con la cifra.
-            const showCaret = isActive && digit === undefined;
+            /* Con el codigo completo la ultima casilla sigue activa pero ya no
+               lleva caret: se solaparia con la cifra. En solo lectura tampoco
+               hay caret — el borde tinta ya marca el foco, y un caret
+               parpadeando invitaria a teclear en un campo que no admite. */
+            const showCaret = isActive && digit === undefined && !readOnlyField;
 
             return (
               <div
@@ -336,7 +375,7 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
                    ganaba lo decidia el orden de la hoja de estilos generada,
                    no el orden de las variantes. tailwind-merge es quien hace
                    valer la ultima. */
-                className={cn(otpCell({ feedback, active: isActive, disabled: inert }))}
+                className={cn(otpCell({ feedback, active: isActive, disabled }))}
               >
                 {showCaret ? (
                   <span
@@ -360,21 +399,28 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
         )}
       </div>
 
-      {message != null && (
-        <span
-          id={messageId}
-          /* Polite y no assertive: el error llega como respuesta del servidor y
-             no debe cortar lo que el lector este leyendo. */
-          aria-live="polite"
-          className={cn(
-            "flex items-center gap-1.5 text-[12.5px] leading-snug",
-            "[&_svg]:size-[15px] [&_svg]:shrink-0",
-            messageTone[feedback ?? "default"],
-          )}
-        >
-          {message}
-        </span>
-      )}
+      {/* La region live se monta SIEMPRE, tambien vacia. Un aria-live que
+          aparece en el DOM en el mismo commit que su texto no lo anuncia en la
+          mayoria de lectores: la region tiene que estar registrada de antes
+          para que el cambio se detecte. Es justo el caso real — `message` es
+          undefined hasta que la verificacion falla, y "Codigo incorrecto. Te
+          quedan N intentos." es exactamente lo que hay que anunciar.
+          Vacio no ocupa: sin contenido no hay caja de texto y el mt-2 solo se
+          aplica cuando hay mensaje. */}
+      <span
+        id={messageId}
+        /* Polite y no assertive: el error llega como respuesta del servidor y
+           no debe cortar lo que el lector este leyendo. */
+        aria-live="polite"
+        className={cn(
+          "flex items-center gap-1.5 text-[12.5px] leading-snug",
+          "[&_svg]:size-[15px] [&_svg]:shrink-0",
+          message != null && "mt-2",
+          messageTone[feedback ?? "default"],
+        )}
+      >
+        {message}
+      </span>
     </div>
   );
 });

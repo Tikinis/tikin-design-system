@@ -60,13 +60,19 @@ function agrupaMiles(digitos: string): string {
 }
 
 function numeroACrudo(n: number, maxDecimals: number): string {
-  const partes = Math.abs(n).toFixed(maxDecimals).split(".");
+  const fijo = Math.abs(n).toFixed(maxDecimals);
+  const partes = fijo.split(".");
   const entero = partes[0] ?? "0";
   // Se recortan los ceros finales: 1250.50 se escribe "1250,5", igual que lo
   // habria tecleado el usuario. Asi el valor formateado de un chip sugerido y
   // el de la misma cifra tecleada a mano son identicos.
   const limpio = (partes[1] ?? "").replace(/0+$/, "");
-  return limpio ? `${entero}${DECIMAL}${limpio}` : entero;
+  const cuerpo = limpio ? `${entero}${DECIMAL}${limpio}` : entero;
+  // El signo se conserva: un ajuste o un saldo negativo pintado como positivo es
+  // un error de importe silencioso, y quien no quiera negativos puede filtrarlos
+  // antes. Se exceptua el cero porque redondear -0,004 a dos decimales da cero y
+  // "-0" no es un monto.
+  return n < 0 && Number.parseFloat(fijo) !== 0 ? `-${cuerpo}` : cuerpo;
 }
 
 /**
@@ -75,6 +81,7 @@ function numeroACrudo(n: number, maxDecimals: number): string {
  *     formatAmount("1250000")  // "1.250.000"
  *     formatAmount("1250,5")   // "1.250,5"
  *     formatAmount(1250.5)     // "1.250,5"
+ *     formatAmount(-500)       // "-500"
  *     formatAmount("")         // "0"
  *
  * NO usa Intl.NumberFormat a proposito. Intl normalizaria los estados
@@ -221,7 +228,9 @@ export const AmountDisplay = React.forwardRef<HTMLDivElement, AmountDisplayProps
     },
     ref,
   ) {
-    const hintId = React.useId();
+    const baseId = React.useId();
+    const labelId = `${baseId}-rotulo`;
+    const hintId = `${baseId}-ayuda`;
     const vacio = value === "" || value === undefined;
     const numero = vacio ? formatAmount(placeholder) : formatAmount(value, maxDecimals);
     const tone = invalid ? "error" : vacio ? "placeholder" : "value";
@@ -233,15 +242,24 @@ export const AmountDisplay = React.forwardRef<HTMLDivElement, AmountDisplayProps
         {...props}
       >
         {label !== undefined && (
-          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
+          <span
+            id={labelId}
+            className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase"
+          >
             {label}
           </span>
         )}
         {/* <output> ya trae role="status" y aria-live="polite". Aqui no es
             adorno: sin teclado del sistema no hay eco del dispositivo, asi que
-            este anuncio es la unica confirmacion de que la pulsacion entro. */}
+            este anuncio es la unica confirmacion de que la pulsacion entro.
+
+            Y por eso el rotulo se ata con aria-labelledby: como region viva,
+            cada pulsacion se anuncia sola, y sin nombre lo que se oye es
+            "$ 1.250" a secas — un numero sin decir de que. La etiqueta esta ahi
+            escrita al lado, pero un <span> hermano no la aporta. */}
         <output
           className={amountValue({ size, tone })}
+          aria-labelledby={label !== undefined ? labelId : undefined}
           aria-describedby={hint !== undefined ? hintId : undefined}
         >
           {currency ? `${currency} ${numero}` : numero}
@@ -309,15 +327,19 @@ export interface KeypadLabels {
   biometric?: string;
 }
 
-/* Se tapan tres props del <div>:
- *   onKeyDown   lo ocupa la navegacion por flechas y la escritura fisica.
+/* Se tapan dos props del <div>:
  *   children    las teclas las pone el componente, no el consumidor.
  *   onKeyPress  el handler del DOM con ese nombre esta obsoleto desde React 17
  *               y aqui el nombre se reutiliza para la tecla PULSADA del numpad,
- *               que es lo que un consumidor espera de "keypress" en un teclado. */
+ *               que es lo que un consumidor espera de "keypress" en un teclado.
+ *
+ * `onKeyDown` SI sigue siendo del consumidor aunque el numpad lo use: se le
+ * llama primero y si consume la tecla (preventDefault) el numpad no la vuelve a
+ * interpretar. Vetarlo dejaba a quien monta la pantalla sin poder añadir sus
+ * propios atajos — Escape para cerrar la hoja, Enter para confirmar. */
 export interface KeypadProps extends Omit<
   React.ComponentPropsWithoutRef<"div">,
-  "onKeyDown" | "children" | "onKeyPress"
+  "children" | "onKeyPress"
 > {
   /** Monto en crudo, gobernado por el padre. */
   value?: string;
@@ -333,10 +355,11 @@ export interface KeypadProps extends Omit<
   onBiometric?: () => void;
   /** Cifras enteras como maximo. 7 = $ 9.999.999, el tope del documento. */
   maxIntegerDigits?: number;
-  /** Decimales como maximo. Con 0, la coma deja de aceptarse. */
+  /** Decimales como maximo. Con 0 la coma deja de aceptarse: la esquina de
+   *  `action="decimal"` se queda vacia en vez de pintar una tecla muerta. */
   maxDecimals?: number;
   disabled?: boolean;
-  /** Nombre accesible del grupo entero. */
+  /** Nombre accesible de la rejilla entera. */
   "aria-label"?: string;
   /** Nombres accesibles de las teclas que no son cifras. */
   labels?: KeypadLabels;
@@ -348,10 +371,18 @@ const ETIQUETAS: Required<KeypadLabels> = {
   biometric: "Autenticar con huella",
 };
 
+/** Las cuatro filas de la rejilla, para recorrerlas al pintar. */
+const FILAS = [0, 1, 2, 3] as const;
+
 /** Rejilla 4x3. `null` es el hueco que deja `action="none"`. */
-function construyeTeclas(action: KeypadAction): (KeypadKey | null)[] {
-  const esquina: KeypadKey | null =
-    action === "decimal" ? "," : action === "biometric" ? "biometric" : null;
+function construyeTeclas(action: KeypadAction, maxDecimals: number): (KeypadKey | null)[] {
+  // Con maxDecimals 0 la coma no puede entrar nunca (`aplicaTecla` la descarta),
+  // asi que la esquina se queda en hueco en vez de pintar una tecla enfocable,
+  // sin `disabled` y visualmente igual que las vivas, que no hace nada al
+  // pulsarla. El hueco no es un apaño: es el mismo estado dibujado que ya usa
+  // `action="none"`, y el foco itinerante ya sabe saltarselo.
+  const aceptaComa = action === "decimal" && maxDecimals >= 1;
+  const esquina: KeypadKey | null = aceptaComa ? "," : action === "biometric" ? "biometric" : null;
   return [
     "1",
     "2",
@@ -419,10 +450,18 @@ function aplicaTecla(
  * ACCESIBILIDAD
  * Doce paradas de tabulacion serian doce, por eso la rejilla usa foco itinerante
  * (roving tabindex): solo una tecla es tabulable y las flechas mueven entre
- * ellas, dando la vuelta por filas y columnas. Ademas, con el foco dentro del
- * grupo el teclado fisico escribe: las cifras suman, Backspace borra y la coma o
- * el punto insertan el decimal. Sin eso, quien navega por teclado tendria que
+ * ellas, dando la vuelta por filas y columnas. Ademas, con el foco dentro de la
+ * rejilla el teclado fisico escribe: las cifras suman, Backspace borra y la coma
+ * o el punto insertan el decimal. Sin eso, quien navega por teclado tendria que
  * ir tecla a tecla para escribir un monto.
+ *
+ * Y por eso el contenedor es `role="grid"` con filas y celdas, no un `group`:
+ * `group` no es un rol de widget, asi que un lector de pantalla se queda en modo
+ * exploracion y las flechas mueven su cursor virtual en vez de llegar aqui —
+ * ademas de que las cifras 1..6 son sus atajos de salto por encabezado. Con el
+ * foco itinerante quitando el Tab a once de las doce teclas, eso dejaba la
+ * navegacion rota justo para quien mas la necesita. Es el mismo patron de
+ * rejilla que ya usa calendar.tsx.
  */
 export const Keypad = React.forwardRef<HTMLDivElement, KeypadProps>(function Keypad(
   {
@@ -431,6 +470,7 @@ export const Keypad = React.forwardRef<HTMLDivElement, KeypadProps>(function Key
     defaultValue = "",
     onValueChange,
     onKeyPress,
+    onKeyDown,
     action = "none",
     onBiometric,
     maxIntegerDigits = 7,
@@ -442,7 +482,10 @@ export const Keypad = React.forwardRef<HTMLDivElement, KeypadProps>(function Key
   },
   ref,
 ) {
-  const teclas = React.useMemo(() => construyeTeclas(action), [action]);
+  // `onKeyDown` se saca de `props` a proposito: si se quedase dentro, el spread
+  // de abajo pisaria el manejador del numpad y las flechas dejarian de mover el
+  // foco sin que nadie se entere.
+  const teclas = React.useMemo(() => construyeTeclas(action, maxDecimals), [action, maxDecimals]);
   // Uno a uno y con ??, no con spread: `{...ETIQUETAS, ...labels}` deja el
   // nombre en undefined si el consumidor pasa `{ delete: undefined }`, y una
   // tecla de icono sin aria-label se queda sin nombre accesible.
@@ -492,6 +535,10 @@ export const Keypad = React.forwardRef<HTMLDivElement, KeypadProps>(function Key
   };
 
   const alPulsarTeclaFisica = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    // Primero el consumidor: si el atajo es suyo y lo consume, el numpad no
+    // vuelve a interpretar la tecla.
+    onKeyDown?.(event);
+    if (event.defaultPrevented) return;
     if (disabled) return;
     const desde = indiceItinerante < 0 ? 0 : indiceItinerante;
 
@@ -516,7 +563,12 @@ export const Keypad = React.forwardRef<HTMLDivElement, KeypadProps>(function Key
       case ".":
         // El punto tambien vale: en un teclado numerico fisico la tecla decimal
         // es un punto, y quien escribe pesos espera que ponga la coma.
-        if (action === "decimal") pulsa(",");
+        //
+        // Se pregunta por la REJILLA, no por `action`: asi la ruta fisica y la
+        // visible no pueden divergir cuando `maxDecimals` es 0 y la coma no se
+        // pinta. Escribir por teclado lo que no existe como tecla seria un
+        // camino oculto que nadie ha especificado.
+        if (teclas.includes(",")) pulsa(",");
         else return;
         break;
       default:
@@ -531,66 +583,79 @@ export const Keypad = React.forwardRef<HTMLDivElement, KeypadProps>(function Key
   return (
     <div
       ref={ref}
-      role="group"
+      role="grid"
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
       data-disabled={disabled || undefined}
-      className={cn("grid w-full max-w-[300px] grid-cols-3 gap-2", className)}
+      // La rejilla CSS baja a las filas porque `role="row"` necesita elementos
+      // reales; el resultado dibujado es el mismo, 3 columnas iguales con
+      // hueco 8 en los dos ejes.
+      className={cn("flex w-full max-w-[300px] flex-col gap-2", className)}
       onKeyDown={alPulsarTeclaFisica}
       {...props}
     >
-      {teclas.map((tecla, indice) => {
-        if (tecla === null) {
-          // Hueco real, no `display:none`: mantiene la columna del 0 centrada.
-          return <div key={`hueco-${indice}`} aria-hidden="true" />;
-        }
+      {FILAS.map((fila) => (
+        <div role="row" key={fila} className="grid grid-cols-3 gap-2">
+          {teclas.slice(fila * 3, fila * 3 + 3).map((tecla, columna) => {
+            const indice = fila * 3 + columna;
 
-        const variant =
-          tecla === "backspace"
-            ? "backspace"
-            : tecla === "biometric"
-              ? "biometric"
-              : tecla === ","
-                ? "decimal"
-                : "numeric";
+            if (tecla === null) {
+              // Celda real y vacia, no `display:none`: la fila tiene que
+              // conservar sus tres columnas para que el 0 quede centrado y
+              // para que la rejilla no declare filas de distinto ancho.
+              return <div role="gridcell" key={`hueco-${indice}`} />;
+            }
 
-        // En las cifras el nombre accesible es el propio texto visible; poner un
-        // aria-label ahi solo serviria para poder desincronizarlo.
-        const nombre =
-          tecla === "backspace"
-            ? nombres.delete
-            : tecla === "biometric"
-              ? nombres.biometric
-              : tecla === ","
-                ? nombres.decimal
-                : undefined;
+            const variant =
+              tecla === "backspace"
+                ? "backspace"
+                : tecla === "biometric"
+                  ? "biometric"
+                  : tecla === ","
+                    ? "decimal"
+                    : "numeric";
 
-        return (
-          <button
-            key={tecla}
-            ref={(el) => {
-              referencias.current[indice] = el;
-            }}
-            type="button"
-            disabled={disabled}
-            data-key={tecla}
-            aria-label={nombre}
-            // Foco itinerante: una sola parada de tabulacion en toda la rejilla.
-            tabIndex={indice === indiceItinerante ? 0 : -1}
-            onFocus={() => setIndiceActivo(indice)}
-            onClick={() => pulsa(tecla)}
-            className={keypadKey({ variant })}
-          >
-            {tecla === "backspace" ? (
-              <BorrarGlifo />
-            ) : tecla === "biometric" ? (
-              <HuellaGlifo />
-            ) : (
-              tecla
-            )}
-          </button>
-        );
-      })}
+            // En las cifras el nombre accesible es el propio texto visible;
+            // poner un aria-label ahi solo serviria para desincronizarlo.
+            const nombre =
+              tecla === "backspace"
+                ? nombres.delete
+                : tecla === "biometric"
+                  ? nombres.biometric
+                  : tecla === ","
+                    ? nombres.decimal
+                    : undefined;
+
+            return (
+              <div role="gridcell" key={tecla}>
+                <button
+                  ref={(el) => {
+                    referencias.current[indice] = el;
+                  }}
+                  type="button"
+                  disabled={disabled}
+                  data-key={tecla}
+                  aria-label={nombre}
+                  // Foco itinerante: una sola parada de tabulacion en toda la
+                  // rejilla.
+                  tabIndex={indice === indiceItinerante ? 0 : -1}
+                  onFocus={() => setIndiceActivo(indice)}
+                  onClick={() => pulsa(tecla)}
+                  className={keypadKey({ variant })}
+                >
+                  {tecla === "backspace" ? (
+                    <BorrarGlifo />
+                  ) : tecla === "biometric" ? (
+                    <HuellaGlifo />
+                  ) : (
+                    tecla
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 });

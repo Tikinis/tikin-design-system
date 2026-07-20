@@ -1,6 +1,8 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+  BreadcrumbItem,
+  Breadcrumbs,
   Sidebar,
   SidebarFooter,
   SidebarItem,
@@ -283,6 +285,12 @@ export const RailLateral: Story = {
         </SidebarFooter>
       </Sidebar>
       <div className="flex flex-1 flex-col gap-4 bg-surface px-6 py-5">
+        {/* La ruta va sobre el titulo, como en el documento. */}
+        <Breadcrumbs>
+          <BreadcrumbItem href="#inicio" label="Inicio" />
+          <BreadcrumbItem href="#bolsillos" label="Bolsillos" />
+          <BreadcrumbItem label="Arriendo" current />
+        </Breadcrumbs>
         <div className="font-display text-[22px] font-semibold text-ink">Arriendo</div>
         <div className="flex flex-col gap-2">
           <div className="h-2.5 w-[70%] rounded-xs bg-surface-2" />
@@ -290,6 +298,38 @@ export const RailLateral: Story = {
           <div className="h-2.5 w-[60%] rounded-xs bg-surface-2" />
         </div>
       </div>
+    </div>
+  ),
+};
+
+export const Ruta: Story = {
+  name: "Breadcrumbs",
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          'Ruta del dashboard web: tramos en gris 600, caret de 11 en gris 400, y el actual en tinta. El tramo actual se pinta como `<span>` con `aria-current="page"`, no como enlace: un enlace a la pagina en la que ya estas es una parada de tabulador que no lleva a ningun sitio.',
+      },
+    },
+  },
+  render: () => (
+    <div className="flex flex-col gap-4 bg-surface p-5">
+      <Breadcrumbs>
+        <BreadcrumbItem href="#inicio" label="Inicio" />
+        <BreadcrumbItem label="Bolsillos" current />
+      </Breadcrumbs>
+      <Breadcrumbs>
+        <BreadcrumbItem href="#inicio" label="Inicio" />
+        <BreadcrumbItem href="#bolsillos" label="Bolsillos" />
+        <BreadcrumbItem label="Arriendo" current />
+      </Breadcrumbs>
+      {/* El separador se sustituye entero: el caret es el defecto, no un dogma. */}
+      <Breadcrumbs separator={<span className="text-ink-400">/</span>}>
+        <BreadcrumbItem href="#inicio" label="Inicio" />
+        <BreadcrumbItem href="#bonos" label="Bonos" />
+        <BreadcrumbItem label="Enero" current />
+      </Breadcrumbs>
     </div>
   ),
 };

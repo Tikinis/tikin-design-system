@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Tooltip as TooltipPrimitive } from "radix-ui";
+import * as TooltipPrimitive from "radix-ui/tooltip";
 import { cva } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -44,11 +44,31 @@ import { cn } from "../lib/cn";
 const tooltipContent = cva(
   [
     "z-50 rounded-sm bg-ink-strong font-sans text-surface select-none",
+    /* Interlineado explicito. El archivo no declara line-height para la burbuja,
+     * asi que esta hereda `normal` (~1.15 en Ubuntu Sans) y la burbuja simple
+     * mide 13 * 1.15 + 7 + 7 = ~29px, la unica medida vertical que el documento
+     * fija de forma exacta. Sin esta linea heredaria el 1.5 del preflight de
+     * Tailwind y creceria ~4px. La descripcion del layout rich lo sobreescribe
+     * con su propio 1.4, que ese si viene del archivo.
+     *
+     * Va PEGADO al tamaño con la sintaxis `text-13px/normal` y no como un
+     * `leading-[normal]` suelto en la base. tailwind-merge considera que
+     * `text-*` y `leading-*` compiten por lo mismo — `text-sm/6` fija los dos —
+     * asi que un leading declarado antes desaparecia al llegar la variante con
+     * su tamaño, y la burbuja heredaba el 1.5 del preflight. Medido: cn() sobre
+     * la cadena real devolvia la clase de leading ya borrada. */
     /* El fade de ~140ms del documento sin plugin de animaciones: la entrada se
      * consigue con @starting-style (variante `starting:` de Tailwind 4). No hay
      * fade de salida a proposito — Radix desmonta el contenido al cerrar y
      * retenerlo montado solo para animarlo dejaria un nodo con role="tooltip"
-     * en el arbol de accesibilidad mas tiempo del debido. */
+     * en el arbol de accesibilidad mas tiempo del debido.
+     *
+     * Matiz conocido: mientras mide la posicion, Radix aparca la burbuja fuera
+     * de pantalla y anula ahi las `animation`, no las `transition`, asi que el
+     * primer frame del fade puede consumirse aun sin verse. Se acepta a
+     * sabiendas: pasar a @keyframes para entrar en esa guarda haria que
+     * Presence esperase al `animationend`, y un cierre inmediato despues de
+     * abrir dejaria la burbuja colgada los 140ms enteros. */
     "opacity-100 transition-opacity duration-140 ease-out starting:opacity-0",
     "motion-reduce:transition-none",
   ],
@@ -58,10 +78,10 @@ const tooltipContent = cva(
         /* Una sola linea. `nowrap` es del documento: la etiqueta es breve por
          * definicion, y partirla en dos lineas rompe la silueta de la burbuja. */
         simple:
-          "inline-flex items-center px-[11px] py-[7px] text-[13px] leading-[1.35] whitespace-nowrap",
+          "inline-flex items-center px-[11px] py-[7px] text-[13px]/[normal] whitespace-nowrap",
         /* Titulo + descripcion. El ancho maximo de 200 es lo que fuerza el
          * limite de "dos lineas como maximo". */
-        rich: "flex max-w-[200px] flex-col gap-[3px] px-3 py-[9px]",
+        rich: "flex max-w-[200px] flex-col gap-[3px] px-3 py-[9px] text-[13px]/[normal]",
       },
       /* Con chip de atajo el padding derecho baja de 11 a 8: el chip ya trae su
        * propio aire y con 11 la burbuja quedaba descentrada. */
@@ -127,6 +147,19 @@ export interface TooltipProps extends Omit<ContentProps, "children" | "asChild" 
   /**
    * El disparador. Debe ser UN elemento capaz de recibir foco — un boton, un
    * enlace — porque el tooltip tambien se abre con el teclado.
+   *
+   * Con `triggerAsChild` (el valor por defecto) el hijo se fusiona con el
+   * disparador via Slot, que exige exactamente un elemento: un texto suelto
+   * revienta el render con "Primitive.button failed to slot onto its children".
+   *
+   * El tipo NO puede impedirlo, y conviene saber por que antes de intentarlo:
+   * `radix-ui@1.6.3` publica declaraciones rotas —.d.mts con codigo de runtime
+   * dentro— asi que `typeof TooltipPrimitive.Content` es `any` y `ContentProps`
+   * acaba siendo `Omit<any, "ref">`, un tipo con firma de indice. Cualquier
+   * `children` que se declare aqui se intersecta con ese `any` y vuelve a ser
+   * `any`: estrecharlo a `React.ReactElement`, o partir el tipo en una union
+   * segun `triggerAsChild`, compila igual de permisivo y solo aparenta
+   * seguridad. Se arregla en la dependencia, no aqui.
    */
   children: React.ReactNode;
   /** Texto de la burbuja. Una frase breve, sin punto final. */
@@ -146,7 +179,8 @@ export interface TooltipProps extends Omit<ContentProps, "children" | "asChild" 
   disableHoverableContent?: boolean;
   /**
    * Renderiza el hijo como disparador en vez de envolverlo en un `<button>`.
-   * Activo por defecto: es lo que evita anidar un boton dentro de otro.
+   * Activo por defecto: es lo que evita anidar un boton dentro de otro. Con
+   * `false` el disparador lo monta Radix y ahi si vale cualquier nodo.
    */
   triggerAsChild?: boolean;
   /** Contenedor del portal. Por defecto `document.body`. */

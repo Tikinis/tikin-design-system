@@ -30,7 +30,9 @@ import { cn } from "../lib/cn";
  *
  * Formas que usa el prototipo, y de donde salen los defaults de aqui:
  *   linea    alto 9 · 10 · 11 · 12 · 26 · 28 · 30 · 34, ancho en %, radio 6
- *            -> el alto mas repetido con diferencia es 10-12  =>  h-3 (12)
+ *            -> contando los `.tk-sk` del bloque DEL ARCHIVO: 10 sale 23 veces,
+ *               9 sale 16 y 12 solo 13. El default es el alto que mas se repite
+ *               tal cual, sin agrupar valores contiguos    =>  h-2.5 (10)
  *   circulo  28 · 32 · 36 · 38 · 40 · 44 · 56 · 64, border-radius 50%
  *            -> el de las filas de lista es 40           =>  size-10
  *   bloque   alto 44 · 56 · 80 · 120, radio 10 · 12 · 14
@@ -45,10 +47,16 @@ import { cn } from "../lib/cn";
  *    ninguna paleta. La diferencia es de 4 niveles de gris, imperceptible.
  *
  * 2. Los dos grises van por token semantico (--tk-surface-3 / --tk-surface-2),
- *    no por valor literal. En el bloque .dark esos tokens invierten a
- *    rgb(58,58,58) y rgb(36,36,36), asi que el barrido sigue siendo un gris
- *    ligeramente mas claro sobre uno mas oscuro. Con los rgb literales del
- *    texto tendriamos dos manchas casi blancas sobre pagina negra.
+ *    no por valor literal, porque con los rgb literales del texto tendriamos
+ *    dos manchas casi blancas sobre pagina negra en tema oscuro.
+ *    El precio de ir por token: en .dark los dos tokens NO se limitan a
+ *    oscurecerse, se cruzan. La base (surface-3) pasa de 238 a 58 y la banda
+ *    (surface-2) de 243 a 36, asi que en claro la banda es mas clara que la
+ *    base — un destello — y en oscuro es mas oscura — una sombra. El delta
+ *    tambien salta de 5 niveles de gris a 22, asi que el barrido se nota
+ *    bastante mas en oscuro. Se asume: es exactamente lo que hace el CSS del
+ *    prototipo con estos mismos tokens, y la alternativa seria fijar rgb a
+ *    mano y perder el tema.
  *
  * NOTA SOBRE EL CROSS-FADE
  * ------------------------
@@ -80,7 +88,7 @@ const skeleton = cva(
     variants: {
       shape: {
         /* r6 = --radius-xs, el border-radius que fija .tk-sk en el prototipo. */
-        line: "h-3 w-full rounded-xs",
+        line: "h-2.5 w-full rounded-xs",
         circle: "size-10 rounded-full",
         /* r10 = --radius-md, el de la tarjeta y el grafico del documento. */
         block: "h-14 w-full rounded-md",
@@ -119,8 +127,8 @@ export interface SkeletonProps
    */
   width?: number | string;
   /**
-   * Alto del bloque. En `shape="circle"` se puede omitir: si `width` es un
-   * numero, el alto lo copia para que no salga un ovalo.
+   * Alto del bloque. En `shape="circle"` basta con dar UNO de los dos ejes en
+   * numero: el que falte copia al otro para que no salga un ovalo.
    */
   height?: number | string;
   /**
@@ -128,8 +136,12 @@ export interface SkeletonProps
    * movimientos". Sin el, el bloque es puramente decorativo y queda fuera del
    * arbol de accesibilidad.
    *
-   * Ponlo UNA sola vez por grupo, en el bloque exterior. Si lo repites en las
-   * veinte lineas de una lista, el lector anuncia veinte veces lo mismo.
+   * UNA sola espera se anuncia UNA sola vez. Este prop es para el caso en que
+   * un unico Skeleton es toda la espera. Cuando la espera es un grupo — una
+   * lista, una tarjeta —, el anuncio va en el div que envuelve al grupo
+   * (`role="status"` + `aria-label`) y los Skeleton de dentro se quedan
+   * decorativos; ponerlo en uno de los hermanos convierte a ese en region viva
+   * y deja a los demas mudos.
    */
   label?: string;
 }
@@ -143,8 +155,9 @@ export interface SkeletonProps
  * pantalla real, no un componente aparte.
  *
  * Por defecto es invisible para los lectores de pantalla (`aria-hidden`): un
- * lector no debe describir cajas grises. Para anunciar la espera pasa `label`
- * al bloque exterior del grupo, que entonces pasa a `role="status"`.
+ * lector no debe describir cajas grises. Con `label` el bloque pasa a
+ * `role="status"` y lleva dentro ese texto en sr-only, que es lo que el lector
+ * anuncia. Para grupos, el anuncio va en el div contenedor, no en un hermano.
  */
 export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(function Skeleton(
   { className, shape, animation, width, height, label, style, ...props },
@@ -154,11 +167,16 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(function
      accesible, que el lector anuncia como region anonima. */
   const announced = typeof label === "string" && label.trim() !== "";
 
-  /* En circulo un solo eje basta. Solo se copia cuando `width` es numero: un
-     "45%" copiado al alto se mediria contra la altura del padre — que casi
-     siempre es auto — y daria 0. */
-  const resolvedHeight =
-    height ?? (shape === "circle" && typeof width === "number" ? width : undefined);
+  /* En circulo un solo eje basta, y da igual cual: el que falte copia al otro.
+     Copiar solo en una direccion dejaba `<Skeleton shape="circle" height={64} />`
+     con el ancho en el size-10 de la clase — un ovalo, justo lo que esta logica
+     existe para evitar.
+     Se copia unicamente cuando el eje dado es un numero: un "45%" copiado al
+     alto se mediria contra la altura del padre — que casi siempre es auto — y
+     daria 0. */
+  const esCirculo = shape === "circle";
+  const resolvedHeight = height ?? (esCirculo && typeof width === "number" ? width : undefined);
+  const resolvedWidth = width ?? (esCirculo && typeof height === "number" ? height : undefined);
 
   return (
     <div
@@ -167,14 +185,28 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(function
       /* Las medidas son DATO, no estilo: vienen de la maqueta que se esta
          calcando, no de una escala. Van inline, y el `style` del consumidor se
          mezcla despues para que pueda pisarlas. */
-      style={{ width, height: resolvedHeight, ...style }}
+      style={{ width: resolvedWidth, height: resolvedHeight, ...style }}
       {...(announced
-        ? // role="status" es una region viva educada: el lector lo anuncia
-          // cuando aparece sin interrumpir lo que este leyendo.
-          { role: "status", "aria-label": label, "aria-busy": true }
+        ? /* role="status" es una region viva educada: el lector la anuncia
+             cuando aparece sin interrumpir lo que este leyendo.
+             Lo que anuncia una region viva es su CONTENIDO al cambiar, no su
+             aria-label; por eso el texto va dentro en sr-only. Y por eso NO se
+             pone aria-busy aqui: en la propia live region significa "reten las
+             actualizaciones hasta que vuelva a false", y aqui nunca vuelve —
+             el skeleton se desmonta — asi que el anuncio no llegaria a salir.
+             El aria-busy correcto es el del contenedor que se esta rellenando,
+             y ese es del consumidor. */
+          {
+            role: "status",
+            "aria-live": "polite" as const,
+            "aria-label": label,
+          }
         : { "aria-hidden": true })}
       {...props}
     >
+      {/* sr-only: alto 1px y clip, asi que no altera la caja que se esta
+          calcando. Sin label no hay nodo: un decorativo no lee nada. */}
+      {announced ? <span className="sr-only">{label}</span> : null}
       {animation === "pulse" || animation === "none" ? null : (
         <style href="tk-skeleton-shimmer" precedence="default">
           {SHIMMER_KEYFRAMES}

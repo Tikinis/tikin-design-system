@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Toast as ToastPrimitive } from "radix-ui";
+import * as ToastPrimitive from "radix-ui/toast";
 import { cva } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -36,9 +36,47 @@ import { cn } from "../lib/cn";
  * que el anillo de foco de la accion y el spinner puedan referirse a ellas sin
  * repetir el valor, y para que un consumidor pueda re-teñir el toast entero
  * cambiando dos variables en vez de pelearse con la especificidad.
+ *
+ * POR QUE EL TONO NEUTRO NO LLEVA TEXTO LIMA
+ * ------------------------------------------
+ * El pie del primer swatch dice "NEUTRO · texto lima", pero la pieza dibujada
+ * justo encima pinta ese mismo texto con var(--tk-surface), o sea blanco, igual
+ * que los otros cuatro. El bloque "TINTA + LIMA" desempata sin ambiguedad:
+ * "Fondo tinta 900, TEXTO BLANCO, acento lima para lo positivo y la accion".
+ * Asi que el lima entra por el icono de exito y por la accion — que es donde
+ * esta puesto aqui — y el pie del swatch es un desliz del documento. (El toast
+ * de "EN VIVO" si va en lima, pero ese bloque son demos ampliadas: alli es una
+ * pildora r999 en mono 13, ni siquiera la misma pieza.)
  */
 
 type ToastTone = "neutral" | "success" | "error" | "loading";
+
+/* POR QUE LA ANIMACION VA EN @keyframes Y NO EN UNA TRANSICION
+ * ------------------------------------------------------------
+ * Presence de Radix decide si espera o desmonta leyendo `animationName` del
+ * estilo calculado (react-presence 1.1.8: `if (currentAnimationName === 'none'
+ * ...) send('UNMOUNT')`). Una transicion CSS no produce animationName, asi que
+ * con `transition` el nodo se desmonta en el mismo tick y data-state="closed"
+ * NUNCA llega a pintarse: la salida seria un corte seco y la regla, codigo
+ * muerto. Solo una animacion de verdad retiene el nodo hasta el animationend.
+ *
+ * Los @keyframes no se pueden expresar como utilidad de Tailwind sin declararlos
+ * en el tema, y packages/tokens es territorio de otro agente. React 19 hoista a
+ * <head> cualquier <style> con `href` + `precedence` y lo deduplica por href,
+ * asi que la regla se inserta una sola vez aunque haya varios toasts.
+ *
+ * La entrada calca el muelle del prototipo (opacity 0→1, y 16→0, scale
+ * 0.95→1). La salida es mas corta: cerrar no necesita rebote. Son los mismos
+ * tiempos y la misma curva que el Snackbar, que comparte superficie con esto. */
+const TOAST_KEYFRAMES = `
+@keyframes tk-toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes tk-toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(0.97); }
+}`;
 
 const toast = cva(
   [
@@ -51,17 +89,26 @@ const toast = cva(
     "shadow-[0_8px_24px_-6px_rgba(0,0,0,0.35)]",
     // Radix hace el <li> enfocable (tabIndex 0) para poder alcanzarlo con F8.
     "outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-page",
-    // Entrada y salida por transicion, no por @keyframes: sin keyframes propias
-    // la salida se veria como un corte seco. Presence de Radix desmonta el nodo
-    // en cuanto no hay animacion CSS corriendo, asi que la transicion de cierre
-    // es cosmetica y nunca retiene el nodo en el DOM.
-    "transition-[opacity,transform] duration-200 ease-out",
-    "data-[state=closed]:translate-y-2 data-[state=closed]:opacity-0",
+    // Entrada y salida (ver TOAST_KEYFRAMES). Sin animacion Presence desmonta
+    // al instante, que es justo lo que pide quien ha reducido el movimiento.
+    "data-[state=open]:animate-[tk-toast-in_320ms_cubic-bezier(0.16,1,0.3,1)]",
+    "data-[state=closed]:animate-[tk-toast-out_140ms_ease-in]",
+    /* El apagado repite el atributo a proposito. Un `motion-reduce:animate-none`
+       a secas pesa (0,1,0) — la media query no suma especificidad — frente a los
+       (0,2,0) de las clases de arriba, asi que NUNCA las apagaba: quien pide
+       menos movimiento se lo comia igual. Repitiendo el atributo sube a (0,3,0)
+       y gana sin depender del orden en que Tailwind emita las variantes. */
+    "motion-reduce:data-[state=open]:data-[state=open]:animate-none",
+    "motion-reduce:data-[state=closed]:data-[state=closed]:animate-none",
     // Arrastre hacia abajo para descartar: el toast va anclado abajo, asi que
-    // la direccion natural es la del ToastProvider (swipeDirection="down").
-    "data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[swipe=move]:transition-none",
-    "data-[swipe=cancel]:translate-y-0",
-    "data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[swipe=end]:opacity-0",
+    // la direccion natural es la del ToastProvider (swipeDirection="down"). El
+    // dedo manda mientras arrastra, por eso `move` va sin transicion; al soltar
+    // sin llegar al umbral vuelve a su sitio acompañado.
+    "data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)]",
+    "data-[swipe=cancel]:translate-y-0 data-[swipe=cancel]:transition-transform data-[swipe=cancel]:duration-200",
+    // El descarte por arrastre sale por la misma puerta que el cierre normal:
+    // la animacion controla el transform, asi que aqui no se traslada a mano.
+    "data-[swipe=end]:animate-[tk-toast-out_140ms_ease-in]",
   ],
   {
     variants: {
@@ -83,10 +130,16 @@ const toast = cva(
  * prototipo usa ph-fill ph-check-circle y ph-fill ph-warning-circle a 17px;
  * estos son su equivalente de trazo. Heredan currentColor y van ocultos al
  * lector: el mensaje del toast ya dice lo que ha pasado. Si tu app si tiene
- * Phosphor instalado, pasa el icono real por la prop `icon`. */
+ * Phosphor instalado, pasa el icono real por la prop `icon`.
+ *
+ * El `data-slot` no es decorativo: al ir aria-hidden, el glifo no tiene rol ni
+ * nombre accesible, asi que es el unico asidero estable para apuntarle desde
+ * CSS o desde un test sin depender de la forma del path. Misma convencion que
+ * modal.tsx / otp-input.tsx / pin-input.tsx. */
 function CheckCircleGlyph() {
   return (
     <svg
+      data-slot="toast-glyph-check"
       viewBox="0 0 24 24"
       width="17"
       height="17"
@@ -106,6 +159,7 @@ function CheckCircleGlyph() {
 function WarningCircleGlyph() {
   return (
     <svg
+      data-slot="toast-glyph-warning"
       viewBox="0 0 24 24"
       width="17"
       height="17"
@@ -129,7 +183,11 @@ function WarningCircleGlyph() {
 function SpinnerGlyph() {
   return (
     <span
+      data-slot="toast-glyph-spinner"
       aria-hidden="true"
+      /* El giro NO lleva motion-reduce:animate-none, al reves que la entrada y
+         la salida: aquellas son adorno, esto es la unica señal de que la
+         operacion sigue en marcha. */
       className="size-[15px] animate-spin rounded-full border-2 border-[rgba(255,255,255,0.3)] border-t-[var(--tk-toast-ink)]"
     />
   );
@@ -177,7 +235,13 @@ export interface ToastProps extends Omit<
   duration?: number;
   /** `foreground` interrumpe al lector de pantalla; `background` espera turno. */
   type?: "foreground" | "background";
-  /** Fuerza el montaje para animar el cierre con una libreria externa. */
+  /**
+   * Fuerza el montaje para animar el cierre con una libreria externa. Si la
+   * usas, apaga antes la animacion propia con
+   * `className="data-[state=closed]:animate-none"`: si no, el toast se
+   * desvanece por CSS y reaparece al terminar, porque con `forceMount` ya no
+   * hay desmontaje que recoja el resultado.
+   */
   forceMount?: true;
   /** El temporizador se pausa al entrar el puntero o el foco. */
   onPause?: () => void;
@@ -224,48 +288,62 @@ export const Toast = React.forwardRef<HTMLLIElement, ToastProps>(function Toast(
   const glifo = icon === undefined ? GLIFO[tone] : icon;
 
   return (
-    <ToastPrimitive.Root
-      ref={ref}
-      className={cn(toast({ tone, className }))}
-      duration={
-        duration ??
-        (tone === "loading"
-          ? // Radix trata Infinity como "sin temporizador"; un 0 caeria en la
-            // duracion del Provider por su comprobacion `duration || context.duration`.
-            Infinity
-          : action
-            ? DURACION_CON_ACCION
-            : DURACION_BASE)
-      }
-      /* `foreground` interrumpe al lector de pantalla; `background` espera su
-         turno. Interrumpir se reserva a lo que el usuario tiene que atender —
-         un error o algo que puede deshacer. Confirmar un copiado no lo es. */
-      type={type ?? (tone === "error" || action ? "foreground" : "background")}
-      {...props}
-    >
-      {glifo != null && (
-        <span
-          aria-hidden="true"
-          className="inline-flex shrink-0 items-center justify-center text-[var(--tk-toast-icon)] [&_svg]:size-[17px] [&_svg]:shrink-0"
-        >
-          {glifo}
-        </span>
-      )}
-      {/* El mensaje entero es el Title de Radix: es lo que se anuncia. Sin
-          Title ni Description, Radix no tendria nada que leer en voz alta. */}
-      <ToastPrimitive.Title className="min-w-0">{children}</ToastPrimitive.Title>
-      {action != null && (
-        <>
-          {/* Separador de 1x16 en gris 550. Decorativo: la accion ya es un
-              boton con su propio nombre accesible. */}
+    <>
+      {/* Fuera del Root a proposito. React 19 lo hoista a <head>, pero el
+          paquete admite React 18 como peer y alli NO se hoista: se quedaria
+          dentro del <li>, y el anunciador de Radix recorre los nodos
+          descartando solo los que llevan aria-hidden, hidden o display:none en
+          linea — un <style> no cumple ninguno, asi que el lector de pantalla
+          leeria los @keyframes antes del mensaje. Aqui cuelga del arbol del
+          consumidor, no del <li> que Radix portaliza al viewport. */}
+      <style href="tk-toast" precedence="default">
+        {TOAST_KEYFRAMES}
+      </style>
+
+      <ToastPrimitive.Root
+        ref={ref}
+        className={cn(toast({ tone, className }))}
+        duration={
+          duration ??
+          (tone === "loading"
+            ? // Radix trata Infinity como "sin temporizador"; un 0 caeria en la
+              // duracion del Provider por su comprobacion `duration || context.duration`.
+              Infinity
+            : action
+              ? DURACION_CON_ACCION
+              : DURACION_BASE)
+        }
+        /* `foreground` interrumpe al lector de pantalla; `background` espera su
+           turno. Interrumpir se reserva a lo que el usuario tiene que atender —
+           un error o algo que puede deshacer. Confirmar un copiado no lo es. */
+        type={type ?? (tone === "error" || action ? "foreground" : "background")}
+        {...props}
+      >
+        {glifo != null && (
           <span
+            data-slot="toast-icon"
             aria-hidden="true"
-            className="h-4 w-px shrink-0 bg-[var(--colours-grayscale-dark-550)]"
-          />
-          {action}
-        </>
-      )}
-    </ToastPrimitive.Root>
+            className="inline-flex shrink-0 items-center justify-center text-[var(--tk-toast-icon)] [&_svg]:size-[17px] [&_svg]:shrink-0"
+          >
+            {glifo}
+          </span>
+        )}
+        {/* El mensaje entero es el Title de Radix: es lo que se anuncia. Sin
+            Title ni Description, Radix no tendria nada que leer en voz alta. */}
+        <ToastPrimitive.Title className="min-w-0">{children}</ToastPrimitive.Title>
+        {action != null && (
+          <>
+            {/* Separador de 1x16 en gris 550. Decorativo: la accion ya es un
+                boton con su propio nombre accesible. */}
+            <span
+              aria-hidden="true"
+              className="h-4 w-px shrink-0 bg-[var(--colours-grayscale-dark-550)]"
+            />
+            {action}
+          </>
+        )}
+      </ToastPrimitive.Root>
+    </>
   );
 });
 
@@ -334,7 +412,15 @@ export const ToastViewport = React.forwardRef<HTMLOListElement, ToastViewportPro
           // La safe-area evita que en un movil con gesto inferior el toast
           // quede pisado por la barra del sistema.
           "bottom-[calc(28px+env(safe-area-inset-bottom,0px))] max-w-[calc(100vw-32px)]",
-          "outline-none",
+          // F8 trae el foco AQUI, a la <ol>, antes de poder tabular al toast.
+          // Sin anillo propio ese primer salto no se veria: es el unico camino
+          // de teclado hasta el toast y quedaba ciego.
+          // Va con `focus:` y no con `focus-visible:` a proposito: Radix pone
+          // tabIndex -1 en la lista y aqui no se capturan clicks, asi que la
+          // unica via de foco ya es el teclado; con focus-visible dependeriamos
+          // de la heuristica de cada motor para el foco programatico, que es
+          // justo lo que puede volver a dejarlo invisible.
+          "rounded-xl outline-none focus:ring-2 focus:ring-lime",
           className,
         )}
         {...props}

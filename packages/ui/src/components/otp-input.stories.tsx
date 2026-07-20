@@ -92,15 +92,28 @@ export const Deshabilitado: Story = {
 export const SoloLectura: Story = {
   name: "Solo lectura",
   args: { value: "314279", readOnly: true },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "No es lo mismo que deshabilitado: sigue siendo enfocable y sigue en el orden de tabulación, así que se pinta en reposo y marca la casilla activa al recibir el foco. Sin eso, tabular hasta él no dibujaría nada — el caret nativo va a opacidad 0. El caret propio sí se omite: parpadear invitaría a teclear.",
+      },
+    },
+  },
 };
 
-/** El documento dibuja 6 (por defecto) y 4. La fila se ajusta al número de casillas. */
+/**
+ * El documento dibuja exactamente dos longitudes: 6 (por defecto) y 4. El «8»
+ * que aparece junto al rótulo «4 CASILLAS» en el volcado plano no es una
+ * tercera variante — es la cifra que va dentro de la primera casilla de ese
+ * mismo ejemplo de 4. `length` es libre, pero solo estas dos están dibujadas.
+ */
 export const Longitudes: Story = {
   name: "Longitudes",
   parameters: { controls: { disable: true } },
   render: () => (
     <div className="flex flex-col gap-8">
-      {[4, 6, 8].map((n) => (
+      {[4, 6].map((n) => (
         <div key={n} className="flex flex-col gap-3.5">
           <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
             {n} casillas

@@ -179,55 +179,95 @@ export const DosAcciones: Story = {
  * tailwind-merge sustituye `fixed` y el centrado. */
 const VIEWPORT_ESTATICO = "static translate-x-0 items-start gap-4 p-0 pb-0 max-w-none";
 
+/* Cada celda trae SU PROPIO provider y su propio viewport. No es adorno: Radix
+ * portaliza cada toast al ultimo viewport montado de su provider, asi que con
+ * uno solo todas las piezas caen en la misma lista y no hay donde intercalar el
+ * rotulo. El documento rotula cada caso de la matriz — sin rotulo, la matriz
+ * deja de ser documentacion y pasa a ser un monton de snackbars. */
+function Celda({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+        {rotulo}
+      </span>
+      <SnackbarProvider>
+        <SnackbarViewport className={VIEWPORT_ESTATICO} />
+        {children}
+      </SnackbarProvider>
+    </div>
+  );
+}
+
+const CHECK = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="9" />
+    <path d="m8.2 12.3 2.6 2.6 5-5.8" />
+  </svg>
+);
+
+/* Los seis casos del bloque "VARIANTES · ANATOMIA", con el mismo rotulo que les
+ * pone el documento y en el mismo orden. */
+const VARIANTES: { rotulo: string; props: SnackbarProps }[] = [
+  {
+    rotulo: "Texto + acción",
+    props: { message: "Movimiento eliminado", actionLabel: "Deshacer" },
+  },
+  {
+    rotulo: "Icono leading",
+    props: {
+      message: "Cambios guardados",
+      actionLabel: "Deshacer",
+      countdown: "none",
+      icon: CHECK,
+    },
+  },
+  {
+    rotulo: "Anillo cuenta regresiva",
+    props: { message: "Bolsillo archivado", actionLabel: "Deshacer", countdown: "ring" },
+  },
+  {
+    rotulo: "Dos líneas",
+    props: {
+      message: "Transferencia cancelada",
+      description: "$ 250.000 a $mariarojas",
+      actionLabel: "Deshacer",
+      countdown: "none",
+    },
+  },
+  {
+    rotulo: "Procesando · sin acción",
+    props: { message: "Archivando bolsillo…", loading: true },
+  },
+  {
+    rotulo: "Dos acciones",
+    props: {
+      message: "No se pudo enviar",
+      closeLabel: "Cerrar",
+      actionLabel: "Reintentar",
+      countdown: "none",
+    },
+  },
+];
+
 /** superficie tinta · r12 · padding 12/16 · gap 12 · sans 14 · sombra alta */
 export const MatrizDeVariantes: Story = {
   name: "Matriz de variantes",
   parameters: { controls: { disable: true } },
   render: () => (
-    <SnackbarProvider>
-      <SnackbarViewport className={VIEWPORT_ESTATICO} />
-      <Snackbar duration={Infinity} message="Movimiento eliminado" actionLabel="Deshacer" />
-      <Snackbar
-        duration={Infinity}
-        message="Cambios guardados"
-        actionLabel="Deshacer"
-        countdown="none"
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="m8.2 12.3 2.6 2.6 5-5.8" />
-          </svg>
-        }
-      />
-      <Snackbar
-        duration={Infinity}
-        message="Bolsillo archivado"
-        actionLabel="Deshacer"
-        countdown="ring"
-      />
-      <Snackbar
-        duration={Infinity}
-        message="Transferencia cancelada"
-        description="$ 250.000 a $mariarojas"
-        actionLabel="Deshacer"
-        countdown="none"
-      />
-      <Snackbar duration={Infinity} message="Archivando bolsillo…" loading />
-      <Snackbar
-        duration={Infinity}
-        message="No se pudo enviar"
-        closeLabel="Cerrar"
-        actionLabel="Reintentar"
-        countdown="none"
-      />
-    </SnackbarProvider>
+    <div className="flex flex-col gap-6">
+      {VARIANTES.map(({ rotulo, props }) => (
+        <Celda key={rotulo} rotulo={rotulo}>
+          <Snackbar duration={Infinity} {...props} />
+        </Celda>
+      ))}
+    </div>
   ),
 };
 
@@ -247,19 +287,19 @@ export const EstadosDeDeshacer: Story = {
   name: "Deshacer · estados",
   parameters: { controls: { disable: true } },
   render: () => (
-    <SnackbarProvider>
-      <SnackbarViewport className={VIEWPORT_ESTATICO} />
+    <div className="flex flex-col gap-6">
       {ESTADOS.map(({ etiqueta, clase }) => (
-        <Snackbar
-          key={etiqueta}
-          duration={Infinity}
-          countdown="none"
-          message="Movimiento eliminado"
-          actionLabel="Deshacer"
-          className={clase}
-        />
+        <Celda key={etiqueta} rotulo={etiqueta}>
+          <Snackbar
+            duration={Infinity}
+            countdown="none"
+            message="Movimiento eliminado"
+            actionLabel="Deshacer"
+            className={clase}
+          />
+        </Celda>
       ))}
-    </SnackbarProvider>
+    </div>
   ),
 };
 

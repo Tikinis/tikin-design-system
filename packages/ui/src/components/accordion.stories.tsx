@@ -204,6 +204,44 @@ export const MatrizDeEspecificacion: Story = {
   },
 };
 
+/* El glifo va dibujado a mano: packages/ui no depende de @phosphor-icons y esta
+ * story solo necesita algo que demuestre el hueco de `startIcon`. En producto
+ * pasa el icono real de Phosphor, ya dimensionado a 16. */
+function Glifo() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4 shrink-0 text-ink-600">
+      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="8" cy="8" r="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** `startIcon` para listas de ajustes: el icono va antes de la pregunta. */
+export const ConIcono: Story = {
+  name: "Con icono",
+  args: { type: "multiple", variant: "flush", defaultValue: ["tiempo"] },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`startIcon` se renderiza tal cual, sin envoltorio: dale tu el tamaño en el propio icono (`size-4` para los 16px del sistema), igual que en Chip.",
+      },
+    },
+  },
+  render: (args) => (
+    <div className="w-[560px] max-w-full rounded-xl border border-edge bg-surface p-4">
+      <Accordion {...args}>
+        {preguntas.map((p) => (
+          <AccordionItem key={p.id} value={p.id}>
+            <AccordionTrigger startIcon={<Glifo />}>{p.q}</AccordionTrigger>
+            <AccordionContent>{p.a}</AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  ),
+};
+
 /** El nivel del encabezado se ajusta al de la pagina, no al reves. */
 export const NivelDeEncabezado: Story = {
   name: "Nivel de encabezado",

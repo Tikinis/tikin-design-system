@@ -123,15 +123,60 @@ describe("FileUpload", () => {
     expect(onFilesAccepted).toHaveBeenCalledWith([png, doc]);
   });
 
-  it("sin multiple se queda solo con el primero aunque suelten varios", () => {
+  it("acepta un mime completo, no solo comodines y extensiones", () => {
     const onFilesAccepted = vi.fn();
-    render(<FileUpload onFilesAccepted={onFilesAccepted} />);
+    const onFilesRejected = vi.fn();
+    render(
+      <FileUpload
+        accept="application/pdf"
+        onFilesAccepted={onFilesAccepted}
+        onFilesRejected={onFilesRejected}
+      />,
+    );
+
+    const doc = pdf("carta.pdf");
+    const png = new File(["x"], "foto.png", { type: "image/png" });
+    fireEvent.drop(screen.getByRole("button"), { dataTransfer: dataTransfer([doc, png]) });
+
+    expect(onFilesAccepted).toHaveBeenCalledWith([doc]);
+    expect(onFilesRejected).toHaveBeenCalledWith([{ file: png, reason: "type" }]);
+  });
+
+  it("sin multiple se queda con el primero y devuelve el resto con motivo", () => {
+    // El sobrante NO se cae en silencio: sin motivo el consumidor no puede
+    // decir "solo se admite uno" y el usuario ve desaparecer archivos validos.
+    const onFilesAccepted = vi.fn();
+    const onFilesRejected = vi.fn();
+    render(<FileUpload onFilesAccepted={onFilesAccepted} onFilesRejected={onFilesRejected} />);
 
     const uno = pdf("uno.pdf");
     const dos = pdf("dos.pdf");
     fireEvent.drop(screen.getByRole("button"), { dataTransfer: dataTransfer([uno, dos]) });
 
     expect(onFilesAccepted).toHaveBeenCalledWith([uno]);
+    expect(onFilesRejected).toHaveBeenCalledWith([{ file: dos, reason: "count" }]);
+  });
+
+  it("deriva la pista de formatos y limite cuando no se pasa", () => {
+    // La regla FORMATO Y PESO del documento es "di siempre los tipos y el
+    // limite antes de subir": con accept y maxSize a mano, callarse es un bug.
+    render(<FileUpload accept=".pdf,.jpg,.jpeg,.png" maxSize={10 * 1024 * 1024} />);
+
+    expect(screen.getByRole("button")).toHaveTextContent("pdf, jpg o png · hasta 10 MB");
+    // Las mayusculas las pone el CSS, no toUpperCase(): el DOM sigue en minusculas.
+    expect(screen.getByText("pdf, jpg o png").className).toContain("uppercase");
+  });
+
+  it("la pista explicita manda, y hint={null} la calla del todo", () => {
+    const { rerender } = render(
+      <FileUpload accept=".pdf" maxSize={1024} hint="Solo el extracto" />,
+    );
+    expect(screen.getByRole("button")).toHaveTextContent("Solo el extracto");
+    expect(screen.getByRole("button")).not.toHaveTextContent("1 KB");
+
+    rerender(<FileUpload accept=".pdf" maxSize={1024} hint={null} />);
+    expect(screen.getByRole("button")).not.toHaveTextContent("1 KB");
+    expect(screen.getByRole("button")).not.toHaveTextContent("pdf");
   });
 
   it("marca el arrastre encima y lo desmarca al salir", () => {
@@ -193,6 +238,11 @@ describe("FileUpload", () => {
     await userEvent.click(screen.getByRole("button"));
     expect(open).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Adjunta un soporte")).toBeInTheDocument();
+
+    // La pildora existe, no es <button> y no pone el rotulo en mayusculas en JS.
+    const pildora = screen.getByText("Examinar");
+    expect(pildora.tagName).toBe("SPAN");
+    expect(pildora.className).toContain("uppercase");
   });
 
   it("compone los manejadores de arrastre del consumidor sin perder los propios", () => {
@@ -276,6 +326,63 @@ describe("FileUploadItem", () => {
       </FileUploadList>,
     );
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("la barra la pinta Progress, con lo que Radix añade", () => {
+    // Un <span role="progressbar"> a mano no da aria-valuetext ni data-state, y
+    // dejaba dos fuentes de verdad para la misma pieza del sistema.
+    row(<FileUploadItem name="cedula.pdf" status="uploading" value={62} />);
+    const barra = screen.getByRole("progressbar");
+
+    expect(barra).toHaveAttribute("aria-valuetext", "62%");
+    expect(barra).toHaveAttribute("data-state", "loading");
+    expect(barra).toHaveAccessibleName("Progreso de cedula.pdf");
+  });
+
+  it("apila la meta bajo el nombre, salvo cuando hay barra", () => {
+    // El prototipo solo pone nombre y meta en la misma linea en las dos filas
+    // con barra; en las otras cuatro la meta va DEBAJO y a la izquierda.
+    const { rerender } = row(<FileUploadItem name="extracto.pdf" status="queued" meta="en cola" />);
+
+    const nombre = screen.getByText("extracto.pdf");
+    const meta = screen.getByText("en cola");
+    expect(meta.parentElement).toBe(nombre.parentElement);
+    expect(nombre.parentElement!.className).toContain("flex-col");
+    expect(nombre.parentElement!.className).not.toContain("justify-between");
+
+    rerender(
+      <FileUploadList>
+        <FileUploadItem name="cedula.pdf" status="uploading" value={62} />
+      </FileUploadList>,
+    );
+    const enLinea = screen.getByText("cedula.pdf").parentElement!;
+    expect(enLinea).toBe(screen.getByText("62%").parentElement);
+    expect(enLinea.className).toContain("justify-between");
+  });
+
+  it("el glifo hereda el color del tile en vez de imponer el del formato", () => {
+    // Sin esto un extracto.pdf pintaba el glifo en rojo (color de PDF) dentro
+    // de una fila en cola, y rojo significa error en el resto del sistema.
+    row(<FileUploadItem name="extracto.pdf" status="queued" meta="en cola" />);
+    const glifo = screen.getByRole("listitem").querySelector("svg")!;
+
+    expect(glifo.getAttribute("class")).toContain("text-current");
+    expect(glifo.getAttribute("class")).not.toContain("text-fg-error");
+  });
+
+  it("el error de formato conserva la hoja del tipo; el de peso lleva el aspa", () => {
+    const { rerender } = row(
+      <FileUploadItem name="foto.png" status="error" meta="supera 10 MB" reason="size" />,
+    );
+    // El aspa no rotula formato.
+    expect(screen.getByRole("listitem").querySelector("svg text")).toBeNull();
+
+    rerender(
+      <FileUploadList>
+        <FileUploadItem name="foto.png" status="error" meta="formato no permitido" reason="type" />
+      </FileUploadList>,
+    );
+    expect(screen.getByRole("listitem").querySelector("svg text")).toHaveTextContent("PNG");
   });
 
   it("acota el porcentaje fuera de rango en vez de desbordar la barra", () => {

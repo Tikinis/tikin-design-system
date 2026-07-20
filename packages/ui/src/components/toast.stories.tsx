@@ -24,6 +24,7 @@ const meta = {
           "- **Se va solo** — ~2,5 s, o 5 s si lleva accion. Un solo toast a la vez: el nuevo reemplaza al anterior.",
           "- **Tinta + lima** — fondo tinta 900 y texto blanco en los dos temas; lima para lo positivo y para la accion. El rojo solo tiñe el icono de error, nunca el fondo.",
           "- **Toast o dialogo** — toast para confirmar algo reversible. Si hace falta una decision, o hay riesgo, es un dialogo.",
+          "- **Entra y sale animado** — muelle de 320 ms al aparecer, 140 ms al irse, tambien al descartarlo arrastrando hacia abajo. Con `prefers-reduced-motion` no hay animacion y el aviso simplemente aparece y desaparece.",
           "",
           "La superficie es la unica del sistema que **no invierte** con el tema: el separador y los acentos del prototipo solo se leen sobre negro. Ver el comentario de cabecera de `toast.tsx`.",
         ].join("\n"),
@@ -128,7 +129,15 @@ const VIEWPORT_ESTATICO = "static translate-x-0 items-start gap-4 max-w-none";
 /** tinta 900 · r12 · padding 12/16 · gap 10 · icono 17 · sombra alta */
 export const MatrizDeVariantes: Story = {
   name: "Matriz de variantes",
-  parameters: { controls: { disable: true } },
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "Los cinco a la vez son una lamina de especificacion, no un uso valido: en una app va **uno solo**, y el nuevo reemplaza al anterior. Mira cualquiera de las otras stories para el patron real.",
+      },
+    },
+  },
   render: () => (
     <ToastProvider>
       <ToastViewport className={VIEWPORT_ESTATICO} />

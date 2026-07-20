@@ -125,6 +125,11 @@ export interface EmptyStateProps
    * vacio SUSTITUYE a un resultado — "Sin resultados" tras buscar, "Sin
    * conexion" tras fallar una carga — porque ahi el cambio ocurre lejos del
    * foco y sin aviso nadie se entera.
+   *
+   * Con `announce` el contenido se pinta un commit despues que el contenedor,
+   * para que la region viva exista vacia antes de recibir texto (ver el cuerpo
+   * del componente). No lo actives en contenido que deba salir ya pintado en el
+   * HTML del servidor.
    */
   announce?: boolean;
 }
@@ -157,51 +162,102 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(func
 ) {
   const Heading = `h${headingLevel}` as const;
 
+  // role explicito gana siempre: hay casos raros (un vacio dentro de una region
+  // viva que ya existe) donde duplicar el anuncio molesta, y ahi el consumidor
+  // se encarga del anuncio por su cuenta.
+  const esRegionViva = role === undefined && announce;
+
+  /* Una region viva que se INSERTA ya poblada no se anuncia: NVDA y JAWS solo
+   * vigilan las regiones que ya existian en el DOM cuando su contenido cambia.
+   * Y ese es justo el caso de `announce` — la lista se desmonta y el vacio
+   * entero se monta de golpe —, asi que poner role="status" y quedarse tan
+   * anchos no anunciaba nada.
+   *
+   * Por eso el contenido entra un commit despues: primer commit la region vacia
+   * (ya observada), segundo commit el texto, que si cuenta como cambio. Es el
+   * mismo truco del Toast de Radix.
+   *
+   * El precio es un frame con la tarjeta vacia, y solo cuando `announce` esta
+   * activo — es decir, cuando el vacio acaba de sustituir a otra cosa y el ojo
+   * del usuario ya estaba viendo un cambio. Sin `announce` no hay diferimiento
+   * y el render sigue siendo sincrono (importa para SSR). */
+  const [regionLista, setRegionLista] = React.useState(false);
+  React.useEffect(() => {
+    if (esRegionViva) setRegionLista(true);
+  }, [esRegionViva]);
+  const muestraContenido = !esRegionViva || regionLista;
+
   return (
     <div
       ref={ref}
       className={cn(emptyState({ bordered, className }))}
-      // role explicito gana siempre: hay casos raros (un vacio dentro de una
-      // region viva que ya existe) donde duplicar el anuncio molesta.
       role={role ?? (announce ? "status" : undefined)}
       // Redundante con role="status" sobre el papel, pero hay combinaciones de
       // lector y navegador que solo respetan la region viva si aria-live esta
       // escrito. No cuesta nada y evita que el anuncio se pierda.
-      aria-live={role === undefined && announce ? "polite" : undefined}
+      aria-live={esRegionViva ? "polite" : undefined}
       {...props}
     >
-      {icon && (
-        <div className={cn(emptyStateTile({ tone }))} aria-hidden="true">
-          {icon}
-        </div>
-      )}
+      {muestraContenido && (
+        <>
+          {icon && (
+            <div className={cn(emptyStateTile({ tone }))} aria-hidden="true">
+              {icon}
+            </div>
+          )}
 
-      {title !== undefined && title !== null && (
-        // El h* no arrastra los margenes del navegador porque el reset de
-        // Tailwind ya los quita; el ritmo lo pone el gap del contenedor.
-        <Heading className="font-display text-[17px] font-medium text-ink">{title}</Heading>
-      )}
+          {/* Las tres ranuras se guardan por veracidad, igual que `action`, y no
+              por `!== undefined`. Con la comprobacion estricta, el patron
+              habitual `title={cond && "..."}` o un `title=""` colaban un <h3>
+              vacio — encabezado sin texto, que axe reporta como violacion de
+              WCAG 2.4.6 — y un <p> vacio que ademas se comia 12px del gap del
+              contenedor. Un titulo o un mensaje que valen 0 no existen en un
+              vacio, asi que la veracidad no pierde ningun caso real. */}
+          {title && (
+            // El h* no arrastra los margenes del navegador porque el reset de
+            // Tailwind ya los quita; el ritmo lo pone el gap del contenedor.
+            <Heading className="font-display text-[17px] font-medium text-ink">{title}</Heading>
+          )}
 
-      {children !== undefined && children !== null && (
-        // max-w 240 (max-w-60) mantiene la medida de lectura corta: centrado y
-        // a ancho completo el mensaje se vuelve ilegible en desktop.
-        <p className="max-w-60 text-[13.5px] leading-[1.5] text-ink-600">{children}</p>
-      )}
+          {children && (
+            // max-w 240 (max-w-60) mantiene la medida de lectura corta: centrado
+            // y a ancho completo el mensaje se vuelve ilegible en desktop.
+            <p className="max-w-60 text-[13.5px] leading-[1.5] text-ink-600">{children}</p>
+          )}
 
-      {/* mt-1 son los 4px extra que el prototipo mete solo delante de la
-          accion, ademas del gap de 12. */}
-      {action && <div className="mt-1">{action}</div>}
+          {/* mt-1 son los 4px extra que el prototipo mete solo delante de la
+              accion, ademas del gap de 12. */}
+          {action && <div className="mt-1">{action}</div>}
+        </>
+      )}
     </div>
   );
 });
 
 /* -------------------------------------------------------------------------- */
 
+/* ESTADOS DE LA ACCION: default / hover / pressed / disabled, los cuatro que la
+ * seccion 05 exige a cualquier boton del sistema. Aunque las medidas obliguen a
+ * no reutilizar `Button` (h40/r12/px18/13px frente a los h40/r10/px20/14px del
+ * tamaño M), los estados si se copian de el.
+ *
+ * DISABLED: `Button` compacto usa la pareja aprobada de Figma
+ * --button-primary-bg-disable rgb(236,237,238) / --button-primary-text-disable
+ * rgb(124,126,127) (~3.5:1). Aqui se escribe con surface-3 / ink-600, que en
+ * claro son rgb(238,238,238) y rgb(110,110,110) — la misma pareja a simple
+ * vista — pero SI se invierten en oscuro. Los dos tokens --button-*-disable no
+ * estan redefinidos en el bloque .dark de figma.css, asi que usarlos literales
+ * dejaria una pastilla casi blanca sobre una pagina casi negra.
+ * La pareja anterior (bg-edge sobre ink-400) daba ~1.5:1 en claro y ~2.1:1 en
+ * oscuro: el label deshabilitado no se leia. */
 const emptyStateAction = cva(
   [
     "inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-[18px]",
     "font-mono text-[13px] font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "transition-colors duration-140 ease-out",
+    // select-none igual que Button: al pulsar y arrastrar sobre un boton el
+    // navegador selecciona el label, y una seleccion azul sobre MAYUSCULAS mono
+    // se lee como un fallo de render.
+    "transition-colors duration-140 ease-out select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed",
     // Los iconos del prototipo van a 15px, mas pequeños que el label.
@@ -214,7 +270,13 @@ const emptyStateAction = cva(
         primary: [
           "bg-ink text-surface",
           "hover:not-disabled:bg-ink-800",
-          "disabled:bg-edge disabled:text-ink-400",
+          // Pressed: la tinta va a su extremo, igual que Button
+          // (--button-primary-bg-pressed = grayscale-900 = rgb(11,11,11)).
+          // Se escribe con ink-strong y no con el literal de Figma porque
+          // ink-strong ES ese valor en claro y se invierte a blanco en oscuro;
+          // el literal dejaria un boton negro sobre pagina negra al pulsar.
+          "active:not-disabled:bg-ink-strong",
+          "disabled:bg-surface-3 disabled:text-ink-600",
         ],
         /* Contorno de tinta: el reintento del error (REINTENTAR). Borde por
            inset shadow y no por border, igual que en Button: asi el alto sigue
@@ -222,6 +284,8 @@ const emptyStateAction = cva(
         secondary: [
           "bg-transparent text-ink shadow-[inset_0_0_0_1px_var(--tk-ink)]",
           "hover:not-disabled:bg-surface-2",
+          // Pressed invierte a relleno, como el secondary de Button.
+          "active:not-disabled:bg-ink active:not-disabled:text-surface",
           "disabled:text-ink-400 disabled:shadow-[inset_0_0_0_1px_var(--tk-border)]",
         ],
         /* Contorno tenue: la salida secundaria de un vacio que no es error
@@ -229,6 +293,9 @@ const emptyStateAction = cva(
         quiet: [
           "bg-transparent text-ink shadow-[inset_0_0_0_1px_var(--tk-border-2)]",
           "hover:not-disabled:bg-surface-2",
+          // Pressed solo profundiza el relleno un escalon: esta accion es la
+          // salida discreta y no debe gritar mas que la primaria del vacio.
+          "active:not-disabled:bg-surface-3",
           "disabled:text-ink-400 disabled:shadow-[inset_0_0_0_1px_var(--tk-border)]",
         ],
       },

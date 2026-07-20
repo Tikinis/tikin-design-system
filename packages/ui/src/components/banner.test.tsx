@@ -119,6 +119,65 @@ describe("Banner", () => {
     expect(screen.getByRole("status")).not.toHaveAttribute("aria-busy");
   });
 
+  it("acepta cualquier nodo como accion, no solo BannerAction", () => {
+    render(<Banner action={<a href="/pedir">Pedir</a>}>Tu tarjeta física ya está aquí.</Banner>);
+    expect(screen.getByRole("link", { name: "Pedir" })).toBeInTheDocument();
+  });
+
+  it("en loading cambia el icono por el spinner, tambien si hay icono propio", () => {
+    const { container, rerender } = render(<Banner tone="neutral">Sincronizando…</Banner>);
+    expect(container.querySelector("svg")).not.toBeNull();
+
+    rerender(
+      <Banner tone="neutral" loading>
+        Sincronizando…
+      </Banner>,
+    );
+    // El formato "progreso" del documento dibuja spinner EN VEZ de icono: si el
+    // glifo del tono se quedara, habria dos cosas donde va una.
+    expect(container.querySelector("svg")).toBeNull();
+    expect(container.querySelector(".animate-spin")).not.toBeNull();
+
+    rerender(
+      <Banner tone="neutral" loading icon={<svg data-testid="icono-propio" />}>
+        Sincronizando…
+      </Banner>,
+    );
+    expect(screen.queryByTestId("icono-propio")).not.toBeInTheDocument();
+    expect(container.querySelector(".animate-spin")).not.toBeNull();
+  });
+
+  it("el icono propio sustituye al del tono y hereda su color pleno", () => {
+    render(
+      <Banner tone="info" icon={<svg data-testid="icono-propio" />}>
+        Actualizamos nuestros términos de servicio.
+      </Banner>,
+    );
+    const propio = screen.getByTestId("icono-propio");
+    // Solo hay un icono: el del consumidor sustituye al glifo del tono.
+    expect(propio.closest("[role='status']")?.querySelectorAll("svg")).toHaveLength(1);
+
+    const hueco = propio.parentElement;
+    // Aqui la clase SI es el contrato: la prop se documenta como "hereda el
+    // color pleno via currentColor". Sin este hueco, currentColor seria el color
+    // del MENSAJE y el icono saldria en tinta en vez de lavanda.
+    expect(hueco?.className).toContain("text-[var(--tk-banner-icon)]");
+    // flex:none del prototipo: un icono ancho no debe aplastarse con un mensaje
+    // largo, igual que no se aplasta el glifo por defecto.
+    expect(hueco?.className).toContain("shrink-0");
+  });
+
+  it("deja repintar el icono del tono, sin que el ajuste de tema lo pise", () => {
+    render(<Banner className="[--tk-banner-icon:red]">Invita a un amigo.</Banner>);
+    const cls = screen.getByRole("status").className;
+    expect(cls).toContain("[--tk-banner-icon:red]");
+    // tailwind-merge descarta la declaracion del tono. El ajuste de tema oscuro
+    // vive en OTRA variable a proposito: si publicara `dark:[--tk-banner-icon:…]`
+    // sobreviviria al merge y ganaria al consumidor en oscuro.
+    expect(cls).not.toContain("--tk-banner-icon:var(--tk-banner-icon-tema");
+    expect(cls).not.toContain("dark:[--tk-banner-icon:");
+  });
+
   it("muestra las dos lineas del formato doble", () => {
     render(
       <Banner tone="system" description="Regulariza antes del 30 de julio para evitar bloqueos.">
@@ -128,6 +187,30 @@ describe("Banner", () => {
     const region = screen.getByRole("status");
     expect(region).toHaveTextContent("Tu cuenta tiene un pago pendiente.");
     expect(region).toHaveTextContent("Regulariza antes del 30 de julio para evitar bloqueos.");
+  });
+
+  it("una descripcion vacia no cuenta como segunda linea", () => {
+    const { rerender } = render(
+      <Banner tone="system" description="">
+        Tu cuenta tiene un pago pendiente.
+      </Banner>,
+    );
+    const region = screen.getByRole("status");
+    // description="" es lo habitual cuando el texto viene de una API todavia sin
+    // cargar. Ni <span> vacio...
+    expect(region.querySelectorAll("span")).toHaveLength(1);
+    // ...ni el items-start del formato doble, que descolgaria icono, accion y X
+    // hacia arriba sin nada que lo justifique.
+    expect(region.className).toContain("items-center");
+    expect(region.className).not.toContain("items-start");
+
+    rerender(
+      <Banner tone="system" description="Regulariza antes del 30 de julio.">
+        Tu cuenta tiene un pago pendiente.
+      </Banner>,
+    );
+    expect(region.querySelectorAll("span")).toHaveLength(2);
+    expect(region.className).toContain("items-start");
   });
 
   it("el icono es decorativo y no contamina el nombre accesible", () => {
@@ -176,8 +259,12 @@ describe("BannerAction", () => {
   it("no pone el label en mayusculas en JS, solo por CSS", () => {
     // Importa para el texto que anuncia el lector de pantalla y para lo que el
     // usuario copia al portapapeles.
-    render(<BannerAction>Pedir tarjeta</BannerAction>);
-    expect(screen.getByRole("button")).toHaveTextContent("Pedir tarjeta");
+    const boton = render(<BannerAction>Pedir tarjeta</BannerAction>).getByRole("button");
+    expect(boton).toHaveTextContent("Pedir tarjeta");
+    // La otra mitad de la afirmacion: las mayusculas tienen que salir de algun
+    // sitio. Sin esto, borrar la clase dejaria pasar el test y el CTA se veria
+    // en minusculas contra el documento.
+    expect(boton.className).toContain("uppercase");
   });
 
   it("dispara onClick y respeta disabled", async () => {

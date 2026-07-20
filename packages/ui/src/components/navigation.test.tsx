@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
+  BreadcrumbItem,
+  Breadcrumbs,
   Sidebar,
   SidebarFooter,
   SidebarItem,
@@ -13,6 +15,10 @@ import {
   TopBarAction,
   TopBarLink,
 } from "./navigation";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 /* Estos tests cubren COMPORTAMIENTO, no apariencia. Las medidas (rail 220,
  * accion central 52, item 64) se verifican contra el navegador, no aqui: jsdom
@@ -69,6 +75,11 @@ describe("TopBar", () => {
     expect(screen.getByRole("link", { name: "Movimientos" })).not.toHaveAttribute("aria-current");
   });
 
+  it("en variante web pinta el logo", () => {
+    render(<TopBar variant="web" logo="tikin" />);
+    expect(screen.getByText("tikin")).toBeInTheDocument();
+  });
+
   it("TopBarLink con asChild conserva el elemento del consumidor y su texto", () => {
     render(
       <TopBarLink asChild label="Bolsillos" active>
@@ -98,14 +109,26 @@ describe("TopBarAction", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("el punto de aviso no aporta nombre accesible: tiene que ir en el label", () => {
-    render(
-      <TopBarAction label="Notificaciones, 3 sin leer" dot>
+  it("dibuja el punto de aviso, y fuera del arbol de accesibilidad", () => {
+    const { rerender } = render(
+      <TopBarAction label="Notificaciones" data-testid="campana">
         <Dot />
       </TopBarAction>,
     );
-    // El unico nombre del boton es el que pasa el consumidor. El punto queda
-    // fuera del arbol de accesibilidad a proposito.
+    // Sin la prop no hay punto: el assert de abajo tiene que poder fallar.
+    expect(screen.getByTestId("campana").querySelector("span[aria-hidden='true']")).toBeNull();
+
+    rerender(
+      <TopBarAction label="Notificaciones, 3 sin leer" dot data-testid="campana">
+        <Dot />
+      </TopBarAction>,
+    );
+    // El punto existe de verdad en el DOM...
+    const punto = screen
+      .getByTestId("campana")
+      .querySelector("span[aria-hidden='true']") as HTMLElement | null;
+    expect(punto).not.toBeNull();
+    // ...y sigue siendo decorativo: el unico nombre del boton es el del label.
     expect(screen.getByRole("button", { name: "Notificaciones, 3 sin leer" })).toBeInTheDocument();
   });
 
@@ -224,6 +247,93 @@ describe("TabBar", () => {
     );
     expect(screen.getAllByRole("button")).toHaveLength(2);
   });
+
+  it("no comparte nombre de landmark con la barra web ni con el rail", () => {
+    // Un layout responsive tiene las tres en el DOM aunque el CSS enseñe una:
+    // con nombres repetidos el lector lista regiones indistinguibles.
+    render(
+      <>
+        <TopBar variant="web" logo="tikin">
+          <TopBarLink href="#i" label="Inicio" />
+        </TopBar>
+        <TabBar>
+          <TabBarItem icon={<Dot />} label="Inicio" />
+          <TabBarItem icon={<Dot />} label="Bonos" />
+        </TabBar>
+        <Sidebar />
+      </>,
+    );
+    const nombres = screen.getAllByRole("navigation").map((nav) => nav.getAttribute("aria-label"));
+    expect(nombres).toHaveLength(3);
+    expect(new Set(nombres).size).toBe(3);
+  });
+
+  it("avisa en desarrollo si el reparto en mitades no cuadra", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    render(
+      <TabBar
+        action={
+          <TabBarAction label="Enviar">
+            <Dot />
+          </TabBarAction>
+        }
+      >
+        <TabBarItem icon={<Dot />} label="Inicio" />
+        <TabBarItem icon={<Dot />} label="Movimientos" />
+        <TabBarItem icon={<Dot />} label="Bolsillos" />
+      </TabBar>,
+    );
+    // Con 3 destinos y accion central el hueco del medio deja de estar centrado.
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain("mitades");
+  });
+
+  it("avisa en desarrollo si se pasan mas de 4 destinos", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    render(
+      <TabBar>
+        {["Inicio", "Movimientos", "Bolsillos", "Bonos", "Tarjeta"].map((n) => (
+          <TabBarItem key={n} icon={<Dot />} label={n} />
+        ))}
+      </TabBar>,
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain("maximo en 4 destinos");
+  });
+
+  it("no avisa con 4 destinos y accion central", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    render(bar());
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("disabled con asChild bloquea la activacion del enlace del consumidor", async () => {
+    // En un <a> el atributo `disabled` no existe: sin traducirlo a aria-disabled
+    // y cortar el click, el destino inhabilitado seguia navegando.
+    const onClick = vi.fn();
+    render(
+      <TabBarItem asChild icon={<Dot />} label="Bolsillos" disabled onClick={onClick}>
+        <a href="/bolsillos" />
+      </TabBarItem>,
+    );
+    const link = screen.getByRole("link", { name: "Bolsillos" });
+    expect(link).toHaveAttribute("aria-disabled", "true");
+    expect(link).toHaveAttribute("data-disabled", "");
+    // `disabled` no se cuela como atributo invalido en el <a>.
+    expect(link).not.toHaveAttribute("disabled");
+
+    await userEvent.click(link);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("sin asChild conserva el atributo disabled nativo", async () => {
+    const onClick = vi.fn();
+    render(<TabBarItem icon={<Dot />} label="Bonos" disabled onClick={onClick} />);
+    const boton = screen.getByRole("button", { name: /Bonos/ });
+    expect(boton).toBeDisabled();
+    await userEvent.click(boton);
+    expect(onClick).not.toHaveBeenCalled();
+  });
 });
 
 describe("Sidebar", () => {
@@ -288,6 +398,96 @@ describe("Sidebar", () => {
     render(<SidebarItem icon={<Dot />} label="Tarjeta" disabled onClick={onClick} />);
     await userEvent.click(screen.getByRole("button", { name: /Tarjeta/ }));
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("disabled con asChild bloquea la activacion del enlace del consumidor", async () => {
+    const onClick = vi.fn();
+    render(
+      <SidebarItem asChild icon={<Dot />} label="Tarjeta" disabled onClick={onClick}>
+        <a href="/tarjeta" />
+      </SidebarItem>,
+    );
+    const link = screen.getByRole("link", { name: /Tarjeta/ });
+    expect(link).toHaveAttribute("aria-disabled", "true");
+    expect(link).not.toHaveAttribute("disabled");
+    await userEvent.click(link);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("el pie se renderiza y deja sus destinos alcanzables", () => {
+    render(rail);
+    expect(screen.getByRole("button", { name: /Ayuda/ })).toBeInTheDocument();
+    expect(screen.getByText("Valentina C.")).toBeInTheDocument();
+  });
+});
+
+describe("Breadcrumbs", () => {
+  const ruta = (
+    <Breadcrumbs>
+      <BreadcrumbItem href="/inicio" label="Inicio" />
+      <BreadcrumbItem href="/bolsillos" label="Bolsillos" />
+      <BreadcrumbItem label="Arriendo" current />
+    </Breadcrumbs>
+  );
+
+  it("es un landmark de navegacion con nombre propio", () => {
+    render(ruta);
+    expect(screen.getByRole("navigation", { name: "Ruta" })).toBeInTheDocument();
+  });
+
+  it("ordena los tramos en una lista: el orden ES la jerarquia", () => {
+    render(ruta);
+    const tramos = screen.getAllByRole("listitem");
+    expect(tramos).toHaveLength(3);
+    expect(tramos[0]).toHaveTextContent("Inicio");
+    expect(tramos[2]).toHaveTextContent("Arriendo");
+  });
+
+  it("el tramo actual no es enlace y lleva aria-current", () => {
+    render(ruta);
+    // Un enlace a la pagina en la que ya estas es una parada de tabulador que
+    // no lleva a ningun sitio.
+    expect(screen.queryByRole("link", { name: "Arriendo" })).not.toBeInTheDocument();
+    expect(screen.getByText("Arriendo")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Inicio" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("pone un separador entre tramos y ninguno al final", () => {
+    const { container } = render(ruta);
+    const separadores = container.querySelectorAll("li > span[aria-hidden='true']");
+    // Tres tramos, dos carets. Y quedan fuera del arbol de accesibilidad: el
+    // lector ya separa los <li> por su cuenta.
+    expect(separadores).toHaveLength(2);
+  });
+
+  it("acepta un separador propio", () => {
+    render(
+      <Breadcrumbs separator={<span data-testid="barra">/</span>}>
+        <BreadcrumbItem href="/inicio" label="Inicio" />
+        <BreadcrumbItem label="Arriendo" current />
+      </Breadcrumbs>,
+    );
+    expect(screen.getAllByTestId("barra")).toHaveLength(1);
+  });
+
+  it("con asChild renderiza el enlace del consumidor", () => {
+    render(
+      <Breadcrumbs>
+        <BreadcrumbItem asChild label="Inicio">
+          <a href="/inicio" data-testid="router-link" />
+        </BreadcrumbItem>
+        <BreadcrumbItem label="Arriendo" current />
+      </Breadcrumbs>,
+    );
+    const link = screen.getByTestId("router-link");
+    expect(link.tagName).toBe("A");
+    expect(link).toHaveTextContent("Inicio");
+  });
+
+  it("el consumidor puede sobreescribir el contenedor", () => {
+    render(<Breadcrumbs data-testid="ruta" className="hidden" />);
+    expect(screen.getByTestId("ruta").className).toContain("hidden");
+    expect(screen.getByTestId("ruta").className).not.toContain("flex");
   });
 });
 

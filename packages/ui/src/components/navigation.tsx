@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Slot } from "radix-ui";
+import * as Slot from "radix-ui/slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -21,6 +21,10 @@ import { cn } from "../lib/cn";
  *               web   logo + links + buscar/campana/avatar, en escritorio
  *   Sidebar   rail de 220 del dashboard de dispersion, con contador y usuario
  *             abajo.
+ *   Breadcrumbs
+ *             ruta del dashboard web, que el pie del bloque WEB · SIDEBAR pide
+ *             con todas las letras ("breadcrumbs con caret, actual en tinta") y
+ *             el prototipo dibuja en el panel de la derecha.
  *
  * GEOMETRIA (fuente: el HTML del prototipo, que aplica los estilos inline)
  *
@@ -40,15 +44,26 @@ import { cn } from "../lib/cn";
  *                 activo = tinta invertida · hover superficie 2
  *                 contador lima r999, 18 de alto, mono 10
  *                 usuario abajo: tarjeta r10 con borde, avatar 28
+ *   Breadcrumbs   gap 6 · texto 12.5 · caret 11 en gris 400
+ *                 tramos en gris 600 · actual en tinta
  *
  * DECISIONES QUE SE APARTAN DEL PROTOTIPO, Y POR QUE
  * -------------------------------------------------
- * 1. NI BORDE NI RADIO EN EL CONTENEDOR. El prototipo envuelve cada bloque en
- *    `border:1px solid var(--tk-border); border-radius:16px`. Ese marco es el
- *    chasis de la demo — el mismo que usa para simular la ventana del dashboard
- *    alrededor del sidebar —, no anatomia del componente. Una app bar real va
- *    pegada al borde de la pantalla. Quien quiera separador lo pide por
- *    className ("border-b border-edge"), que para eso pasa todo por cn().
+ * 1. NI BORDE NI RADIO EN EL CONTENEDOR, PERO SI HAIRLINE EN LA TAB BAR. El
+ *    prototipo envuelve cada bloque en `border:1px solid var(--tk-border);
+ *    border-radius:16px`, y a la tab bar le añade ademas --shadow-xs. Ese marco
+ *    es el chasis de la demo — el mismo que usa para simular la ventana del
+ *    dashboard alrededor del sidebar —, no anatomia del componente: una app bar
+ *    real va pegada al borde de la pantalla.
+ *    La sombra tampoco se copia tal cual, porque --shadow-xs proyecta hacia
+ *    ABAJO y una barra anclada al fondo de la pantalla la manda fuera de vista.
+ *    Lo que si es anatomia es la SEPARACION que esa sombra consigue: el
+ *    contenido scrollea por debajo de la tab bar y bg-surface sobre bg-page
+ *    coincide en algunos temas, asi que sin limite la barra se funde con la
+ *    pantalla. Por eso la TabBar lleva `border-t border-edge`, y solo eso.
+ *    La TopBar no lo lleva: no siempre va fijada, y quien la fije pide
+ *    "border-b border-edge" por className, que para eso pasa todo por cn(). Por
+ *    la misma via se quita el de la tab bar ("border-t-0").
  *
  * 2. EL TITULO DEL FLUJO NO VA CENTRADO. El panel de reglas dice "back +
  *    titulo centrado + accion", pero el prototipo lo dibuja pegado al back, con
@@ -67,6 +82,17 @@ import { cn } from "../lib/cn";
  *    los destinos para que el orden de tabulacion y el de lectura coincidan con
  *    el orden visual.
  *
+ * 5. `disabled` CON `asChild` NO VIAJA COMO ATRIBUTO. En el <a> que trae el
+ *    consumidor `disabled` no existe: no bloquea el click, no bloquea el
+ *    teclado y las variantes :disabled de la cva nunca casan, asi que la
+ *    pestaña "inhabilitada" seguia navegando y pintada como activa. Con asChild
+ *    se traduce a aria-disabled — que el lector si anuncia y sobre el que si
+ *    hay variante de Tailwind — mas data-disabled y un corte del onClick a
+ *    mano. El atributo nativo se sigue poniendo cuando el elemento es nuestro
+ *    <button>; si el hijo del consumidor es un <button> de verdad y quiere el
+ *    atributo, se lo pone en su propio elemento: Slot deja ganar las props del
+ *    hijo.
+ *
  * COLOR EN TEMA OSCURO
  * --------------------
  * Todo sale de utilidades semanticas (ink, surface, surface-2, page, edge,
@@ -80,15 +106,30 @@ import { cn } from "../lib/cn";
  * oscura en los dos temas y no existe token para ella.
  */
 
+/* El paquete no lleva @types/node y su tsconfig no se toca en este encargo, asi
+ * que `process` se declara aqui como opcional. Se escribe con la forma literal
+ * `process.env.NODE_ENV` a proposito: es la que los empaquetadores sustituyen
+ * por una constante, de modo que el aviso de la TabBar desaparece del bundle de
+ * produccion en vez de viajar como codigo muerto. */
+declare const process: { env?: { NODE_ENV?: string } } | undefined;
+
 /* Geometria de Phosphor — la libreria de iconos oficial del sistema — copiada a
  * mano (viewBox 256, peso regular) porque @phosphor-icons/react no es
  * dependencia de packages/ui y no toco su package.json. Solo la flecha de
- * volver, que es anatomia del componente y no contenido del consumidor: los
- * iconos de los destinos si los pasa quien usa la barra. */
+ * volver y el caret de la ruta, que son anatomia del componente y no contenido
+ * del consumidor: los iconos de los destinos si los pasa quien usa la barra. */
 function ArrowLeftIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false" {...props}>
       <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" />
+    </svg>
+  );
+}
+
+function CaretRightIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false" {...props}>
+      <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z" />
     </svg>
   );
 }
@@ -149,7 +190,15 @@ export interface TopBarProps
   actions?: React.ReactNode;
   /** Solo en `web`. Los `TopBarLink` del menu. */
   children?: React.ReactNode;
-  /** Nombre accesible del `<nav>` de links en `web`. */
+  /**
+   * Nombre accesible del `<nav>` de links en `web`.
+   *
+   * Los tres landmarks de la seccion traen nombres distintos de fabrica
+   * ("Navegación principal" aqui, "Navegación inferior" en `TabBar`,
+   * "Navegación lateral" en `Sidebar`) porque un layout responsive los tiene a
+   * la vez en el DOM aunque el CSS solo enseñe uno, y dos regiones con el mismo
+   * nombre son indistinguibles en la lista de landmarks del lector.
+   */
   navLabel?: string;
 }
 
@@ -361,7 +410,11 @@ export interface TabBarProps extends React.ComponentPropsWithoutRef<"nav"> {
   children?: React.ReactNode;
   /** La accion central de envio: `TabBarAction`. */
   action?: React.ReactNode;
-  /** Nombre accesible del landmark de navegacion. */
+  /**
+   * Nombre accesible del landmark de navegacion. Por defecto se nombra por su
+   * posicion, no "principal": en un layout responsive la barra web y esta
+   * conviven en el DOM y dos landmarks homonimos no se distinguen en el lector.
+   */
   label?: string;
 }
 
@@ -379,7 +432,7 @@ export interface TabBarProps extends React.ComponentPropsWithoutRef<"nav"> {
  * que la envuelva no puede recortar (`overflow: hidden`) o se corta el circulo.
  */
 export const TabBar = React.forwardRef<HTMLElement, TabBarProps>(function TabBar(
-  { className, children, action, label = "Navegación principal", ...props },
+  { className, children, action, label = "Navegación inferior", ...props },
   ref,
 ) {
   /* Los destinos se parten en dos mitades y la accion va entre ellas. Esta
@@ -389,12 +442,36 @@ export const TabBar = React.forwardRef<HTMLElement, TabBarProps>(function TabBar
   const items = React.Children.toArray(children);
   const half = Math.ceil(items.length / 2);
 
+  /* Ese reparto en mitades SOLO cuadra con un numero par: con 3 o 5 destinos el
+     grupo izquierdo se queda el item de mas mientras la accion sigue clavada en
+     left-1/2, asi que el hueco central deja de estar centrado respecto a los
+     items. La seccion fija el tope en "Maximo 4 pestañas", pero ni el tipo ni el
+     runtime pueden imponerlo sin quitarle al consumidor el poder de construir
+     los destinos con un .map(), asi que el aviso va en desarrollo. */
+  const repartoTorcido = action != null && items.length % 2 !== 0;
+  const demasiadosDestinos = items.length > 4;
+  React.useEffect(() => {
+    if (!repartoTorcido && !demasiadosDestinos) return;
+    if (typeof process !== "undefined" && process?.env?.NODE_ENV === "production") return;
+    if (demasiadosDestinos) {
+      console.warn("[Tikin/TabBar] La seccion fija el maximo en 4 destinos mas la accion central.");
+    }
+    if (repartoTorcido) {
+      console.warn(
+        "[Tikin/TabBar] Con `action` los destinos se reparten en dos mitades: con un numero impar el hueco central queda descentrado.",
+      );
+    }
+  }, [repartoTorcido, demasiadosDestinos]);
+
   return (
     <nav
       ref={ref}
       aria-label={label}
       className={cn(
-        "relative flex w-full items-end bg-surface px-2 pt-2.5",
+        // El hairline superior sustituye a la sombra del prototipo, que
+        // proyecta hacia abajo y no se ve bajo una barra anclada al fondo.
+        // Ver decision 1: se quita con "border-t-0" si el layout no lo quiere.
+        "relative flex w-full items-end border-t border-edge bg-surface px-2 pt-2.5",
         // 14 de padding inferior mas la zona segura del iPhone, que en
         // escritorio vale 0 y no cambia nada.
         "pb-[calc(14px+env(safe-area-inset-bottom))]",
@@ -402,9 +479,18 @@ export const TabBar = React.forwardRef<HTMLElement, TabBarProps>(function TabBar
       )}
       {...props}
     >
-      <div className="flex flex-1 justify-around">{items.slice(0, half)}</div>
-      {action}
-      <div className="flex flex-1 justify-around">{items.slice(half)}</div>
+      {action == null ? (
+        /* Sin accion no hay hueco central que reservar, y partir en mitades
+           solo introduciria el desajuste de los numeros impares: un unico
+           justify-around reparte bien cualquier cantidad de destinos. */
+        <div className="flex flex-1 justify-around">{items}</div>
+      ) : (
+        <>
+          <div className="flex flex-1 justify-around">{items.slice(0, half)}</div>
+          {action}
+          <div className="flex flex-1 justify-around">{items.slice(half)}</div>
+        </>
+      )}
     </nav>
   );
 });
@@ -413,7 +499,10 @@ const tabBarItem = cva(
   [
     "flex w-16 cursor-pointer flex-col items-center gap-1 pt-1.5",
     "bg-transparent transition-colors duration-140 ease-out select-none",
-    "disabled:cursor-not-allowed disabled:text-ink-400",
+    /* El estado inhabilitado se pinta por aria-disabled y no por :disabled
+       porque con asChild el elemento es un <a>, que nunca casa con :disabled.
+       Ver decision 5. El componente emite aria-disabled en los dos casos. */
+    "aria-disabled:cursor-not-allowed aria-disabled:text-ink-400",
     focusRing,
     "rounded-sm focus-visible:ring-offset-surface",
     "[&_svg]:size-6 [&_svg]:shrink-0",
@@ -423,7 +512,7 @@ const tabBarItem = cva(
       active: {
         /* Activo en tinta con el icono relleno; el resto en gris 500. */
         true: "text-ink",
-        false: "text-ink-500 hover:not-disabled:text-ink-700",
+        false: "text-ink-500 hover:not-aria-disabled:text-ink-700",
       },
     },
     defaultVariants: { active: false },
@@ -439,23 +528,60 @@ export interface TabBarItemProps extends React.ComponentPropsWithoutRef<"button"
   label: React.ReactNode;
   /** Destino actual. Marca `aria-current="page"` ademas del relleno. */
   active?: boolean;
-  /** Renderiza el hijo en vez de un `<button>`. Para el `Link` de tu router. */
+  /**
+   * Renderiza el hijo en vez de un `<button>`. Para el `Link` de tu router.
+   *
+   * Con `asChild`, `disabled` NO se pasa como atributo — en un `<a>` no existe
+   * y no bloquea nada —: se traduce a `aria-disabled` y el click se corta a
+   * mano. Si tu hijo es un `<button>` de verdad y quieres el atributo nativo,
+   * ponselo tu en el elemento.
+   */
   asChild?: boolean;
 }
 
 /** Destino de la barra inferior. */
 export const TabBarItem = React.forwardRef<HTMLButtonElement, TabBarItemProps>(function TabBarItem(
-  { className, icon, activeIcon, label, active = false, asChild = false, type, children, ...props },
+  {
+    className,
+    icon,
+    activeIcon,
+    label,
+    active = false,
+    asChild = false,
+    type,
+    disabled = false,
+    onClick,
+    children,
+    ...props
+  },
   ref,
 ) {
   const Comp = asChild ? Slot.Root : "button";
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    // El hijo del consumidor solo lleva aria-disabled, que no impide nada por
+    // si mismo: sin este corte un <a href> inhabilitado seguiria navegando.
+    if (disabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onClick?.(event);
+  };
+
   return (
     <Comp
       ref={ref}
       // Sin asChild renderizamos un <button>, cuyo type por defecto en HTML es
       // "submit". Con asChild no lo ponemos: el hijo puede ser un <a>.
-      {...(asChild ? {} : { type: type ?? "button" })}
+      {...(asChild ? {} : { type: type ?? "button", disabled })}
       aria-current={active ? "page" : undefined}
+      // Se emite tambien sobre el <button> nativo: es redundante pero permite
+      // que el estilo dependa de una sola variante en los dos caminos.
+      aria-disabled={disabled || undefined}
+      // Gancho para que el consumidor atenue lo que el sistema no conoce.
+      data-disabled={disabled ? "" : undefined}
+      onClick={handleClick}
       className={cn(tabBarItem({ active, className }))}
       {...props}
     >
@@ -558,7 +684,9 @@ const sidebarItem = cva(
   [
     "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-[9px]",
     "text-left text-[13.5px] no-underline transition-colors duration-140 ease-out",
-    "disabled:cursor-not-allowed disabled:text-ink-400",
+    /* Por aria-disabled y no por :disabled: con asChild el elemento es un <a>,
+       que nunca casa con :disabled. Ver decision 5. */
+    "aria-disabled:cursor-not-allowed aria-disabled:text-ink-400",
     focusRing,
     "focus-visible:ring-offset-page",
     "[&_svg]:size-[17px] [&_svg]:shrink-0",
@@ -568,7 +696,7 @@ const sidebarItem = cva(
       active: {
         /* Activo = tinta invertida en r10. */
         true: "bg-ink text-surface",
-        false: "bg-transparent text-ink-700 hover:not-disabled:bg-surface-2",
+        false: "bg-transparent text-ink-700 hover:not-aria-disabled:bg-surface-2",
       },
     },
     defaultVariants: { active: false },
@@ -584,22 +712,58 @@ export interface SidebarItemProps extends React.ComponentPropsWithoutRef<"button
   badge?: React.ReactNode;
   /** Destino actual. Marca `aria-current="page"` ademas del relleno. */
   active?: boolean;
-  /** Renderiza el hijo en vez de un `<button>`. Para el `Link` de tu router. */
+  /**
+   * Renderiza el hijo en vez de un `<button>`. Para el `Link` de tu router.
+   *
+   * Con `asChild`, `disabled` NO se pasa como atributo — en un `<a>` no existe
+   * y no bloquea nada —: se traduce a `aria-disabled` y el click se corta a
+   * mano. Si tu hijo es un `<button>` de verdad y quieres el atributo nativo,
+   * ponselo tu en el elemento.
+   */
   asChild?: boolean;
 }
 
 /** Destino del rail lateral. */
 export const SidebarItem = React.forwardRef<HTMLButtonElement, SidebarItemProps>(
   function SidebarItem(
-    { className, icon, label, badge, active = false, asChild = false, type, children, ...props },
+    {
+      className,
+      icon,
+      label,
+      badge,
+      active = false,
+      asChild = false,
+      type,
+      disabled = false,
+      onClick,
+      children,
+      ...props
+    },
     ref,
   ) {
     const Comp = asChild ? Slot.Root : "button";
+
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+      // aria-disabled no bloquea nada por si mismo; sin este corte el <a> del
+      // consumidor seguiria navegando aunque el destino este inhabilitado.
+      if (disabled) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      onClick?.(event);
+    };
+
     return (
       <Comp
         ref={ref}
-        {...(asChild ? {} : { type: type ?? "button" })}
+        {...(asChild ? {} : { type: type ?? "button", disabled })}
         aria-current={active ? "page" : undefined}
+        // Redundante sobre el <button> nativo a proposito: deja el estilo del
+        // estado en una sola variante para los dos caminos.
+        aria-disabled={disabled || undefined}
+        data-disabled={disabled ? "" : undefined}
+        onClick={handleClick}
         className={cn(sidebarItem({ active, className }))}
         {...props}
       >
@@ -675,5 +839,128 @@ export const SidebarUser = React.forwardRef<HTMLDivElement, SidebarUserProps>(fu
         )}
       </span>
     </div>
+  );
+});
+
+/* ------------------------------------------------------------------------- */
+/* Breadcrumbs                                                                */
+/* ------------------------------------------------------------------------- */
+
+const breadcrumbItem = cva(
+  [
+    "truncate no-underline transition-colors duration-140 ease-out",
+    focusRing,
+    "rounded-sm focus-visible:ring-offset-surface",
+  ],
+  {
+    variants: {
+      current: {
+        /* El tramo actual, en tinta. */
+        true: "text-ink",
+        false: "cursor-pointer text-ink-600 hover:text-ink",
+      },
+    },
+    defaultVariants: { current: false },
+  },
+);
+
+export interface BreadcrumbItemProps extends React.ComponentPropsWithoutRef<"a"> {
+  /** Texto del tramo. */
+  label: React.ReactNode;
+  /** Pagina en la que estas. Es el ultimo tramo y no se pinta como enlace. */
+  current?: boolean;
+  /**
+   * Renderiza el hijo en vez de un `<a>`. Para el `Link` de tu router.
+   *
+   * Gana sobre `current`: si lo pides, el tramo actual tambien sale como tu
+   * elemento — con `aria-current="page"` puesto — en vez de como `<span>`.
+   */
+  asChild?: boolean;
+}
+
+/**
+ * Tramo de la ruta.
+ *
+ * El actual se renderiza como `<span>`, no como enlace: un enlace a la pagina
+ * en la que ya estas es una parada de tabulador que no lleva a ningun sitio.
+ * `aria-current="page"` es lo que lo identifica para el lector.
+ */
+export const BreadcrumbItem = React.forwardRef<HTMLAnchorElement, BreadcrumbItemProps>(
+  function BreadcrumbItem(
+    { className, label, current = false, asChild = false, children, ...props },
+    ref,
+  ) {
+    /* Casteo a ElementType: el elemento resultante alterna entre a, span y el
+       hijo del consumidor, y TypeScript no unifica sus tablas de atributos. */
+    const Comp = (asChild ? Slot.Root : current ? "span" : "a") as React.ElementType;
+    return (
+      <Comp
+        ref={ref}
+        aria-current={current ? "page" : undefined}
+        className={cn(breadcrumbItem({ current, className }))}
+        {...props}
+      >
+        {/* Slottable marca cual de los hijos es el elemento del consumidor.
+            Sin asChild `children` va vacio y solo se pinta el label. */}
+        <Slot.Slottable>{children}</Slot.Slottable>
+        {label}
+      </Comp>
+    );
+  },
+);
+
+export interface BreadcrumbsProps extends React.ComponentPropsWithoutRef<"nav"> {
+  /** Los tramos: `BreadcrumbItem`. El ultimo lleva `current`. */
+  children?: React.ReactNode;
+  /**
+   * Nombre accesible del landmark. Distinto del de las otras barras a
+   * proposito: la ruta convive con el rail y con la barra web en la misma
+   * pantalla del dashboard.
+   */
+  label?: string;
+  /** Sustituye el caret por defecto entre tramos. */
+  separator?: React.ReactNode;
+}
+
+/**
+ * Ruta del dashboard web: "Inicio › Bolsillos › Arriendo".
+ *
+ * Lo pide el pie del bloque WEB · SIDEBAR ("breadcrumbs con caret, actual en
+ * tinta") y el prototipo lo dibuja en el panel de la derecha, sobre el titulo
+ * de la vista.
+ *
+ * Va en `<nav>` con `<ol>` porque el orden ES la informacion: es la jerarquia
+ * de la ruta, y el lector anuncia cuantos tramos hay y en cual estas.
+ */
+export const Breadcrumbs = React.forwardRef<HTMLElement, BreadcrumbsProps>(function Breadcrumbs(
+  { className, children, label = "Ruta", separator, ...props },
+  ref,
+) {
+  const items = React.Children.toArray(children);
+
+  return (
+    <nav ref={ref} aria-label={label} className={cn("flex", className)} {...props}>
+      {/* gap 6 y texto 12.5, como el prototipo. flex-wrap porque una ruta
+          profunda en una ventana estrecha no puede desbordar el panel. */}
+      <ol className="flex flex-wrap items-center gap-1.5 text-[12.5px]">
+        {items.map((item, indice) => (
+          <li
+            key={React.isValidElement(item) && item.key != null ? item.key : indice}
+            className="flex items-center gap-1.5"
+          >
+            {item}
+            {/* El separador lo pinta la lista, no el tramo: asi nunca sobra uno
+                al final y el consumidor no lo repite a mano. aria-hidden porque
+                el lector ya separa los <li> por su cuenta, y un caret leido
+                entre tramos solo añade ruido. */}
+            {indice < items.length - 1 && (
+              <span aria-hidden="true" className="flex text-ink-400 [&_svg]:size-[11px]">
+                {separator ?? <CaretRightIcon />}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 });

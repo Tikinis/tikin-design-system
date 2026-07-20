@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Calendar, CalendarDay, CalendarNavButton, getCalendarGrid } from "./calendar";
+import {
+  Calendar,
+  CalendarDay,
+  CalendarNavButton,
+  CalendarWeekday,
+  getCalendarGrid,
+} from "./calendar";
 
 /* Estos tests cubren COMPORTAMIENTO, no apariencia. Los valores visuales
  * (32x32, r8, texto 14/20, halo de foco 3px) se verifican contra el navegador,
@@ -131,6 +137,62 @@ describe("Calendar", () => {
     expect(day("2026-06-30")).toHaveFocus();
     expect(onMonthChange).toHaveBeenCalledTimes(1);
     expect(iso(onMonthChange.mock.calls[0]![0] as Date)).toBe("2026-06-01");
+  });
+
+  it("elegir un dia de otro mes arrastra el foco al mes nuevo", async () => {
+    setup();
+
+    // Al cambiar de mes se desmontan los 42 botones, incluido el que se acaba
+    // de pulsar: sin devolver el foco a mano se cae al body y el recorrido con
+    // flechas se interrumpe (el onKeyDown vive en la rejilla).
+    await userEvent.click(day("2026-08-01"));
+
+    expect(day("2026-08-01")).toHaveFocus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(day("2026-08-02")).toHaveFocus();
+  });
+
+  it("con el mes controlado, si el padre no lo mueve la rejilla no se queda sin foco", async () => {
+    const onMonthChange = vi.fn();
+    render(
+      <Calendar
+        month={JULIO_2026}
+        today={HOY}
+        formatDay={iso}
+        showOutsideDays={false}
+        onMonthChange={onMonthChange}
+      />,
+    );
+
+    day("2026-07-01").focus();
+    await userEvent.keyboard("{ArrowLeft}");
+
+    // El padre manda: la vista sigue en julio porque no ha reenviado `month`.
+    expect(onMonthChange).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "2026-06-30" })).toBeNull();
+
+    // Pero la rejilla conserva su punto de entrada y el foco vive dentro: si el
+    // foco se quedara en un dia sin boton, el teclado dejaria de responder y no
+    // se podria volver a entrar con Tab.
+    const tabulables = screen
+      .getAllByRole("button")
+      .filter((node) => node.hasAttribute("data-tk-day") && node.getAttribute("tabindex") === "0");
+    expect(tabulables).toHaveLength(1);
+    expect(day("2026-07-01")).toHaveFocus();
+  });
+
+  it("el teclado respeta el mismo tope de mes que apaga las flechas", async () => {
+    const onMonthChange = vi.fn();
+    setup({ minDate: JULIO_2026, onMonthChange });
+
+    day("2026-07-01").focus();
+    await userEvent.keyboard("{ArrowLeft}");
+
+    // El foco si baja al dia vecino — los huecos no se saltan, patron APG —,
+    // pero la vista NO se mueve a un mes que la flecha se niega a abrir.
+    expect(day("2026-06-30")).toHaveFocus();
+    expect(onMonthChange).not.toHaveBeenCalled();
+    expect(day("2026-07-15")).toBeInTheDocument();
   });
 
   it("AvPag y RePag saltan de mes, y con Mayusculas de año", async () => {
@@ -289,11 +351,56 @@ describe("Calendar", () => {
     }
   });
 
+  it("CalendarWeekday deja cambiar el rol para usarla fuera de una rejilla", () => {
+    /* El rol por defecto (columnheader) solo es valido dentro de una fila. El
+       spread de props va DESPUES del rol para que una muestra suelta pueda
+       apagarlo; si alguien lo adelanta, el consumidor se queda sin salida. */
+    render(<CalendarWeekday role="presentation">Lu</CalendarWeekday>);
+    expect(screen.getByText("Lu")).toHaveAttribute("role", "presentation");
+  });
+
   it("permite sobreescribir estilos por className", () => {
     render(<CalendarDay className="rounded-none">1</CalendarDay>);
     // tailwind-merge debe descartar el rounded-sm de la base, no acumularlo.
     const cls = screen.getByRole("button").className;
     expect(cls).toContain("rounded-none");
     expect(cls).not.toContain("rounded-sm");
+  });
+});
+
+describe("Calendar · vista fuera del rango", () => {
+  /* Cada flecha mira solo el tope hacia el que camina. Comprobar los dos a la
+     vez dejaba el calendario sin salida: con la vista mas alla del maximo, el
+     mes anterior tambien queda por encima del maximo, asi que se apagaba
+     justo la flecha que devolvia al rango. */
+
+  it("con la vista pasado el maximo, se puede retroceder", async () => {
+    const onMonthChange = vi.fn();
+    setup({
+      defaultMonth: new Date(2030, 0, 1),
+      maxDate: new Date(2026, 6, 31),
+      onMonthChange,
+    });
+
+    const atras = screen.getByRole("button", { name: /anterior/i });
+    expect(atras).toBeEnabled();
+
+    await userEvent.click(atras);
+    expect(onMonthChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("con la vista antes del minimo, se puede avanzar", async () => {
+    const onMonthChange = vi.fn();
+    setup({
+      defaultMonth: new Date(2020, 0, 1),
+      minDate: JULIO_2026,
+      onMonthChange,
+    });
+
+    const adelante = screen.getByRole("button", { name: /siguiente/i });
+    expect(adelante).toBeEnabled();
+
+    await userEvent.click(adelante);
+    expect(onMonthChange).toHaveBeenCalledTimes(1);
   });
 });

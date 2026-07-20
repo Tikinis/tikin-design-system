@@ -47,7 +47,10 @@ import { cn } from "../lib/cn";
  *    texto da un salto de medio pixel al entrar y al salir.
  */
 
-/* Medidas por tamaño. Fuente: export de Figma (autoridad sobre pixeles).
+/* Medidas por tamaño. Fuente: docs/figma-export/components/TextField.jsx
+ * (nodo 2:5155, cuerpos __body0..__body3), que manda sobre los pixeles del
+ * documento: la matriz TAMAÑOS del .dc.html es un dibujo a mano y difiere
+ * (dice texto 15 y px 14 en m, px 12 e icono 18 en s).
  *
  *        alto  radio  px   texto  icono
  *   l      56    12   16     16     20
@@ -67,7 +70,7 @@ const SIZES = {
 
 const fieldBox = cva(
   [
-    "relative flex w-full items-stretch overflow-hidden",
+    "relative flex w-full items-stretch",
     // 0.5px es literal en Figma y en el documento; no es un redondeo de 1px.
     "border-[0.5px] bg-[var(--textfield-bg-default)]",
     "transition-[border-color,background-color,box-shadow] duration-140 ease-out",
@@ -101,9 +104,26 @@ const fieldBox = cva(
 
       /* Solo lectura no es un campo apagado: es texto que se puede seleccionar
          y copiar. El documento le quita el borde y lo posa sobre el fondo de
-         pagina para que no invite a escribir. */
+         pagina para que no invite a escribir.
+
+         Conserva foco visible aunque `interactive` sea false. A diferencia de
+         `disabled`, este campo SI entra en el orden de tabulacion (el usuario
+         tiene que poder llegar a el para copiarlo) y el <input> lleva
+         `outline-none`: sin esto, tabular hasta aqui no dejaria ninguna señal
+         de donde esta el foco (WCAG 2.4.7). Va despues de `interactive` para
+         que tailwind-merge lo deje ganar, y antes del className del consumidor
+         para que siga pudiendo repintarlo. */
       readOnly: {
-        true: "border-transparent bg-page",
+        true: "border-transparent bg-page focus-within:border-ink focus-within:shadow-[inset_0_0_0_0.5px_var(--tk-ink)]",
+        false: "",
+      },
+
+      /* Recortar al radio solo hace falta cuando hay capsulas pegadas al borde:
+         son lo unico que puede desbordar la esquina. Recortar siempre se comia
+         el anillo de foco que el consumidor pone en `endAction`, que es la
+         unica pieza interactiva del campo ademas del input. */
+      clipped: {
+        true: "overflow-hidden",
         false: "",
       },
     },
@@ -126,6 +146,7 @@ const fieldBox = cva(
       interactive: true,
       disabled: false,
       readOnly: false,
+      clipped: false,
     },
   },
 );
@@ -147,6 +168,17 @@ const LABEL_FLOAT_ON_FOCUS =
   "peer-focus:top-[var(--tf-lbl-top)] peer-focus:translate-y-0 peer-focus:text-[length:var(--tf-lbl)] peer-focus:tracking-[0.03em] peer-focus:text-ink-600";
 const LABEL_FLOAT_ON_VALUE =
   "peer-[&:not(:placeholder-shown)]:top-[var(--tf-lbl-top)] peer-[&:not(:placeholder-shown)]:translate-y-0 peer-[&:not(:placeholder-shown)]:text-[length:var(--tf-lbl)] peer-[&:not(:placeholder-shown)]:tracking-[0.03em] peer-[&:not(:placeholder-shown)]:text-ink-600";
+
+/* Con icono leading la etiqueta descansa junto al icono (el <label> vive dentro
+ * del hueco del input, ya desplazado) pero al flotar tiene que volver al borde
+ * de contenido de la caja, ENCIMA del icono. El documento lo pide literal:
+ * `.tk-field.tk-lead > input:focus ~ .tk-lbl { left: 16px }`, es decir 46 -> 16.
+ * Se consigue tirando de `left` hacia atras el ancho del icono mas el hueco
+ * (el `gap-2.5` de la fila = 10px; si cambia ese gap, cambia este calc).
+ * Literales por lo mismo que arriba: Tailwind no ve clases concatenadas. */
+const LABEL_LEAD_FLOAT = "left-[calc((var(--tf-icon)+10px)*-1)]";
+const LABEL_LEAD_ON_FLOAT =
+  "peer-focus:left-[calc((var(--tf-icon)+10px)*-1)] peer-[&:not(:placeholder-shown)]:left-[calc((var(--tf-icon)+10px)*-1)]";
 
 const messageTone = {
   default: "text-ink-600",
@@ -191,7 +223,16 @@ export interface TextFieldProps
   startIcon?: React.ReactNode;
   /** Icono decorativo a la derecha: check de validacion, candado. */
   endIcon?: React.ReactNode;
-  /** Ranura interactiva a la derecha: el ojo de contraseña, el boton de limpiar. */
+  /**
+   * Ranura interactiva a la derecha: el ojo de contraseña, el boton de limpiar.
+   *
+   * La ranura se alinea al borde de contenido (`--tf-px`), igual que `endIcon`.
+   * El documento dibuja el area de toque MAS ANCHA que el icono y sangrada
+   * (`.tk-btn` 36x36 a right:8, `.tk-clear` 26x26 a right:12) para que el GLIFO
+   * caiga donde caeria un `endIcon`. El componente no puede adivinar el relleno
+   * del nodo que le pasen: compensalo con un margen derecho negativo — `-mr-2`
+   * en un boton de 36, `-mr-1` en una pastilla de 26.
+   */
   endAction?: React.ReactNode;
   /** Capsula pegada al borde izquierdo: `tikin.co/`, `$`. */
   prefix?: React.ReactNode;
@@ -267,6 +308,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
             interactive: !disabled && !readOnly,
             disabled: Boolean(disabled),
             readOnly: Boolean(readOnly),
+            clipped: prefix != null || suffix != null,
             className,
           }),
         )}
@@ -316,10 +358,13 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
               htmlFor={id}
               className={cn(
                 "pointer-events-none absolute left-0 max-w-full truncate font-sans",
-                "transition-[top,font-size,letter-spacing,color,transform] duration-140 ease-out",
+                "transition-[top,left,font-size,letter-spacing,color,transform] duration-140 ease-out",
                 hasOwnPlaceholder
                   ? LABEL_FLOAT
                   : [LABEL_REST, LABEL_FLOAT_ON_FOCUS, LABEL_FLOAT_ON_VALUE],
+                /* Con placeholder propio la etiqueta nace flotada, asi que el
+                   desplazamiento tambien tiene que ser permanente. */
+                startIcon != null && (hasOwnPlaceholder ? LABEL_LEAD_FLOAT : LABEL_LEAD_ON_FLOAT),
               )}
             >
               {label}
@@ -344,9 +389,14 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
           {message != null && (
             <span
               id={messageId}
-              /* Polite y no assertive: la validacion suele dispararse al salir
-                 del campo y no debe cortar lo que el lector este leyendo. */
-              aria-live="polite"
+              /* Sin aria-live a proposito. El bloque de mensaje se MONTA junto
+                 con su texto, y un lector de pantalla solo anuncia regiones
+                 vivas que ya estaban en el arbol cuando cambia su contenido:
+                 aqui no anunciaria nada y en algunos lectores duplicaria la
+                 lectura, porque el texto ya llega por aria-describedby. Para
+                 tener region viva de verdad habria que dejar un nodo vacio
+                 permanente bajo cada campo, que ademas abriria un hueco del
+                 `gap-2` en todos los formularios. */
               className={cn(
                 "flex items-center gap-1.5 text-[12.5px] leading-snug",
                 "[&_svg]:size-[15px] [&_svg]:shrink-0",
@@ -490,7 +540,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(fun
           {message != null && (
             <span
               id={messageId}
-              aria-live="polite"
+              /* Sin aria-live, por lo mismo que en TextField. */
               className={cn(
                 "flex items-center gap-1.5 text-[12.5px] leading-snug",
                 "[&_svg]:size-[15px] [&_svg]:shrink-0",

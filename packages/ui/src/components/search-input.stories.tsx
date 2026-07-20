@@ -105,11 +105,42 @@ function normaliza(texto: string) {
     .toLowerCase();
 }
 
-function Fila({ c }: { c: Contacto }) {
+/* La lupa del estado "sin resultados": 22 en --tk-400, tal cual la dibuja el
+   bloque EN VIVO del archivo. Se redibuja aqui porque el componente no exporta
+   sus glifos — son detalle interno suyo, no API. */
+function LupaVacia() {
   return (
-    <button
-      type="button"
-      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-surface-2"
+    <svg
+      viewBox="0 0 20 20"
+      width="22"
+      height="22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      aria-hidden="true"
+      className="text-ink-400"
+    >
+      <circle cx="8.75" cy="8.75" r="5.75" />
+      <path d="m13.1 13.1 3.9 3.9" />
+    </svg>
+  );
+}
+
+/* Cada resultado es un `option` de la lista, no un `button`: en el patron
+   combobox el foco NO se mueve nunca de la caja de texto — la fila activa se
+   señala con `aria-activedescendant`. Un <button> aqui obligaria a tabular
+   fuera del campo para llegar a los resultados. */
+function Fila({ c, id, activa }: { c: Contacto; id: string; activa: boolean }) {
+  return (
+    <div
+      id={id}
+      role="option"
+      aria-selected={activa}
+      className={[
+        "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left",
+        activa ? "bg-surface-2" : "",
+      ].join(" ")}
     >
       <span className="flex size-[34px] shrink-0 items-center justify-center rounded-pill bg-lavender font-mono text-xs text-on-accent">
         {c.ini}
@@ -118,20 +149,39 @@ function Fila({ c }: { c: Contacto }) {
         <span className="font-sans text-sm text-ink">{c.n}</span>
         <span className="font-mono text-xs text-ink-600">{c.t}</span>
       </span>
-    </button>
+    </div>
   );
 }
 
 /**
  * Filtra mientras escribes, sin boton de buscar. Vacio muestra recientes; sin
  * coincidencias, un estado claro con sugerencia.
+ *
+ * Es tambien la referencia del patron **combobox**: como el componente no
+ * renderiza la lista, esta story es el unico sitio donde queda documentado el
+ * cableado accesible que el consumidor tiene que poner de su parte.
  */
 export const EnVivo: Story = {
   name: "En vivo",
-  parameters: { controls: { disable: true } },
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story: [
+          "El campo delega la lista al consumidor por diseno, asi que **la semantica de autocompletado tambien es suya**. Sin ella un lector de pantalla no anuncia que han aparecido resultados al escribir: la unica region viva del componente solo dice *Buscando*.",
+          "",
+          'Lo que hay que cablear, y esta story lo hace: `role="combobox"` + `aria-expanded` + `aria-controls` + `aria-activedescendant` en el campo, `role="listbox"` con `role="option"` en la lista, y navegacion con flechas / Enter sin sacar el foco del input.',
+        ].join("\n"),
+      },
+    },
+  },
   render: () => {
     function Demo() {
       const [q, setQ] = React.useState("");
+      const [activo, setActivo] = React.useState(0);
+      const listaId = React.useId();
+      const opcionId = (i: number) => `${listaId}-op-${i}`;
+
       const consulta = normaliza(q.trim());
       const recientes = consulta === "";
       const resultados = recientes
@@ -140,15 +190,56 @@ export const EnVivo: Story = {
             (c) => normaliza(c.n).includes(consulta) || normaliza(c.t).includes(consulta),
           );
 
+      /* El indice activo se recorta al filtrar: si la lista encoge, apuntar a
+         una fila que ya no existe dejaria un aria-activedescendant colgando. */
+      const indice = resultados.length === 0 ? -1 : Math.min(activo, resultados.length - 1);
+
+      const alPulsar = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (resultados.length === 0) return;
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          // preventDefault: las flechas mueven el cursor dentro del input si no.
+          event.preventDefault();
+          const paso = event.key === "ArrowDown" ? 1 : -1;
+          // Se parte del indice ya recortado, no del estado crudo: si la lista
+          // encogio al filtrar, sumar sobre el viejo daria un salto raro.
+          setActivo((indice + paso + resultados.length) % resultados.length);
+          return;
+        }
+        if (event.key === "Enter") {
+          const elegido = resultados[indice];
+          if (!elegido) return;
+          event.preventDefault();
+          setQ(elegido.n);
+        }
+      };
+
       return (
         <div className="flex flex-col gap-2">
           <SearchInput
             label="Buscar contacto o movimiento"
             placeholder="Buscar contacto o movimiento"
             value={q}
-            onValueChange={setQ}
+            onValueChange={(v) => {
+              setQ(v);
+              // Consulta nueva, lista nueva: se vuelve a la primera fila.
+              setActivo(0);
+            }}
+            onKeyDown={alPulsar}
+            /* El desplegable esta siempre visible en esta demo, de ahi el
+               aria-expanded fijo. En una pantalla real seguiria al estado que
+               decida cuando se abre y cuando se cierra. */
+            role="combobox"
+            aria-expanded
+            aria-controls={listaId}
+            aria-autocomplete="list"
+            aria-activedescendant={indice >= 0 ? opcionId(indice) : undefined}
           />
-          <div className="flex flex-col gap-0.5 rounded-xl border border-edge bg-surface p-1.5 shadow-xs">
+          <div
+            id={listaId}
+            role="listbox"
+            aria-label="Resultados"
+            className="flex flex-col gap-0.5 rounded-xl border border-edge bg-surface p-1.5 shadow-xs"
+          >
             {recientes && (
               <span className="px-3 pt-2 pb-1 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
                 Recientes
@@ -156,13 +247,16 @@ export const EnVivo: Story = {
             )}
             {resultados.length === 0 ? (
               <div className="flex flex-col items-center gap-1.5 px-3 py-5 text-center">
+                <LupaVacia />
                 <span className="font-sans text-[13.5px] text-ink-600">Sin resultados</span>
                 <span className="font-mono text-[11px] text-ink-500">
                   prueba con otro nombre o TikinTAG
                 </span>
               </div>
             ) : (
-              resultados.map((c) => <Fila key={c.n} c={c} />)
+              resultados.map((c, i) => (
+                <Fila key={c.n} c={c} id={opcionId(i)} activa={i === indice} />
+              ))
             )}
           </div>
         </div>

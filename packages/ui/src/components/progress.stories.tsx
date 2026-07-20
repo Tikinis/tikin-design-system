@@ -106,10 +106,32 @@ export const CircularLima: Story = {
   },
 };
 
+/** CIRCULAR COMPLETO · 100%. La pista vira a verde tenue igual que en lineal. */
+export const CircularCompleto: Story = {
+  name: "Circular · completo",
+  args: { shape: "circular", value: 100, tone: "lime", "aria-label": "Meta alcanzada" },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "El verde pertenece al estado, no a la forma ni al tono: al 100% la pista pasa a verde tenue y el arco a lima tanto aqui como en la barra lineal.",
+      },
+    },
+  },
+};
+
 /** Sin valor conocido, el arco gira; la cifra desaparece porque no hay cifra. */
 export const CircularIndeterminado: Story = {
   name: "Circular · indeterminado",
   args: { shape: "circular", value: null, "aria-label": "Calculando" },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Con `prefers-reduced-motion` el arco no se queda congelado a un tercio de vuelta — eso se leeria como un 30% determinado —: se cierra en circulo completo y baja de opacidad, que no afirma ningun valor.",
+      },
+    },
+  },
 };
 
 /**

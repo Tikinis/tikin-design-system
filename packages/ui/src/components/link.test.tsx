@@ -21,19 +21,19 @@ describe("Link", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it("deshabilitado deja de ser un link y no dispara onClick", async () => {
+  it("deshabilitado se anuncia como link apagado y no dispara onClick", async () => {
     const onClick = vi.fn();
     render(
       <Link href="/movimientos" disabled onClick={onClick}>
         Ver todos
       </Link>,
     );
-    // Sin href el elemento sale del arbol de accesibilidad como link, igual que
-    // haria un control nativo deshabilitado.
-    expect(screen.queryByRole("link")).toBeNull();
-    const enlace = screen.getByText("Ver todos");
-    expect(enlace.closest("a")).toHaveAttribute("aria-disabled", "true");
-    expect(enlace.closest("a")).not.toHaveAttribute("href");
+    // Sin href el <a> pierde el rol y aria-disabled quedaria sobre un elemento
+    // generico, donde ningun lector de pantalla lo expone. El rol se declara a
+    // mano para que el estado se anuncie, sin devolver la navegacion.
+    const enlace = screen.getByRole("link", { name: "Ver todos" });
+    expect(enlace).toHaveAttribute("aria-disabled", "true");
+    expect(enlace).not.toHaveAttribute("href");
 
     await userEvent.click(enlace);
     expect(onClick).not.toHaveBeenCalled();
@@ -149,16 +149,90 @@ describe("Link", () => {
     expect(enlace.querySelector("svg")).not.toBeNull();
   });
 
+  it("el subrayado nunca desaparece: el label va en un span subrayado", () => {
+    // Es la regla central de la seccion. Se comprueba por token exacto y no con
+    // toContain: "underline-offset-2" contiene "underline" y daria un falso
+    // positivo si el subrayado se cayese.
+    const { rerender } = render(
+      <Link variant="action" href="/a">
+        Ver todo
+      </Link>,
+    );
+    const label = screen.getByRole("link").querySelector("span");
+    expect(label).toHaveTextContent("Ver todo");
+    expect(label).toHaveClass("underline");
+
+    rerender(
+      <Link variant="action" disabled>
+        Ver todo
+      </Link>,
+    );
+    // Disabled baja de tinta y pierde el pointer, nunca el subrayado.
+    expect(screen.getByRole("link").querySelector("span")).toHaveClass("underline");
+  });
+
+  it("con asChild y disabled bloquea el onClick del hijo y lo saca del tabulador", async () => {
+    // Slot compone los handlers llamando primero al del hijo: un Link de router
+    // que navegue en su propio onClick pasaria por delante de nuestro onClick.
+    const onClickHijo = vi.fn();
+    render(
+      <>
+        <button type="button">antes</button>
+        <Link asChild disabled>
+          <a href="/w" onClick={onClickHijo}>
+            Ver
+          </a>
+        </Link>
+        <button type="button">despues</button>
+      </>,
+    );
+    const enlace = screen.getByRole("link", { name: "Ver" });
+    expect(enlace).toHaveAttribute("aria-disabled", "true");
+    // El href lo pone el consumidor y Slot le da prioridad, asi que el elemento
+    // sigue siendo un link real: hay que sacarlo del tabulador a mano.
+    expect(enlace).toHaveAttribute("tabindex", "-1");
+
+    // El orden de tabulacion se mide antes del click: pulsar un elemento con
+    // tabindex=-1 le da el foco y falsearia el recorrido.
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "antes" })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "despues" })).toHaveFocus();
+
+    await userEvent.click(enlace);
+    expect(onClickHijo).not.toHaveBeenCalled();
+  });
+
+  it("con asChild habilitado el onClick del hijo sigue corriendo", async () => {
+    // El corte en captura no puede comerse el camino normal del consumidor.
+    const onClickHijo = vi.fn((e: React.MouseEvent) => e.preventDefault());
+    render(
+      <Link asChild>
+        <a href="/w" onClick={onClickHijo}>
+          Ver
+        </a>
+      </Link>,
+    );
+    const enlace = screen.getByRole("link", { name: "Ver" });
+    expect(enlace).not.toHaveAttribute("aria-disabled");
+    expect(enlace).not.toHaveAttribute("tabindex");
+    await userEvent.click(enlace);
+    expect(onClickHijo).toHaveBeenCalledTimes(1);
+  });
+
   it("permite sobreescribir estilos por className", () => {
     render(
       <Link href="/a" className="text-red">
         A
       </Link>,
     );
-    const cls = screen.getByRole("link").className;
-    expect(cls).toContain("text-red");
-    // tailwind-merge debe descartar el text-ink del estado por defecto.
-    expect(cls).not.toContain("text-ink ");
+    const enlace = screen.getByRole("link");
+    expect(enlace).toHaveClass("text-red");
+    // tailwind-merge debe descartar el text-ink del estado por defecto. Se mira
+    // el token exacto: un not.toContain("text-ink") tambien casaria con
+    // text-ink-700 y un not.toContain("text-ink ") dependeria de que quede un
+    // espacio detras.
+    expect(enlace).not.toHaveClass("text-ink");
   });
 });
 
@@ -254,9 +328,54 @@ describe("IconButton", () => {
     );
     const enlace = screen.getByRole("link", { name: "Volver" });
     expect(enlace).toHaveAttribute("href", "/atras");
-    expect(enlace.className).toContain("inline-flex");
+    expect(enlace).toHaveClass("inline-flex");
     // Con asChild no inyectamos type: en un <a> no significa lo mismo.
     expect(enlace).not.toHaveAttribute("type");
+    // Habilitado no deja rastro del bloqueo.
+    expect(enlace).not.toHaveAttribute("aria-disabled");
+    expect(enlace).not.toHaveAttribute("tabindex");
+  });
+
+  it("con asChild y disabled no filtra el atributo disabled al hijo y bloquea la accion", async () => {
+    // `disabled` no es valido en un <a>: si viaja en el spread queda pintado en
+    // el DOM sin efecto y el control se ve y se comporta como habilitado.
+    const onClickHijo = vi.fn();
+    render(
+      <>
+        <button type="button">antes</button>
+        <IconButton asChild label="Volver" disabled>
+          <a href="/atras" onClick={onClickHijo}>
+            <svg />
+          </a>
+        </IconButton>
+        <button type="button">despues</button>
+      </>,
+    );
+    const enlace = screen.getByRole("link", { name: "Volver" });
+    expect(enlace).not.toHaveAttribute("disabled");
+    expect(enlace).toHaveAttribute("aria-disabled", "true");
+
+    // Igual que en el Link: el recorrido se mide antes de pulsar.
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "antes" })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "despues" })).toHaveFocus();
+
+    await userEvent.click(enlace);
+    expect(onClickHijo).not.toHaveBeenCalled();
+  });
+
+  it("con asChild habilitado el onClick del hijo sigue corriendo", async () => {
+    const onClickHijo = vi.fn((e: React.MouseEvent) => e.preventDefault());
+    render(
+      <IconButton asChild label="Volver">
+        <a href="/atras" onClick={onClickHijo}>
+          <svg />
+        </a>
+      </IconButton>,
+    );
+    await userEvent.click(screen.getByRole("link", { name: "Volver" }));
+    expect(onClickHijo).toHaveBeenCalledTimes(1);
   });
 
   it("permite sobreescribir estilos por className", () => {
@@ -265,9 +384,9 @@ describe("IconButton", () => {
         <svg />
       </IconButton>,
     );
-    const cls = screen.getByRole("button").className;
-    expect(cls).toContain("rounded-none");
+    const boton = screen.getByRole("button");
+    expect(boton).toHaveClass("rounded-none");
     // tailwind-merge debe descartar el rounded-lg del tamaño, no acumularlo.
-    expect(cls).not.toContain("rounded-lg");
+    expect(boton).not.toHaveClass("rounded-lg");
   });
 });

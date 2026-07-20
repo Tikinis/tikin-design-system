@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Slot } from "radix-ui";
+import * as Slot from "radix-ui/slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -125,8 +125,15 @@ export interface LinkProps
   extends Omit<React.ComponentPropsWithoutRef<"a">, "type">, Omit<LinkVariants, "disabled"> {
   /**
    * Deshabilita la navegacion. Como `<a>` no admite el atributo `disabled`, se
-   * retira el href: eso lo saca del orden de tabulacion igual que haria un
-   * control nativo deshabilitado, y ademas el navegador deja de navegar.
+   * retira el href —el navegador deja de navegar y el elemento sale del orden
+   * de tabulacion— y se declara `role="link"` junto a `aria-disabled`: un `<a>`
+   * sin href pierde el rol, y sobre un elemento generico ningun lector de
+   * pantalla expone el estado. Con el rol declarado si se anuncia como link
+   * apagado, que es lo que hace un control nativo deshabilitado.
+   *
+   * Con `asChild` el href lo pone el consumidor y Slot le da prioridad, asi que
+   * ahi el bloqueo son `aria-disabled`, `tabIndex=-1` y el corte del click en
+   * fase de captura.
    */
   disabled?: boolean;
   /** Sustituye la flecha del tipo `external`. */
@@ -159,12 +166,30 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
     target,
     rel,
     onClick,
+    onClickCapture,
     children,
     ...props
   },
   ref,
 ) {
   const Comp = asChild ? Slot.Root : "a";
+
+  /* El corte del click va en CAPTURA y no solo en el onClick. Radix Slot compone
+     los handlers llamando primero al del HIJO y despues al nuestro, asi que un
+     Link de router que navegue en su propio onClick ya habria navegado cuando
+     nos toca el turno. La fase de captura corre antes que cualquier onClick del
+     arbol, tambien el del hijo.
+     Se desestructura de props en vez de dejarlo en el spread para que el
+     consumidor no pueda tumbar la barrera sin querer: su handler se sigue
+     llamando cuando el link esta habilitado. */
+  const handleClickCapture = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (disabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onClickCapture?.(event);
+  };
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (disabled) {
@@ -190,15 +215,20 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
       ref={ref}
       // `group` habilita el group-active del subrayado de 2px en pressed.
       className={cn("group", link({ variant, disabled, className }))}
-      // Sin href el elemento deja de ser un link para el arbol de
-      // accesibilidad y sale del orden de tabulacion. Es lo mas parecido a un
-      // control deshabilitado nativo: aria-disabled sobre un <a> con href sigue
-      // siendo activable con el teclado en la mayoria de navegadores.
+      // Sin href el navegador deja de navegar y el elemento sale del orden de
+      // tabulacion, pero tambien pierde el rol de link: por eso se declara
+      // role="link", para que aria-disabled caiga sobre algo que el lector de
+      // pantalla si expone. No lo vuelve activable — sigue sin href y sin
+      // tabindex.
       // Con asChild el href lo pone el consumidor y Slot le da prioridad, asi
-      // que ahi el bloqueo se queda en aria-disabled + preventDefault.
-      {...(disabled ? { "aria-disabled": true } : { href })}
+      // que el elemento sigue siendo un link real: sacarlo del tabulador hay
+      // que hacerlo a mano con tabIndex.
+      {...(disabled
+        ? { "aria-disabled": true, ...(asChild ? { tabIndex: -1 } : { role: "link" }) }
+        : { href })}
       target={target}
       rel={safeRel}
+      onClickCapture={handleClickCapture}
       onClick={handleClick}
       {...props}
     >
@@ -227,7 +257,11 @@ const iconButton = cva(
     "relative inline-flex shrink-0 items-center justify-center",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
-    "disabled:cursor-not-allowed",
+    /* Dos hooks para un solo estado: `disabled:` solo casa con el atributo
+       nativo, que no existe cuando asChild renderiza un <a>; ahi el estado
+       viaja en aria-disabled. Ambos selectores pesan (0,2,0), asi que ninguno
+       le sube la especificidad al consumidor que quiera repintarlos. */
+    "disabled:cursor-not-allowed aria-disabled:cursor-not-allowed",
     // El glifo manda su tamaño por variable. Se fija por partida doble para
     // cubrir los dos formatos del sistema: SVG (Phosphor React) e icono de
     // fuente, que se escala con font-size.
@@ -239,37 +273,49 @@ const iconButton = cva(
         /* Por defecto en app bars y toolbars: sin caja hasta que se toca. */
         ghost: [
           "bg-transparent text-ink",
-          "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
-          "disabled:text-ink-400",
+          "hover:not-disabled:not-aria-disabled:bg-surface-2",
+          "active:not-disabled:not-aria-disabled:bg-edge",
+          "disabled:text-ink-400 aria-disabled:text-ink-400",
         ],
         /* Borde por inset shadow, no por border: asi el 1px no come del
            tamaño de la caja y 44 sigue siendo 44. */
         outline: [
           "bg-transparent text-ink shadow-[inset_0_0_0_1px_var(--tk-ink)]",
-          "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
+          "hover:not-disabled:not-aria-disabled:bg-surface-2",
+          "active:not-disabled:not-aria-disabled:bg-edge",
           "disabled:text-ink-400 disabled:shadow-[inset_0_0_0_1px_var(--tk-400)]",
+          "aria-disabled:text-ink-400 aria-disabled:shadow-[inset_0_0_0_1px_var(--tk-400)]",
         ],
         /* Una sola accion primaria por barra. */
         solid: [
           "bg-ink text-surface",
-          "hover:not-disabled:bg-ink-800 active:not-disabled:bg-ink-strong",
+          "hover:not-disabled:not-aria-disabled:bg-ink-800",
+          "active:not-disabled:not-aria-disabled:bg-ink-strong",
           "disabled:bg-edge disabled:text-ink-500",
+          "aria-disabled:bg-edge aria-disabled:text-ink-500",
         ],
         /* Eliminar. El tinte se deriva de los semanticos de error para que
            invierta en tema oscuro. */
         destructive: [
           "bg-transparent text-fg-error",
-          "hover:not-disabled:bg-tint-error",
-          "active:not-disabled:bg-[color-mix(in_srgb,var(--tk-fg-error)_12%,var(--tk-tint-error))]",
+          "hover:not-disabled:not-aria-disabled:bg-tint-error",
+          "active:not-disabled:not-aria-disabled:bg-[color-mix(in_srgb,var(--tk-fg-error)_12%,var(--tk-tint-error))]",
           "disabled:text-[color-mix(in_srgb,var(--tk-fg-error)_45%,transparent)]",
+          "aria-disabled:text-[color-mix(in_srgb,var(--tk-fg-error)_45%,transparent)]",
         ],
       },
 
-      /* 44 · glifo 20 · r12 | 40 · glifo 18 · r10 | 32 · glifo 16 · r8 */
+      /* 44 · glifo 20 · r12 | 40 · glifo 18 · r10 | 32 · glifo 16 · r8
+         --tk-ib-badge-offset es la SEPARACION del punto respecto a las dos
+         esquinas, no su tamaño: el diametro es 6 en los tres escalones ("badge
+         opcional 6" del bloque de anatomia) y lo pinta size-1.5.
+         El offset se deriva del radio menos 2, la unica regla que reproduce el
+         unico badge interior que trae el archivo: 8 sobre la caja de 40 con r10
+         del app bar. De ahi 10 / 8 / 6. */
       size: {
-        l: "size-11 rounded-lg [--tk-ib-badge:8px] [--tk-ib-glyph:20px]",
-        m: "size-10 rounded-md [--tk-ib-badge:8px] [--tk-ib-glyph:18px]",
-        s: "size-8 rounded-sm [--tk-ib-badge:6px] [--tk-ib-glyph:16px]",
+        l: "size-11 rounded-lg [--tk-ib-badge-offset:10px] [--tk-ib-glyph:20px]",
+        m: "size-10 rounded-md [--tk-ib-badge-offset:8px] [--tk-ib-glyph:18px]",
+        s: "size-8 rounded-sm [--tk-ib-badge-offset:6px] [--tk-ib-glyph:16px]",
       },
 
       shape: {
@@ -277,17 +323,24 @@ const iconButton = cva(
         round: "rounded-pill",
       },
 
-      /* El glifo mide 16-20 pero el area tactil minima es 44. Se amplia con un
-         pseudoelemento en vez de con padding para no mover la caja visible. */
+      /* El glifo mide 16-20 y la caja puede bajar de 44. Se amplia el area
+         tactil con un pseudoelemento en vez de con padding para no mover la
+         caja visible.
+         La ampliacion es de 2px POR LADO, no "hasta 44": la seccion manda gap
+         4-8 entre icon buttons vecinos, y 2 es la mitad del gap minimo, asi que
+         dos areas contiguas como mucho se tocan y nunca se roban el click. Un
+         pseudoelemento fijo de 44 desbordaba 6px por lado sobre la caja de 32 y
+         se comia el borde del vecino. En m eso deja el target en los 44 de la
+         seccion; en s en 36, por encima del minimo de 24 de WCAG 2.5.8. */
       hitArea: {
-        true: "after:absolute after:top-1/2 after:left-1/2 after:size-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']",
+        true: "after:absolute after:-inset-0.5 after:content-['']",
         false: "",
       },
     },
 
     compoundVariants: [
-      // A 44 el propio boton ya es el target: el pseudoelemento sobraria y solo
-      // serviria para pisar al vecino, que va a gap 4-8.
+      // A 44 la caja ya es el target: el pseudoelemento solo serviria para
+      // invadir al vecino.
       { size: "l", hitArea: true, class: "after:hidden" },
     ],
 
@@ -331,12 +384,28 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
     asChild = false,
     type,
     title,
+    disabled = false,
+    onClickCapture,
     children,
     ...props
   },
   ref,
 ) {
   const Comp = asChild ? Slot.Root : "button";
+
+  /* Con asChild no hay atributo `disabled` que frene nada, y Slot llama al
+     onClick del HIJO antes que al nuestro. El corte va en captura, que corre
+     antes que cualquier onClick del arbol. Se desestructura de props para que
+     el consumidor no pueda tumbar la barrera sin querer: su handler se sigue
+     llamando cuando el boton esta habilitado. */
+  const handleClickCapture = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (disabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onClickCapture?.(event);
+  };
 
   return (
     <Comp
@@ -349,7 +418,15 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
       title={title ?? label}
       // Un <button> sin type dentro de un form envia el formulario. Con asChild
       // no se pone: el hijo puede ser un <a>, donde type no significa lo mismo.
-      {...(asChild ? {} : { type: type ?? "button" })}
+      // Y `disabled` tampoco puede viajar en el spread hasta el hijo: en un <a>
+      // no es un atributo valido, React lo pintaria igual y el resultado seria
+      // un control que se ve y se comporta como habilitado. Se traduce a
+      // aria-disabled —que si anuncia el estado y engancha las variantes
+      // aria-disabled:*— y se saca del tabulador a mano.
+      {...(asChild
+        ? { "aria-disabled": disabled || undefined, tabIndex: disabled ? -1 : undefined }
+        : { type: type ?? "button", disabled })}
+      onClickCapture={handleClickCapture}
       {...props}
     >
       {badge && (
@@ -357,8 +434,10 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
           // Decorativo: el estado que representa se comunica en el label o con
           // aria-pressed, no con un punto de color.
           aria-hidden="true"
+          // Diametro 6 fijo en los tres tamaños; lo unico que escala es la
+          // separacion a las esquinas.
           className="absolute size-1.5 rounded-full bg-red"
-          style={{ top: "var(--tk-ib-badge)", right: "var(--tk-ib-badge)" }}
+          style={{ top: "var(--tk-ib-badge-offset)", right: "var(--tk-ib-badge-offset)" }}
         />
       )}
       {/* Slottable marca cual de los hijos es el elemento del consumidor.

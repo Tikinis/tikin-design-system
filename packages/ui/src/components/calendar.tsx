@@ -11,10 +11,22 @@ import { cn } from "../lib/cn";
  *   Calendar / Day Header    node 2:156675                 -> CalendarWeekday
  *   Calendar / Arrow Button  node 2:156649 ·  8 variantes  -> CalendarNavButton
  *
- * La cuadricula del mes, la cabecera con el nombre del mes y toda la navegacion
- * por teclado son EXTENSION: no existe ningun nodo de mes en el archivo, y la
- * seccion 13 del documento se limita a instanciar las tres piezas de arriba.
- * No cites `Calendar` como especificacion aprobada; las tres subpiezas si.
+ * La seccion 13 instancia esas tres y una CUARTA tarjeta, "Date picker · rueda
+ * iOS (dark)" (node 2:156583, Controls/Pickers/Date and Time/Wheel). Esa cuarta
+ * se deja fuera a proposito y aqui queda declarado: su export
+ * (docs/figma-export/components/ControlsPickersDateAndTime.jsx) es un raster
+ * plano — un div negro con una banda y una imagen —, o sea el picker nativo de
+ * iOS pegado en el archivo, no una pieza construible con tokens del sistema.
+ *
+ * EL MONTAJE DEL MES SI TIENE ESPECIFICACION, pero en otra seccion: la 23
+ * (`python3 scripts/seccion.py datepicker`) describe el titulo "Julio 2026", la
+ * fila de cabeceras, la rejilla, el modo rango, los presets y el sheet movil, y
+ * su bloque DEL ARCHIVO dice literalmente "Las celdas reutilizan Calendar/Day
+ * Button (default, current, outside, selected), Day Header y Arrow Button".
+ * Lo que no existe en NINGUN sitio es un nodo de Figma con el mes montado: por
+ * eso los gaps de la rejilla, la cabecera con flechas y toda la navegacion por
+ * teclado son EXTENSION, medida contra la prosa de la 23 y no contra pixeles.
+ * Al citar especificacion del mes, cita la seccion 23, no esta.
  *
  * GEOMETRIA CANONICA (docs/figma-export/components/Calendar*.jsx, que es
  * autoridad sobre pixeles: el prototipo solo pinta las piezas con x-import)
@@ -28,12 +40,15 @@ import { cn } from "../lib/cn";
  *            outside    opacidad .5, texto --base-muted-foreground
  *            outside+hover     opacidad .5, fondo acento, texto foreground
  *            outside+selected  opacidad .5, fondo acento, texto muted
- *            outside+pressed   opacidad .3
+ *            outside+pressed   opacidad .3 + capa blanca al 50% -> desviacion 6
  *            disabled   opacidad .5
  *   header   ancho 32 · alto 21 · texto 12/16 · --base-muted-foreground
  *   flecha   32x32 · r8 · glifo 16
  *
- * CINCO DESVIACIONES DELIBERADAS, Y POR QUE
+ * El archivo NO define outside+disabled; la rejilla si lo produce (un minimo a
+ * mitad de mes con dias vecinos a la vista). Se resuelve en la cva, ver alli.
+ *
+ * SEIS DESVIACIONES DELIBERADAS, Y POR QUE
  * -----------------------------------------
  * 1. EL FONDO DE LA FLECHA NO USA SUS TOKENS DE FIGMA. El nodo pinta
  *    --custom-background-dark-input-30 en reposo y --custom-accent-dark-input-50
@@ -68,6 +83,14 @@ import { cn } from "../lib/cn";
  *    invierte con el tema y por tanto mantiene el contraste en los dos.
  *    Ningun otro componente del repo copia ese literal: el gris de Figma es un
  *    resto del prototipo en oscuro, no un token.
+ *
+ * 6. EL PRESSED DE UN DIA VECINO PIERDE LA CAPA BLANCA. El archivo lo pinta con
+ *    opacidad .3 MAS un linear-gradient plano de rgba(255,255,255,.5) encima
+ *    del acento. Ese blanco es otro literal del prototipo en oscuro: alli
+ *    aclara, pero en tema claro se sumaria a un fondo ya casi blanco y borraria
+ *    la cifra justo mientras se pulsa. Ningun token del sistema expresa "aclara
+ *    lo que haya debajo", asi que se conserva solo la opacidad .3, que si se
+ *    lee en los dos temas.
  *
  * DIAS DESHABILITADOS: aria-disabled, NUNCA el atributo `disabled`
  * ---------------------------------------------------------------
@@ -144,6 +167,11 @@ function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+/** Ultimo dia del mes: el dia 0 del siguiente, que el constructor normaliza. */
+function endOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
 function addDays(date: Date, amount: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount);
 }
@@ -217,8 +245,12 @@ const calendarDay = cva(
   ],
   {
     variants: {
-      /* `current` es HOY. En el archivo se dibuja con relleno de acento, igual
-         que el hover — no con borde. Ver discrepancia anotada en las stories. */
+      /* `current` es HOY. La prosa de la seccion 23 dice "hoy se marca con
+         borde", pero el nodo Calendar/Day Button (variant=current) lo pinta con
+         relleno de acento, igual que el hover. Manda el bloque DEL ARCHIVO, asi
+         que va relleno; la discrepancia queda anotada tambien en las stories
+         (bloque de documentacion del meta) para que la vea quien solo lea la
+         documentacion y no este fichero. */
       variant: {
         default: "bg-transparent text-[var(--base-foreground)]",
         current: "bg-[var(--base-accent)] text-[var(--base-accent-foreground)]",
@@ -255,6 +287,14 @@ const calendarDay = cva(
         selected: true,
         class: "bg-[var(--base-accent)] text-[var(--base-muted-foreground)]",
       },
+      /* Un dia vecino BLOQUEADO tiene que leerse distinto de uno vecino normal.
+         Los dos parten ya de opacidad .5, asi que la .5 que aporta `disabled`
+         no cambia nada: sin esto la unica diferencia seria el cursor, invisible
+         para quien va con el dedo o con el teclado. Se baja a .3, el mismo
+         escalon que el archivo reserva para el pressed de un vecino — y no hay
+         choque posible, porque el hover/active de outside solo existe cuando
+         `disabled` es false. */
+      { variant: "outside", disabled: true, class: "opacity-30" },
     ],
 
     defaultVariants: { variant: "default", selected: false, disabled: false },
@@ -324,6 +364,12 @@ export interface CalendarWeekdayProps extends React.ComponentPropsWithoutRef<"di
  *
  * 32 de ancho y 21 de alto: el ancho cuadra con la celda de dia, la altura no,
  * y es asi en el archivo.
+ *
+ * `role="columnheader"` es el valor por defecto porque el sitio natural de la
+ * pieza es una `role="row"` dentro de la rejilla. Fuera de ahi ese rol seria
+ * ARIA invalido, asi que la prop se puede sobreescribir — el spread va DESPUES
+ * del rol a proposito: `<CalendarWeekday role="presentation" />` para una
+ * muestra suelta.
  */
 export const CalendarWeekday = React.forwardRef<HTMLDivElement, CalendarWeekdayProps>(
   function CalendarWeekday({ className, label, ...props }, ref) {
@@ -544,6 +590,30 @@ export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(function
   const [selectedState, setSelectedState] = React.useState<Date | null>(defaultSelected ?? null);
   const selected = selectedProp !== undefined ? selectedProp : selectedState;
 
+  /* ---- bloqueo ---- */
+  /* Va ANTES del roving tabindex porque el teclado consulta los topes: las dos
+     rutas que mueven la vista — flecha y teclado — tienen que compartir limite. */
+  const isDisabled = (date: Date): boolean => {
+    const day = startOfDay(date);
+    if (minDate && day < startOfDay(minDate)) return true;
+    if (maxDate && day > startOfDay(maxDate)) return true;
+    return isDateDisabled?.(day) ?? false;
+  };
+
+  /* Moverse a un mes solo lo frena el tope hacia el que se camina.
+     Comprobar los DOS topes a la vez deja el calendario sin salida cuando la
+     vista arranca mas alla del rango: con la vista en 2030 y maxDate en 2026,
+     el mes anterior tambien cae por encima del maximo, asi que se bloqueaba
+     precisamente el movimiento que devolvia al rango. */
+  const canShowMonth = (target: Date): boolean => {
+    if (target < month) return !(minDate && endOfMonth(target) < startOfDay(minDate));
+    if (target > month) return !(maxDate && startOfMonth(target) > startOfDay(maxDate));
+    return true;
+  };
+
+  const previousDisabled = !canShowMonth(addMonths(month, -1));
+  const nextDisabled = !canShowMonth(addMonths(month, 1));
+
   /* ---- roving tabindex ---- */
   const preferredFocus = (visible: Date): Date => {
     if (selected && isSameMonth(selected, visible)) return startOfDay(selected);
@@ -553,6 +623,13 @@ export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(function
 
   const [focusedDate, setFocusedDate] = React.useState(() => preferredFocus(month));
 
+  /* Dias que de verdad tienen boton en pantalla: con `showOutsideDays` las seis
+     semanas enteras, sin el solo el mes (los vecinos se pintan como huecos). */
+  const firstVisible = showOutsideDays
+    ? startOfWeek(startOfMonth(month), weekStartsOn)
+    : startOfMonth(month);
+  const lastVisible = showOutsideDays ? addDays(firstVisible, 41) : endOfMonth(month);
+
   /* Cuando el mes cambia desde FUERA (prop `month`, o un boton del consumidor)
      el dia enfocado puede quedarse en el mes anterior y ninguna celda seria
      tabulable. Se corrige DURANTE el render, no en un efecto: con useEffect se
@@ -561,6 +638,20 @@ export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(function
   if (monthKey !== lastMonthKey) {
     setLastMonthKey(monthKey);
     if (!isSameMonth(focusedDate, month)) setFocusedDate(preferredFocus(month));
+  } else if (focusedDate < firstVisible || focusedDate > lastVisible) {
+    /* Red de seguridad para el mes CONTROLADO: el teclado ya movio el foco al
+       mes vecino y pidio el cambio de vista, pero mientras el padre no reenvie
+       `month` la vista no se mueve y ese dia no tiene boton. Sin esto la rejilla
+       se queda con CERO celdas tabulables y el teclado muere en silencio: ni
+       responde, ni se puede volver a entrar con Tab.
+
+       Se pega al borde visible en vez de saltar a `preferredFocus` para que el
+       foco se quede justo donde estaba — el usuario ha chocado con una pared,
+       no ha pedido volver a hoy. El `else if` importa: en el render en que el
+       mes SI cambia manda la rama de arriba, que ya ha encolado el dia bueno.
+
+       No hay bucle posible: el resultado siempre esta dentro del rango. */
+    setFocusedDate(focusedDate < firstVisible ? firstVisible : lastVisible);
   }
 
   /* El foco solo se mueve a mano DESPUES de una pulsacion de teclado. Sin esta
@@ -579,32 +670,32 @@ export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(function
   const moveFocusTo = (next: Date) => {
     shouldFocusRef.current = true;
     setFocusedDate(next);
-    if (!isSameMonth(next, month)) changeMonth(next);
+    /* El foco SI puede salirse del mes (patron APG: los huecos no se saltan),
+       pero la vista solo le sigue hasta donde llegan las flechas. Mover la vista
+       a un mes que el boton de flecha se niega a abrir seria darle al mismo
+       calendario dos limites distintos segun por donde se navegue. Si la vista
+       no se mueve, el dia queda visible como vecino o el foco se pega al borde
+       en el bloque de resincronizacion de arriba. */
+    if (!isSameMonth(next, month) && canShowMonth(next)) changeMonth(next);
   };
-
-  /* ---- bloqueo ---- */
-  const isDisabled = (date: Date): boolean => {
-    const day = startOfDay(date);
-    if (minDate && day < startOfDay(minDate)) return true;
-    if (maxDate && day > startOfDay(maxDate)) return true;
-    return isDateDisabled?.(day) ?? false;
-  };
-
-  /* Las flechas se apagan cuando el mes de destino cae entero fuera de rango:
-     el ultimo dia del mes anterior por debajo del minimo, o el primero del
-     siguiente por encima del maximo. */
-  const previousDisabled = Boolean(
-    minDate && addDays(startOfMonth(month), -1) < startOfDay(minDate),
-  );
-  const nextDisabled = Boolean(maxDate && startOfMonth(addMonths(month, 1)) > startOfDay(maxDate));
 
   const pick = (date: Date) => {
     if (isDisabled(date)) return;
     const day = startOfDay(date);
     if (selectedProp === undefined) setSelectedState(day);
-    // Pulsar un dia de otro mes tambien mueve la vista: si no, el dia elegido
-    // desapareceria de la rejilla justo al elegirlo.
-    if (!isSameMonth(day, month)) changeMonth(day);
+    if (!isSameMonth(day, month)) {
+      /* Pulsar un dia de otro mes tambien mueve la vista: si no, el dia elegido
+         desapareceria de la rejilla justo al elegirlo.
+
+         Y hay que pedir el foco a mano: las filas se montan con el mes en la
+         clave, asi que al cambiarlo se desmontan los 42 botones — incluido el
+         que se acaba de pulsar — y el foco se caeria al body. El teclado
+         quedaria mudo (el onKeyDown vive en la rejilla) hasta volver a tabular.
+         Solo en esta rama: si el mes no cambia, nada se desmonta y forzar el
+         foco solo serviria para pisar al consumidor que lo mueva en onSelect. */
+      shouldFocusRef.current = true;
+      changeMonth(day);
+    }
     setFocusedDate(day);
     onSelect?.(day);
   };

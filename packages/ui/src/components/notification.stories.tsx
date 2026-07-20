@@ -14,7 +14,11 @@ const meta: Meta<typeof NotificationItem> = {
   decorators: [
     (Story) => (
       <div className="w-[480px] rounded-xl border border-edge bg-surface p-4">
-        <ul className="flex flex-col gap-2">
+        {/* role="list" explicito: el preflight de Tailwind pone list-style:none
+            en todo <ul> y con eso Safari/VoiceOver deja de anunciar la lista.
+            Como este es el ejemplo canonico de uso, tiene que enseñar la forma
+            que si conserva el "lista de N elementos". */}
+        <ul role="list" className="flex flex-col gap-2">
           <Story />
         </ul>
       </div>
@@ -32,7 +36,7 @@ const meta: Meta<typeof NotificationItem> = {
           "- **Icono por tipo** — dinero (verde), seguridad (lavanda), novedad (gris), solicitud (lavanda pleno). El fragmento destacado del texto va en `<strong>`.",
           "- **Tocar = ir** — cada notificacion abre su detalle. Deslizar para marcar leida o archivar es un gesto de plataforma y queda fuera del componente.",
           "",
-          "Renderiza un `<li>`: debe vivir dentro de un `<ul>`. El area pulsable es un boton o un enlace real que cubre la fila con `::after`, para que las acciones inline no queden anidadas dentro de otro boton.",
+          'Renderiza un `<li>`: debe vivir dentro de un `<ul role="list">` — el `role` explicito es necesario porque el preflight de Tailwind quita el `list-style` y Safari/VoiceOver dejan de anunciar la lista. El area pulsable es un boton o un enlace real que cubre la fila con `::after`, para que las acciones inline no queden anidadas dentro de otro boton.',
         ].join("\n"),
       },
     },
@@ -164,7 +168,15 @@ export const AgrupadaPorTiempo: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
     <>
-      <li className="px-0.5 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">Hoy</li>
+      {/* El titulo del grupo NO es un aviso mas: va en un <li
+          role="presentation"> con un encabezado dentro. Si fuera un <li>
+          normal, el lector lo contaria en el total y diria "elemento 1 de 5,
+          Hoy" en vez de anunciarlo como cabecera del grupo. */}
+      <li role="presentation">
+        <h3 className="px-0.5 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+          Hoy
+        </h3>
+      </li>
       <NotificationItem tone="money" unread time="2:14 PM" href="#n1">
         <strong>Recibiste $500.000</strong> de María Rojas
       </NotificationItem>
@@ -172,8 +184,10 @@ export const AgrupadaPorTiempo: Story = {
         <strong>Nuevo inicio de sesión</strong>
       </NotificationItem>
 
-      <li className="px-0.5 pt-2 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
-        Antes
+      <li role="presentation">
+        <h3 className="px-0.5 pt-2 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+          Antes
+        </h3>
       </li>
       <NotificationItem tone="news" time="hace 2 días" href="#n3">
         Invita a un amigo y gana $10.000

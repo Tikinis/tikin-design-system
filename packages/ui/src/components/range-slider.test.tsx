@@ -179,16 +179,114 @@ describe("RangeSlider", () => {
     expect(maximo).toHaveAttribute("aria-valuenow", "90");
   });
 
-  it("onValueCommit se dispara solo al soltar, no en cada paso", async () => {
+  it("onValueCommit entrega el par completo al consumidor", async () => {
     const onValueCommit = vi.fn();
     render(<Monto onValueCommit={onValueCommit} />);
 
     screen.getByRole("slider", { name: "Monto mínimo" }).focus();
     await userEvent.keyboard("{ArrowRight}");
 
-    // Con teclado, Radix confirma en el keyup de cada paso: es el momento en que
-    // el usuario "suelta". Lo que importa es que el consumidor reciba el par.
+    // Con teclado, Radix confirma en el keyup de CADA paso: es el momento en que
+    // el usuario "suelta". Por eso este test no puede afirmar "solo al soltar";
+    // lo unico verificable por este camino es que llega el par entero, no solo
+    // la manija que se movio. El "solo al soltar" es cosa del arrastre con
+    // puntero, que jsdom no puede ejercitar (getBoundingClientRect mide 0x0).
     expect(onValueCommit).toHaveBeenCalledWith([310_000, 750_000]);
+  });
+
+  it("respeta minStepsBetweenThumbs y no deja que las manijas se acerquen mas", async () => {
+    render(
+      <RangeSlider min={0} max={10} step={1} defaultValue={[3, 7]} minStepsBetweenThumbs={2} />,
+    );
+    const minimo = screen.getByRole("slider", { name: "Mínimo" });
+
+    minimo.focus();
+    // Cuatro pasos intentarian llegar a 7; el hueco de 2 lo frena en 5.
+    await userEvent.keyboard("{ArrowRight}".repeat(4));
+    expect(minimo).toHaveAttribute("aria-valuenow", "5");
+    expect(screen.getByRole("slider", { name: "Máximo" })).toHaveAttribute("aria-valuenow", "7");
+  });
+
+  it("solo emite aria-valuetext cuando el consumidor da un formatValue propio", () => {
+    // Sin formatValue el valuetext seria la misma cifra cruda que el valuenow, y
+    // varios lectores anuncian el valuetext en lugar del valuenow, perdiendo el
+    // formateo numerico que el propio lector aplicaria.
+    const { unmount } = render(<RangeSlider min={0} max={100} defaultValue={[20, 80]} />);
+    for (const manija of screen.getAllByRole("slider")) {
+      expect(manija).not.toHaveAttribute("aria-valuetext");
+    }
+    unmount();
+
+    render(<Monto />);
+    expect(screen.getByRole("slider", { name: "Monto máximo" })).toHaveAttribute(
+      "aria-valuetext",
+      "$ 750.000",
+    );
+  });
+
+  it("no revienta ni pinta NaN cuando min y max coinciden", () => {
+    // Radix posiciona la manija con (v - min) / (max - min): sin saneo esto es
+    // una division por cero, sale `left: calc(NaN% + 0px)` y jsdom lanza.
+    expect(() => render(<RangeSlider min={50} max={50} />)).not.toThrow();
+    const manijas = screen.getAllByRole("slider");
+    expect(manijas).toHaveLength(2);
+    for (const manija of manijas) {
+      expect(manija.getAttribute("style") ?? "").not.toContain("NaN");
+    }
+  });
+
+  it("endereza un rango invertido en vez de descartarlo", () => {
+    // min y max permutados por el consumidor: se ordenan, no se ignoran.
+    render(<RangeSlider min={90} max={10} />);
+    const [minimo, maximo] = screen.getAllByRole("slider");
+    expect(minimo).toHaveAttribute("aria-valuemin", "10");
+    expect(maximo).toHaveAttribute("aria-valuemax", "90");
+    // Los limites de abajo tambien salen ordenados (y ademas coinciden con los
+    // valores de arriba, porque sin defaultValue el rango abre entero).
+    expect(screen.getAllByText("10").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("90").length).toBeGreaterThan(0);
+  });
+
+  it("recorta al rango un valor que se sale de el, para que numero y manija coincidan", () => {
+    render(<RangeSlider min={0} max={100} value={[-40, 300]} />);
+    const [minimo, maximo] = screen.getAllByRole("slider");
+    expect(minimo).toHaveAttribute("aria-valuenow", "0");
+    expect(maximo).toHaveAttribute("aria-valuenow", "100");
+    // Y lo pintado arriba dice lo mismo que la manija, no "-40" y "300".
+    expect(screen.queryByText("-40")).not.toBeInTheDocument();
+    expect(screen.queryByText("300")).not.toBeInTheDocument();
+  });
+
+  it("espeja las filas de texto cuando el recorrido va al reves", () => {
+    // Radix invierte su pista con `inverted`, pero las filas de valores y de
+    // limites viven fuera de su arbol: sin espejarlas, el minimo se pintaria a
+    // la izquierda con la manija minima ya a la derecha.
+    const { container, rerender } = render(<Monto inverted />);
+    const bloque = container.firstElementChild as HTMLElement;
+    // Hijos <div> directos del bloque: la fila de valores y la de limites. El
+    // control de Radix es un <span>, asi que no entra.
+    const filas = () => Array.from(bloque.querySelectorAll(":scope > div"));
+    expect(filas()).toHaveLength(2);
+    for (const fila of filas()) {
+      expect(fila.className).toContain("flex-row-reverse");
+    }
+
+    rerender(<Monto />);
+    for (const fila of filas()) {
+      expect(fila.className).not.toContain("flex-row-reverse");
+    }
+  });
+
+  it("propaga dir al bloque entero y no solo a la pista de Radix", () => {
+    // El envoltorio necesita el dir para que sus filas flex se coloquen de
+    // derecha a izquierda; Radix no lee el DOM, asi que lo necesita tambien.
+    const { container } = render(<Monto dir="rtl" data-testid="bloque" />);
+    const bloque = container.firstElementChild as HTMLElement;
+    expect(bloque).toHaveAttribute("dir", "rtl");
+    expect(screen.getByRole("slider", { name: "Monto mínimo" }).closest("[dir]")).toHaveAttribute(
+      "dir",
+      "rtl",
+    );
   });
 
   it("permite sobreescribir estilos del bloque por className", () => {
@@ -197,5 +295,43 @@ describe("RangeSlider", () => {
     // tailwind-merge debe descartar el gap-3.5 del componente, no acumularlo.
     expect(bloque.className).toContain("gap-0");
     expect(bloque.className).not.toContain("gap-3.5");
+  });
+
+  it("className, style, id, data-* y ref apuntan todos al mismo elemento raiz", () => {
+    // Antes className iba al envoltorio y el resto de props al Slider.Root: un
+    // data-testid acababa en un nodo distinto que la clase con la que se pinto.
+    const ref = React.createRef<HTMLDivElement>();
+    const { container } = render(
+      <Monto ref={ref} className="mi-clase" style={{ padding: 9 }} id="foo" data-testid="bloque" />,
+    );
+    const bloque = container.firstElementChild as HTMLElement;
+
+    expect(ref.current).toBe(bloque);
+    expect(screen.getByTestId("bloque")).toBe(bloque);
+    expect(bloque).toHaveAttribute("id", "foo");
+    expect(bloque.className).toContain("mi-clase");
+    expect(bloque.style.padding).toBe("9px");
+  });
+
+  it("sliderClassName llega a la caja del control, no al bloque", () => {
+    const { container } = render(<Monto className="mi-bloque" sliderClassName="mi-control" />);
+    const bloque = container.firstElementChild as HTMLElement;
+    expect(bloque.className).not.toContain("mi-control");
+
+    const control = container.querySelector(".mi-control") as HTMLElement;
+    expect(control).not.toBeNull();
+    // Es el ancestro de las manijas, o sea el Slider.Root.
+    expect(control).toContainElement(screen.getByRole("slider", { name: "Monto mínimo" }));
+  });
+
+  it("la variante tone cambia la clase del relleno", () => {
+    const { container, rerender } = render(<Monto />);
+    // Por defecto, lima: el relleno canonico de la seccion 40.
+    expect(container.querySelector(".bg-lime")).not.toBeNull();
+    expect(container.querySelector(".bg-ink")).toBeNull();
+
+    rerender(<Monto tone="ink" />);
+    expect(container.querySelector(".bg-ink")).not.toBeNull();
+    expect(container.querySelector(".bg-lime")).toBeNull();
   });
 });

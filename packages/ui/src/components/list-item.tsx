@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Slot } from "radix-ui";
+import * as Slot from "radix-ui/slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -108,9 +108,17 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
 /* Fila                                                                */
 /* ------------------------------------------------------------------ */
 
-/* Contexto minimo: solo existe para que el check visual no pueda
- * desincronizarse del aria-pressed de la fila. Todo lo demas va por props. */
-const ListItemContext = React.createContext<{ selected?: boolean }>({});
+/* Contexto minimo, dos usos y ninguno mas:
+ *  - `selected`, para que el check visual no pueda desincronizarse del
+ *    aria-pressed de la fila.
+ *  - `disabled`, porque las piezas de borde (leading, monto, valor) fijan su
+ *    propio color y por tanto NO heredan el gris del titulo. Sin esto una fila
+ *    deshabilitada queda a medias, con el valor de la derecha mas contrastado
+ *    que el titulo.
+ * Va por contexto y no por selector descendente a proposito: asi el gris entra
+ * como una clase mas en el mismo cn() y el consumidor lo sigue pudiendo pisar
+ * por className, cosa que un `[&_x]:` de mayor especificidad le impediria. */
+const ListItemContext = React.createContext<{ selected?: boolean; disabled?: boolean }>({});
 
 const listItem = cva(
   [
@@ -120,13 +128,24 @@ const listItem = cva(
   ],
   {
     variants: {
-      /* Alto 44–68 del bloque de anatomia. Es un suelo, no una camisa de
-         fuerza: con avatar de 42 + padding 14 la fila crece hasta 70 sola. */
+      /* Alto 44–68 del bloque de anatomia.
+       *
+       * El min-height por si solo NO basta: es un suelo, y con el padding fijo
+       * de 14 la caja de texto ya mide 45, asi que `sm` nunca bajaba de ahi y
+       * cualquier leading (38 o 42) empujaba a `sm` y `md` al MISMO alto. Por
+       * eso el tamaño escala tambien el padding vertical, que es lo unico que
+       * el componente controla de verdad.
+       *
+       * Altos resultantes (solo titulo / + caja 38 / + circulo 42):
+       *   sm  44 · 54 · 58    md  56 · 66 · 70    lg  68 · 70 · 74
+       *
+       * `md` conserva el padding 14 del prototipo — sus filas llevan leading y
+       * miden 66/70 — y `lg` sube a 16 para seguir siendo el mas alto tambien
+       * con avatar, que es lo que cumple el ">= 64 en movil" del documento. */
       size: {
-        sm: "min-h-11",
+        sm: "min-h-11 py-2",
         md: "min-h-14",
-        // 68 — el unico que cumple el ">= 64 en movil" que pide el documento.
-        lg: "min-h-[68px]",
+        lg: "min-h-[68px] py-4",
       },
 
       tone: {
@@ -137,7 +156,10 @@ const listItem = cva(
 
       interactive: {
         true: [
-          "cursor-pointer outline-none select-none",
+          // El grupo con nombre existe para que el leading neutro pueda
+          // reaccionar al hover de la fila: su relleno es el MISMO surface-2
+          // que el hover, y sin esto desaparecia al pasar el raton.
+          "group/list-item cursor-pointer outline-none select-none",
           "hover:bg-surface-2 active:bg-surface-3",
           // ring-inset porque la lista recorta con overflow-hidden: un anillo
           // por fuera quedaria cortado justo en la primera y la ultima fila.
@@ -189,9 +211,18 @@ export interface ListItemProps
    * accion y el lector de pantalla lee el boton exterior sobre el interior.
    */
   interactive?: boolean;
-  /** Marca la fila como elegida. Emite `aria-pressed` y alimenta a `ListItemCheck`. */
+  /**
+   * Marca la fila como elegida. Alimenta a `ListItemCheck` y emite
+   * `aria-pressed`, pero SOLO cuando el elemento real es un boton: en un `<a>`
+   * de `asChild` el atributo seria ARIA invalido. Si compones `asChild` sobre
+   * algo que si es un boton, pasa tambien `role="button"`.
+   */
   selected?: boolean;
-  /** Inhabilita la fila. En un <button> real; si no, via aria-disabled. */
+  /**
+   * Inhabilita la fila. En un <button> real; si no, via aria-disabled.
+   * Ademas emite `data-disabled` en la raiz y atenua las piezas del sistema
+   * (leading, monto, valor, metadato) por contexto.
+   */
   disabled?: boolean;
   /**
    * Renderiza el hijo en vez de un <button>, heredando los estilos.
@@ -248,10 +279,17 @@ export const ListItem = React.forwardRef<HTMLElement, ListItemProps>(function Li
     onClick?.(event);
   };
 
+  /* aria-pressed SOLO es valido sobre role="button". Sin este filtro un
+   * `<ListItem asChild selected>` sobre un `<a href>` —el patron de la story
+   * ComoEnlace— emitia aria-pressed en un enlace: ARIA invalido y lectura
+   * indefinida segun el lector de pantalla. Con asChild el consumidor tiene
+   * que declarar el rol si de verdad esta componiendo sobre un boton. */
+  const hasButtonRole = (!asChild && isInteractive) || props.role === "button";
+
   // El Provider envuelve a Comp POR FUERA a proposito: Slot solo busca el
   // Slottable entre sus hijos DIRECTOS, asi que un Provider por dentro lo
   // esconderia y asChild dejaria de funcionar.
-  const context = React.useMemo(() => ({ selected }), [selected]);
+  const context = React.useMemo(() => ({ selected, disabled }), [selected, disabled]);
 
   return (
     <ListItemContext.Provider value={context}>
@@ -270,8 +308,10 @@ export const ListItem = React.forwardRef<HTMLElement, ListItemProps>(function Li
         aria-disabled={disabled && (asChild || !isInteractive) ? true : undefined}
         // aria-pressed convierte la fila en un interruptor de seleccion. Solo
         // tiene sentido si la fila es el control; en una fila inerte se omite.
-        aria-pressed={isInteractive && selected !== undefined ? selected : undefined}
+        aria-pressed={hasButtonRole && selected !== undefined ? selected : undefined}
         data-selected={selected ? "" : undefined}
+        // Gancho para que el consumidor atenue lo que el sistema no conoce.
+        data-disabled={disabled ? "" : undefined}
         onClick={handleClick}
         {...props}
       >
@@ -281,7 +321,15 @@ export const ListItem = React.forwardRef<HTMLElement, ListItemProps>(function Li
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="truncate text-[14.5px] leading-tight">{title}</span>
           {meta !== undefined && meta !== null && (
-            <span className="truncate text-[12.5px] leading-tight text-ink-600">{meta}</span>
+            <span
+              className={cn(
+                "truncate text-[12.5px] leading-tight",
+                // El metadato no puede quedar MAS contrastado que el titulo.
+                disabled ? "text-ink-400" : "text-ink-600",
+              )}
+            >
+              {meta}
+            </span>
           )}
         </span>
         {/* Slottable marca cual de los hijos es el elemento del consumidor.
@@ -289,7 +337,9 @@ export const ListItem = React.forwardRef<HTMLElement, ListItemProps>(function Li
             element child". */}
         <Slot.Slottable>{children}</Slot.Slottable>
         {trailing !== undefined && trailing !== null && (
-          <span className="flex flex-none items-center gap-2">{trailing}</span>
+          // gap-3, no gap-2: en el prototipo las piezas del trailing son
+          // hermanas directas de la fila y las separa su gap de 12.
+          <span className="flex flex-none items-center gap-3">{trailing}</span>
         )}
       </Comp>
     </ListItemContext.Provider>
@@ -316,7 +366,16 @@ const listItemIcon = cva(
         box: "size-[38px] rounded-md [&_svg]:size-[19px]",
       },
       tone: {
-        neutral: "bg-surface-2 text-ink",
+        /* El relleno neutro es EL MISMO token que el hover de la fila
+           (surface-2), asi que sin reaccionar al hover el leading se fundia
+           con el fondo y desaparecia. Sube un escalon de superficie mientras
+           la fila esta activa; el resto de tonos no colisiona y no lo lleva.
+           Va por group-hover y no subiendo el tono en reposo porque en reposo
+           el prototipo pide surface-2 exacto. */
+        neutral: [
+          "bg-surface-2 text-ink",
+          "group-hover/list-item:bg-surface-3 group-active/list-item:bg-edge",
+        ],
         success: "bg-tint-success text-fg-success",
         warning: "bg-tint-warning text-fg-warning",
         error: "bg-tint-error text-fg-error",
@@ -342,10 +401,34 @@ export interface ListItemIconProps
  * Leading de la fila: avatar circular (personas) o icono en caja (conceptos).
  *
  * Acepta un glifo — se dimensiona solo — o iniciales como texto.
+ *
+ * Es DECORACION: va `aria-hidden` por defecto. En los tres ejemplos del
+ * documento el leading solo repite lo que ya dice el titulo (las iniciales "MR"
+ * delante de "María Rojas"), y sin ocultarlo el lector de pantalla anuncia la
+ * fila como "mr María Rojas $mariarojas". Si en tu caso aporta informacion que
+ * no esta en el titulo, pasa `aria-hidden={false}` junto con un `aria-label`.
+ *
+ * Para avatares de persona con asignacion estable de color por nombre y la
+ * escala oficial de tamaños existe `Avatar`; este leading es la version
+ * empotrada en la fila, con los 42/38 que pide esta seccion.
  */
 export const ListItemIcon = React.forwardRef<HTMLSpanElement, ListItemIconProps>(
   function ListItemIcon({ className, shape, tone, ...props }, ref) {
-    return <span ref={ref} className={cn(listItemIcon({ shape, tone, className }))} {...props} />;
+    const { disabled } = React.useContext(ListItemContext);
+    return (
+      <span
+        ref={ref}
+        aria-hidden="true"
+        className={cn(
+          listItemIcon({ shape, tone }),
+          // Una fila deshabilitada no puede dejar el leading a todo color: se
+          // neutraliza el relleno y se apaga el glifo, sea cual sea el tono.
+          disabled && "bg-surface-2 text-ink-400",
+          className,
+        )}
+        {...props}
+      />
+    );
   },
 );
 
@@ -376,7 +459,16 @@ export interface ListItemAmountProps
 /** Monto en mono alineado a la derecha. Entradas en verde, salidas en tinta. */
 export const ListItemAmount = React.forwardRef<HTMLSpanElement, ListItemAmountProps>(
   function ListItemAmount({ className, direction, ...props }, ref) {
-    return <span ref={ref} className={cn(listItemAmount({ direction, className }))} {...props} />;
+    const { disabled } = React.useContext(ListItemContext);
+    return (
+      <span
+        ref={ref}
+        // El verde de una entrada ignoraba el estado de la fila: en una fila
+        // deshabilitada el monto quedaba mas vivo que el propio titulo.
+        className={cn(listItemAmount({ direction }), disabled && "text-ink-400", className)}
+        {...props}
+      />
+    );
   },
 );
 
@@ -410,11 +502,17 @@ export interface ListItemValueProps extends React.ComponentPropsWithoutRef<"span
  */
 export const ListItemValue = React.forwardRef<HTMLSpanElement, ListItemValueProps>(
   function ListItemValue({ className, children, chevron, showChevron = true, ...props }, ref) {
+    const { disabled } = React.useContext(ListItemContext);
     return (
       <span
         ref={ref}
         className={cn(
-          "flex flex-none items-center gap-2 font-mono text-[13px] text-ink-600",
+          // gap-3: en el prototipo el valor mono 13 y el caret 15 son hermanos
+          // directos de la fila, separados por su gap de 12.
+          "flex flex-none items-center gap-3 font-mono text-[13px]",
+          // El gris 600 en reposo era MAS oscuro que el 400 del titulo
+          // deshabilitado, y la fila apagada se leia al reves.
+          disabled ? "text-ink-400" : "text-ink-600",
           className,
         )}
         {...props}
@@ -424,7 +522,10 @@ export const ListItemValue = React.forwardRef<HTMLSpanElement, ListItemValueProp
           // aria-hidden: la navegacion ya la anuncia el rol de la fila; un
           // glifo suelto solo añadiria ruido al lector de pantalla.
           <span
-            className="flex size-[15px] flex-none items-center justify-center text-ink-500"
+            className={cn(
+              "flex size-[15px] flex-none items-center justify-center",
+              disabled ? "text-ink-400" : "text-ink-500",
+            )}
             aria-hidden="true"
           >
             {chevron ?? CaretRight}
@@ -473,7 +574,11 @@ export const ListItemCheck = React.forwardRef<HTMLSpanElement, ListItemCheckProp
         className={cn(
           "flex size-[22px] flex-none items-center justify-center rounded-pill transition-colors duration-140 ease-out",
           isChecked
-            ? "bg-ink text-surface"
+            ? // En una fila deshabilitada el circulo tampoco puede quedarse a
+              // tinta plena: seria la pieza mas contrastada de la fila.
+              context.disabled
+              ? "bg-ink-400 text-surface"
+              : "bg-ink text-surface"
             : // El anillo va por inset shadow y no por border: 1.5px de borde
               // moverian el contenido medio pixel al alternar el estado.
               "shadow-[inset_0_0_0_1.5px_var(--tk-border-2)]",

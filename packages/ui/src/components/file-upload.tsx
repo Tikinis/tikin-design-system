@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
+import { Progress } from "./progress";
 
 /* Seccion 31 · File upload — EXTENSION.
  *
@@ -29,8 +30,15 @@ import { cn } from "../lib/cn";
  *     componente en el sistema. Duplicar aqui su recorte circular crearia dos
  *     fuentes de verdad para la misma pieza.
  *   · MULTI-ARCHIVO · PROGRESO GLOBAL — es composicion pura de una barra de
- *     progreso y dos botones, ambos ya componentes del sistema. Se muestra
- *     como story de composicion, no como API nueva.
+ *     progreso y dos botones, ambos ya componentes del sistema.
+ *
+ * Los dos se muestran como stories de composicion (`Progreso global` y `Foto de
+ * perfil` en file-upload.stories.tsx), no como API nueva: asi la seccion queda
+ * documentada entera sin duplicar componentes que ya existen.
+ *
+ * La barra de la fila TAMPOCO se dibuja aqui: la pinta `Progress`, que ya va
+ * sobre Radix Progress. De ahi salen aria-valuetext ("62%") y el data-state
+ * (loading/complete) que un <span role="progressbar"> a mano no da.
  *
  * GEOMETRIA (fuente: el HTML del prototipo, que aplica los estilos inline)
  *
@@ -227,9 +235,10 @@ export interface FileTypeIconProps extends Omit<GlyphProps, "children"> {
  * Es decorativo: nunca aporta nombre accesible. El nombre del archivo va
  * siempre en texto al lado.
  *
- * El color se puede anular por `className` — `cn()` deja ganar a la ultima
- * utilidad de color, que es lo que hace `FileUploadItem` cuando el tile ya tiñe
- * el glifo (listo, error).
+ * El color por formato SOLO vale suelto, como en el bloque TIPOS DE ARCHIVO. El
+ * color se puede anular por `className` — `cn()` deja ganar a la ultima utilidad
+ * de color — y eso es justo lo que hace `FileUploadItem`, cuyo tile ya tiñe el
+ * glifo en los cinco estados.
  */
 export const FileTypeIcon = React.forwardRef<SVGSVGElement, FileTypeIconProps>(
   function FileTypeIcon({ className, kind, name, ...props }, ref) {
@@ -309,8 +318,15 @@ const dropzone = cva(
 
 type DropzoneVariants = VariantProps<typeof dropzone>;
 
-/** Motivo por el que un archivo no se acepta. */
-export type FileRejectionReason = "type" | "size";
+/**
+ * Motivo por el que un archivo no se acepta.
+ *
+ * `count` es el sobrante de soltar varios sin `multiple`: el archivo era valido,
+ * pero no cabia. Va por el mismo canal que los demas porque el criterio de la
+ * seccion es que TODO descarte lleve motivo; si no, el consumidor no puede
+ * decir "solo se admite uno" y el usuario ve desaparecer archivos sin razon.
+ */
+export type FileRejectionReason = "type" | "size" | "count";
 
 export interface FileRejection {
   file: File;
@@ -338,7 +354,11 @@ export interface FileUploadProps
   onFilesRejected?: (rejections: FileRejection[]) => void;
   /** Titulo de la zona. Solo en `variant="dropzone"`. */
   label?: React.ReactNode;
-  /** Formatos y limite, en mono. El documento pide decirlos SIEMPRE. */
+  /**
+   * Formatos y limite, en mono. El documento pide decirlos SIEMPRE, asi que si
+   * no se pasa se derivan de `accept` y `maxSize`. Para callarla del todo —una
+   * pantalla que ya los explica arriba— pasa `hint={null}`.
+   */
   hint?: React.ReactNode;
   /** Texto en gris del campo compacto. Solo en `variant="inline"`. */
   placeholder?: React.ReactNode;
@@ -359,6 +379,80 @@ function matchesAccept(file: File, accept?: string): boolean {
     if (rule.endsWith("/*")) return type.startsWith(rule.slice(0, -1));
     return type === rule;
   });
+}
+
+/* Rotulos de formato a partir de `accept`, para la pista por defecto.
+ * ".pdf" -> pdf · "image/*" -> image · "application/pdf" -> pdf. Se dejan en
+ * minusculas: las mayusculas las pone `uppercase` en CSS, nunca toUpperCase(),
+ * para que el lector de pantalla no deletree "P-D-F". */
+function acceptLabels(accept?: string): string[] {
+  if (!accept) return [];
+  const labels: string[] = [];
+  const seen = new Set<string>();
+
+  for (const raw of accept.split(",")) {
+    const rule = raw.trim().toLowerCase();
+    if (!rule) continue;
+
+    const label = rule.startsWith(".")
+      ? rule.slice(1)
+      : rule.endsWith("/*")
+        ? rule.slice(0, -2)
+        : (rule.split("/")[1] ?? rule);
+
+    if (!label) continue;
+
+    // ".jpg,.jpeg" o ".jpg,image/jpeg" son UN formato para quien lee la pista:
+    // se agrupan por el mismo mapa que usa el glifo, y se enseña el primero.
+    const key = KIND_BY_EXTENSION[label] ?? label;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    labels.push(label);
+  }
+
+  return labels;
+}
+
+/* Base 1024 y como mucho un decimal, con coma decimal porque el texto es
+ * castellano: 10485760 -> "10 MB", 1572864 -> "1,5 MB". */
+function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unit = 0;
+
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  return `${String(Math.round(value * 10) / 10).replace(".", ",")} ${units[unit]}`;
+}
+
+/* La regla FORMATO Y PESO del documento es "di siempre los tipos y el limite
+ * antes de subir", y `accept`/`maxSize` ya son ese dato. Derivar la pista evita
+ * que una zona se quede muda por olvido del consumidor. */
+function defaultHint(accept?: string, maxSize?: number): React.ReactNode {
+  const labels = acceptLabels(accept);
+  const limit =
+    maxSize != null && Number.isFinite(maxSize) && maxSize > 0
+      ? `hasta ${formatBytes(maxSize)}`
+      : null;
+
+  if (labels.length === 0 && !limit) return null;
+
+  const list =
+    labels.length > 1
+      ? `${labels.slice(0, -1).join(", ")} o ${labels[labels.length - 1]}`
+      : labels[0];
+
+  return (
+    <>
+      {/* Solo la lista de formatos sube a mayusculas; "hasta 10 MB" no. */}
+      {list && <span className="uppercase">{list}</span>}
+      {list && limit && " · "}
+      {limit}
+    </>
+  );
 }
 
 /**
@@ -424,6 +518,10 @@ export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(f
   const localInput = React.useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = React.useState(false);
 
+  /* `undefined` (no pasada) se deriva; `null` la silencia a proposito. Se
+   * distinguen los dos casos para que el consumidor conserve la ultima palabra. */
+  const hintNode = hint === undefined ? defaultHint(accept, maxSize) : hint;
+
   /* dragenter y dragleave burbujean tambien desde los hijos: al pasar el
    * puntero del titulo a la pista el navegador emite leave+enter y el borde
    * parpadearia. Se cuenta la profundidad y solo se apaga al llegar a cero. */
@@ -446,6 +544,10 @@ export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(f
     // traer diez. Sin este recorte el consumidor recibiria mas de los que
     // pidio y tendria que volver a validarlo el mismo.
     const kept = multiple ? accepted : accepted.slice(0, 1);
+
+    // Y el sobrante no se cae en silencio: sale por `onFilesRejected` con
+    // motivo, como cualquier otro descarte.
+    for (const file of accepted.slice(kept.length)) rejected.push({ file, reason: "count" });
 
     if (kept.length > 0) onFilesAccepted?.(kept);
     if (rejected.length > 0) onFilesRejected?.(rejected);
@@ -566,7 +668,7 @@ export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(f
                 <UploadSimpleGlyph className="size-[26px]" />
               </span>
               <span className="font-display text-base font-medium text-ink">{label}</span>
-              {hint && <span className="font-mono text-xs text-ink-600">{hint}</span>}
+              {hintNode && <span className="font-mono text-xs text-ink-600">{hintNode}</span>}
             </>
           ))}
       </button>
@@ -643,24 +745,6 @@ const fileRowMeta = cva("shrink-0 font-mono text-[11px]", {
   defaultVariants: { status: "queued" },
 });
 
-const fileRowBar = cva(
-  "h-full rounded-full transition-[width] duration-200 ease-linear motion-reduce:transition-none",
-  {
-    variants: {
-      status: {
-        queued: "bg-ink",
-        uploading: "bg-ink",
-        // En pausa el relleno baja a gris: el documento lo pide para que una fila
-        // detenida no se confunda con una que avanza.
-        paused: "bg-ink-500",
-        done: "bg-ink",
-        error: "bg-ink",
-      },
-    },
-    defaultVariants: { status: "uploading" },
-  },
-);
-
 /* Boton de icono de la fila. 24 de lado para llegar al area tactil minima sin
    engordar la fila, que mide 60 en total. */
 const rowIconButton = cva(
@@ -698,6 +782,13 @@ export interface FileUploadItemProps extends Omit<
   meta?: React.ReactNode;
   /** Porcentaje 0–100. Dibuja la barra en `uploading` y en `paused`. */
   value?: number | null;
+  /**
+   * Por que fallo. Solo cuenta en `status="error"` y solo cambia el glifo: el
+   * documento dibuja el aspa (`ph-file-x`) en el error de peso y conserva la
+   * hoja del formato en el de tipo, porque ahi el dato util es justo cual era
+   * el formato. El texto del motivo lo escribe el consumidor en `meta`.
+   */
+  reason?: FileRejectionReason;
   /** Quita el archivo de la lista. El documento pide que SIEMPRE se pueda. */
   onRemove?: () => void;
   /** Vuelve a intentarlo. Solo se pinta en `status="error"`. */
@@ -727,6 +818,7 @@ export const FileUploadItem = React.forwardRef<HTMLLIElement, FileUploadItemProp
       status = "queued",
       meta,
       value = null,
+      reason,
       onRemove,
       onRetry,
       onResume,
@@ -746,37 +838,53 @@ export const FileUploadItem = React.forwardRef<HTMLLIElement, FileUploadItemProp
     return (
       <li ref={ref} data-status={status} className={cn(fileRow({ status }), className)} {...props}>
         <span className={fileRowTile({ status })}>
-          {status === "error" ? (
+          {status === "error" && reason !== "type" ? (
             <FileXGlyph className="size-[19px]" />
           ) : (
-            /* En `done` el tile ya tiñe de verde; se le pasa `text-current`
-               para que el glifo no imponga su color por formato encima. */
-            <FileTypeIcon name={name} className={status === "done" ? "text-current" : undefined} />
+            /* El tile SIEMPRE tiñe: tinta en cola/subiendo/pausado, verde en
+               listo, rojo en error. `text-current` hace que el glifo herede ese
+               color en vez de imponer el suyo por formato — sin esto un
+               extracto.pdf pintaba el glifo en rojo dentro de una fila que no
+               era de error, que es la senal mas confusa posible. */
+            <FileTypeIcon name={name} className="text-current" />
           )}
         </span>
 
-        <span className={cn("flex min-w-0 flex-1 flex-col", showBar ? "gap-[5px]" : "gap-px")}>
-          <span className="flex items-center justify-between gap-3">
-            <span className="truncate text-[13.5px] text-ink">{name}</span>
-            {metaNode != null && <span className={fileRowMeta({ status })}>{metaNode}</span>}
-          </span>
+        {/* Dos maquetaciones, como el prototipo: con barra, nombre y meta
+            comparten linea (justify-between) y la barra va debajo; sin barra,
+            la meta cae DEBAJO del nombre y alineada a la izquierda. */}
+        <div className={cn("flex min-w-0 flex-1 flex-col", showBar ? "gap-[5px]" : "gap-px")}>
+          {showBar ? (
+            <span className="flex items-center justify-between gap-3">
+              <span className="truncate text-[13.5px] text-ink">{name}</span>
+              {metaNode != null && <span className={fileRowMeta({ status })}>{metaNode}</span>}
+            </span>
+          ) : (
+            <>
+              <span className="truncate text-[13.5px] text-ink">{name}</span>
+              {metaNode != null && (
+                <span className={cn(fileRowMeta({ status }), "truncate")}>{metaNode}</span>
+              )}
+            </>
+          )}
 
           {showBar && (
-            <span
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(percent)}
+            /* La barra es `Progress`, no un role="progressbar" a mano: de Radix
+               salen aria-valuetext y data-state, y el sistema no acaba con dos
+               fuentes de verdad para la misma pieza. El tono en pausa se cambia
+               por la variable que el propio Progress expone. */
+            <Progress
+              value={percent}
               aria-label={`Progreso de ${name}`}
-              className="block h-[5px] overflow-hidden rounded-full bg-surface-2"
-            >
-              <span
-                className={cn("block", fileRowBar({ status }))}
-                style={{ width: `${percent}%` }}
-              />
-            </span>
+              className={cn(
+                "h-[5px]",
+                // En pausa el relleno baja a gris: el documento lo pide para
+                // que una fila detenida no se confunda con una que avanza.
+                status === "paused" && "[--tk-progress-fill:var(--tk-500)]",
+              )}
+            />
           )}
-        </span>
+        </div>
 
         {status === "queued" && <ClockGlyph className="size-[18px] shrink-0 text-ink-500" />}
         {status === "done" && <CheckCircleGlyph className="size-5 shrink-0 text-fg-success" />}

@@ -22,17 +22,42 @@ import { cn } from "../lib/cn";
  * La seccion 41 dibuja otra cosa: un ARO con cabeza, hecho con border, a 0.7s
  * lineal, en tres tamaños que no existen en Figma (40 no aparece por ningun
  * lado). Manda la seccion 41, porque es la unica de las dos fuentes que
- * especifica el componente suelto que se pide aqui, y porque es lo que ya pinta
- * el spinner interno de button.tsx. Quien quiera el glifo de Figma lo tiene en
- * la libreria de iconos; no se replica en este fichero para no tener dos
- * spinners distintos en la misma pantalla.
+ * especifica el componente suelto que se pide aqui. Quien quiera el glifo de
+ * Figma lo tiene en la libreria de iconos; no se replica en este fichero para
+ * no tener dos spinners distintos en la misma pantalla.
  *
- * GEOMETRIA (fuente: el HTML del prototipo, que aplica los estilos inline)
+ * DIVERGENCIA CONOCIDA CON EL SPINNER INTERNO DE BUTTON
+ * ----------------------------------------------------
+ * button.tsx no reutiliza este componente: pinta su propio aro
+ * (`size-4 animate-spin rounded-full border-2 ... border-t-transparent`). Son
+ * dos piezas distintas y hoy NO coinciden — Button gira a 1s (la duracion por
+ * defecto de animate-spin, no los 0.7s del documento) y tiene la geometria
+ * invertida, aro solido con cabeza transparente, mientras que el documento y
+ * `tone="inverse"` piden aro al 30% con cabeza plena. El documento pinta ademas
+ * el spinner del boton a 18, tamaño que este componente no ofrece. Unificar los
+ * dos es trabajo de button.tsx, no de aqui; queda escrito para que nadie
+ * suponga que ya estan alineados.
+ *
+ * GEOMETRIA — mandan las etiquetas del documento, no el render del prototipo
+ * -------------------------------------------------------------------------
  *
  *   S   16 · trazo 2      M   24 · trazo 2.5      L   40 · trazo 3
  *   aro --tk-border ("gris 230") · cabeza --tk-ink · 0.7s lineal infinita
  *   inline    spinner S + texto mono 13 en --tk-600, gap 10
  *   completa  wordmark Funnel Display 600/22 + spinner M, gap 14, fondo --tk-bg
+ *
+ * Esos numeros son el diametro EXTERIOR del aro, o sea caja con borde incluido:
+ * size-4 fija 16 de caja y el border-2 se come 2 por lado, asi que quedan 16
+ * exteriores con 12 de hueco interno. El HTML del prototipo escribe
+ * los mismos 16/24/40 en `width`/`height` inline, pero ese documento no declara
+ * `box-sizing: border-box` global (su unica aparicion esta en `.tk-field > input`),
+ * asi que ahi el borde suma por fuera y el circulo acaba midiendo 20/29/46. Eso
+ * es un descuido del prototipo, no una intencion: las etiquetas visibles dicen
+ * "S · 16" y son la unica cifra que el documento afirma. Se implementa en
+ * border-box —lo que hereda del preflight de Tailwind— y por tanto el render es
+ * un 25% menor que el del prototipo en S. Si alguna vez se decide lo contrario,
+ * el cambio es `size-5 border-2` / `size-[29px]` / `size-[46px]`, no tocar aqui
+ * a medias.
  *
  * TRES REGLAS DE USO QUE MANDAN SOBRE LA API
  * ------------------------------------------
@@ -157,8 +182,13 @@ const overlay = cva(
            manda, y el arranque siempre se monta antes. */
         screen: "fixed inset-0 z-50 bg-page",
         /* Carga por secciones: velo translucido sobre el trozo que se recarga.
-           Necesita un ancestro posicionado (`relative`) del que colgar. */
-        container: "absolute inset-0 z-10 bg-page/80",
+           Necesita un ancestro posicionado (`relative`) del que colgar.
+           El velo va en --tk-surface y no en --tk-bg porque lo que se recarga
+           suele ser una tarjeta blanca: con el crema de la pagina al 80% la
+           tarjeta se TIÑE en vez de atenuarse. Si la seccion vive directamente
+           sobre el fondo de pagina, el consumidor pasa `className="bg-page/80"`
+           y twMerge lo sustituye. */
+        container: "absolute inset-0 z-10 bg-surface/80",
       },
     },
     defaultVariants: { scope: "container" },
@@ -180,13 +210,22 @@ export interface LoadingOverlayProps
   /** Por defecto M (24) a pantalla completa y S (16) por seccion. */
   spinnerSize?: SpinnerProps["size"];
   /**
-   * Monta en `document.body`. Por defecto solo en `scope="screen"`.
+   * Monta en `document.body`. Por defecto en `scope="screen"` y siempre que se
+   * pase un `container`, porque pedir destino sin portal no haria nada.
    *
    * Un `position: fixed` se ancla al ancestro transformado mas cercano, no al
    * viewport. Cualquier `transform`, `filter` o `will-change` por encima
    * dejaria la pantalla de arranque encajada dentro de una tarjeta.
    */
   portal?: boolean;
+  /**
+   * Destino del portal. Por defecto `document.body`.
+   *
+   * Misma prop que `Modal` y `Tooltip`, por la misma razon: hay hosts (shadow
+   * DOM, un iframe, el contenedor de una prueba visual) donde `document.body`
+   * no es el sitio, y sin escape el componente queda inservible ahi.
+   */
+  container?: Element | DocumentFragment | null;
 }
 
 /**
@@ -200,6 +239,26 @@ export interface LoadingOverlayProps
  * decidir ni forma de cancelar, asi que secuestrar el tabulador solo dejaria al
  * usuario encerrado en una caja sin salida. Si necesitas semantica modal —
  * escape, foco atrapado, contenido de fondo inerte — usa `Modal`.
+ *
+ * CONTENCION DEL FONDO: ES DEL CONSUMIDOR, Y NO ES OPCIONAL EN `scope="screen"`
+ * ---------------------------------------------------------------------------
+ * La capa intercepta el raton (es un elemento opaco por encima), pero el
+ * tabulador no lo sabe: sin hacer nada mas, un usuario de teclado sigue
+ * recorriendo controles que no puede ver y sin foco visible — WCAG 2.4.3 y
+ * 2.4.7. Esto NO se arregla desde aqui: la capa no es duenna del contenido que
+ * tapa, y ponerse a inertizar el `body` a espaldas del consumidor es
+ * exactamente el tipo de efecto global que luego nadie puede deshacer. Lo
+ * correcto para una capa no descartable es marcar el fondo como inerte, y le
+ * toca a quien la monta:
+ *
+ *   <div inert={cargando ? "" : undefined}>{contenido}</div>
+ *   <LoadingOverlay open={cargando} scope="screen" />
+ *
+ * `inert` quita del recorrido del tabulador Y del arbol de accesibilidad todo el
+ * subarbol, que es justo lo que se quiere aqui. Por el mismo motivo tampoco se
+ * bloquea el scroll del `body` en `scope="screen"` (Modal si lo hace, pero via
+ * Radix Dialog, que es quien tiene la semantica modal): si lo necesitas,
+ * bloquealo tu junto con el `inert`.
  */
 export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayProps>(
   function LoadingOverlay(
@@ -212,21 +271,24 @@ export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayPro
       brand,
       spinnerSize,
       portal,
+      container,
       ...props
     },
     ref,
   ) {
-    /* document no existe durante el render del servidor, asi que el destino del
-       portal se resuelve en un efecto. El primer render cliente no pinta nada;
-       para una capa de espera es intrascendente y evita romper la hidratacion. */
-    const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
-    React.useEffect(() => {
-      setPortalTarget(document.body);
-    }, []);
-
     if (!open) return null;
 
-    const usePortal = portal ?? scope === "screen";
+    /* Resolver el portal en un efecto costaba un fotograma en blanco: en el
+       primer render cliente el destino aun era null y no se pintaba nada. Para
+       una pantalla de arranque ese fotograma es precisamente el que enseña la
+       aplicacion sin tapar, o sea lo unico que este componente existe para
+       evitar. Se resuelve durante el render, que es seguro en las dos puntas:
+       en servidor `document` no existe, asi que devuelve null y no se emite
+       portal (createPortal no funciona en SSR); en cliente el portal no aporta
+       nodos en la posicion del padre, asi que la hidratacion no ve diferencia
+       con el HTML del servidor. */
+    const usePortal = portal ?? (container != null || scope === "screen");
+    const portalTarget = container ?? (typeof document === "undefined" ? null : document.body);
 
     const node = (
       <div
@@ -240,7 +302,13 @@ export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayPro
         {...props}
       >
         {brand && (
-          <span className="font-display text-[22px] leading-none font-semibold tracking-[-0.01em] text-ink">
+          /* aria-hidden: el wordmark es decoracion de marca dentro de una
+             region viva. Sin esto el lector de pantalla anuncia "tikin
+             Cargando", que mezcla el nombre del producto con el estado. */
+          <span
+            aria-hidden="true"
+            className="font-display text-[22px] leading-none font-semibold tracking-[-0.01em] text-ink"
+          >
             {brand}
           </span>
         )}

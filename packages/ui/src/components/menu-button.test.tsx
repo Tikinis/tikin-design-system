@@ -208,6 +208,22 @@ describe("MenuButton", () => {
     expect(items[1]).toHaveFocus();
   });
 
+  it("cierra al hacer click fuera del panel", async () => {
+    render(
+      <>
+        <button type="button">Fuera</button>
+        <Menu />
+      </>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /acciones/i }));
+    await screen.findByRole("menu");
+
+    await userEvent.click(screen.getByRole("button", { name: "Fuera" }));
+
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  });
+
   it("no abre nada cuando esta deshabilitado", async () => {
     render(<Menu disabled />);
     const trigger = screen.getByRole("button", { name: /acciones/i });
@@ -280,6 +296,20 @@ describe("SplitButton", () => {
     expect(screen.getByRole("button", { name: "Otras formas de enviar" })).toBeInTheDocument();
   });
 
+  it("los dos segmentos se anuncian como un grupo, no como botones sueltos", () => {
+    render(<Split />);
+    // Sin el role, "Más opciones" queda huerfano: nada lo relaciona con "Enviar".
+    const grupo = screen.getByRole("group");
+    expect(grupo).toContainElement(screen.getByRole("button", { name: "Enviar" }));
+    expect(grupo).toContainElement(screen.getByRole("button", { name: "Más opciones" }));
+  });
+
+  it("el consumidor puede renombrar o cambiar el role del contenedor", () => {
+    render(<Split aria-label="Envío" role="toolbar" />);
+    expect(screen.getByRole("toolbar", { name: "Envío" })).toBeInTheDocument();
+    expect(screen.queryByRole("group")).not.toBeInTheDocument();
+  });
+
   it("deshabilitado no dispara la accion ni abre el menu", async () => {
     const onAction = vi.fn();
     render(<Split disabled onAction={onAction} />);
@@ -326,6 +356,51 @@ describe("ButtonGroup", () => {
     expect(items).toHaveLength(3);
     expect(items.filter((i) => i.getAttribute("aria-checked") === "true")).toHaveLength(1);
     expect(screen.getByRole("radio", { name: "Día" })).toBeChecked();
+  });
+
+  it("sin value ni defaultValue arranca activo el primer item", () => {
+    // La regla del documento — "siempre hay exactamente una activa" — tambien
+    // vale en el primer pintado: un radiogroup sin ninguna marcada no existe.
+    render(
+      <ButtonGroup aria-label="Rango">
+        <ButtonGroupItem value="dia">Día</ButtonGroupItem>
+        <ButtonGroupItem value="semana">Semana</ButtonGroupItem>
+        <ButtonGroupItem value="mes">Mes</ButtonGroupItem>
+      </ButtonGroup>,
+    );
+
+    const items = screen.getAllByRole("radio");
+    expect(items.filter((i) => i.getAttribute("aria-checked") === "true")).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: "Día" })).toBeChecked();
+  });
+
+  it("encuentra el primer item aunque venga envuelto en un fragmento", () => {
+    // Los items casi nunca son hijos directos: suelen salir de un .map().
+    render(
+      <ButtonGroup aria-label="Rango">
+        <>
+          {["dia", "semana"].map((v) => (
+            <ButtonGroupItem key={v} value={v}>
+              {v}
+            </ButtonGroupItem>
+          ))}
+        </>
+      </ButtonGroup>,
+    );
+
+    expect(screen.getByRole("radio", { name: "dia" })).toBeChecked();
+  });
+
+  it("controlado sin defaultValue respeta el valor del padre, no el primer item", () => {
+    render(
+      <ButtonGroup aria-label="Rango" value="mes" onValueChange={() => {}}>
+        <ButtonGroupItem value="dia">Día</ButtonGroupItem>
+        <ButtonGroupItem value="mes">Mes</ButtonGroupItem>
+      </ButtonGroup>,
+    );
+
+    expect(screen.getByRole("radio", { name: "Mes" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Día" })).not.toBeChecked();
   });
 
   it("cambia la activa al pulsar otra opcion", async () => {

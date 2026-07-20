@@ -78,6 +78,42 @@ describe("NotificationItem", () => {
     expect(screen.getByRole("button")).toHaveAccessibleDescription("2:14 PM Sin leer");
   });
 
+  it("no describe con una hora vacia", () => {
+    // time="" pintaba un <span> vacio y lo referenciaba: el lector abria una
+    // descripcion y no decia nada.
+    renderEnLista(
+      <NotificationItem onSelect={() => {}} time="">
+        Recibiste $500.000
+      </NotificationItem>,
+    );
+    // Se comprueba el atributo, no la descripcion calculada: un <span> vacio
+    // referenciado tambien da descripcion "", asi que solo la ausencia del
+    // aria-describedby distingue el arreglo del fallo.
+    expect(screen.getByRole("button")).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("con href y onSelect a la vez, onSelect recibe el evento y puede frenar la navegacion", () => {
+    // Mejora progresiva: el href es real (abrir en otra pestaña, copiar) y el
+    // clic normal lo resuelve el router. Sin el evento no habria forma.
+    const onSelect = vi.fn((event: React.MouseEvent<HTMLElement>) => event.preventDefault());
+    renderEnLista(
+      <NotificationItem href="/notificaciones/12" onSelect={onSelect}>
+        Nuevo inicio de sesion
+      </NotificationItem>,
+    );
+    const enlace = screen.getByRole("link");
+    const evento = new MouseEvent("click", { bubbles: true, cancelable: true });
+    enlace.dispatchEvent(evento);
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(evento.defaultPrevented).toBe(true);
+  });
+
+  it("deja pasar los atributos nativos del <li>, incluido title", () => {
+    renderEnLista(<NotificationItem title="Movimiento del 2 de mayo">X</NotificationItem>);
+    expect(screen.getByRole("listitem")).toHaveAttribute("title", "Movimiento del 2 de mayo");
+  });
+
   it("anuncia el estado sin leer con texto, no solo con el punto", () => {
     const { rerender } = render(
       <ul>
@@ -128,6 +164,33 @@ describe("NotificationItem", () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it("cada accion se describe con el texto de su notificacion", () => {
+    // Con varias solicitudes en pantalla hay N botones "Pagar" identicos: quien
+    // navega por botones no sabria a quien le esta pagando.
+    renderEnLista(
+      <>
+        <NotificationItem
+          tone="request"
+          time="12:05 PM"
+          actions={<NotificationAction>Pagar</NotificationAction>}
+        >
+          Carlos te pide $80.000
+        </NotificationItem>
+        <NotificationItem
+          tone="request"
+          time="12:09 PM"
+          actions={<NotificationAction>Pagar</NotificationAction>}
+        >
+          Ana te pide $12.000
+        </NotificationItem>
+      </>,
+    );
+
+    const [carlos, ana] = screen.getAllByRole("button", { name: "Pagar" });
+    expect(carlos).toHaveAccessibleDescription("Carlos te pide $80.000");
+    expect(ana).toHaveAccessibleDescription("Ana te pide $12.000");
+  });
+
   it("acepta un icono propio y no lo expone al lector de pantalla", () => {
     renderEnLista(
       <NotificationItem icon={<span data-testid="glifo">*</span>}>Novedad</NotificationItem>,
@@ -168,6 +231,31 @@ describe("NotificationAction", () => {
     // Importa para el texto accesible y para lo que se copia al portapapeles.
     render(<NotificationAction>Rechazar</NotificationAction>);
     expect(screen.getByRole("button")).toHaveTextContent("Rechazar");
+  });
+
+  it("fuera de una notificacion no inventa descripcion", () => {
+    render(<NotificationAction>Pagar</NotificationAction>);
+    expect(screen.getByRole("button")).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("el aria-describedby del consumidor gana al del componente", () => {
+    render(
+      <ul>
+        <NotificationItem
+          actions={
+            <>
+              <NotificationAction aria-describedby="saldo">Pagar</NotificationAction>
+              <span id="saldo">Saldo disponible $95.000</span>
+            </>
+          }
+        >
+          Carlos te pide $80.000
+        </NotificationItem>
+      </ul>,
+    );
+    expect(screen.getByRole("button", { name: "Pagar" })).toHaveAccessibleDescription(
+      "Saldo disponible $95.000",
+    );
   });
 
   it("respeta disabled", async () => {

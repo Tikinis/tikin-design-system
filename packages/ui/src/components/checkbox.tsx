@@ -65,9 +65,16 @@ const checkboxBox = cva(
     /* Disabled gana por especificidad, no por orden de fuente: el par
        `:disabled[data-state=checked]` puntua (0,3,0) contra el (0,2,0) de
        `[data-state=checked]`. Sin esto, cual de los dos fondos gana dependeria
-       del orden en que Tailwind emita las variantes. */
+       del orden en que Tailwind emita las variantes.
+       El refuerzo tiene que cubrir fondo Y borde, no solo el fondo: la variante
+       sin error apaga la sombra al marcar (`data-[state=checked]:shadow-none`)
+       y esa regla empata a (0,2,0) con `disabled:shadow-…`, asi que ganaba por
+       orden de fuente y dejaba la casilla deshabilitada+marcada como un
+       cuadrado surface-2 SIN borde, contra lo que pide CHECKBOX · ESTADOS. */
     "disabled:bg-surface-2 disabled:shadow-[inset_0_0_0_1.5px_var(--tk-border)]",
     "disabled:data-[state=checked]:bg-surface-2 disabled:data-[state=indeterminate]:bg-surface-2",
+    "disabled:data-[state=checked]:shadow-[inset_0_0_0_1.5px_var(--tk-border)]",
+    "disabled:data-[state=indeterminate]:shadow-[inset_0_0_0_1.5px_var(--tk-border)]",
     // La marca de un checkbox deshabilitado sigue siendo legible: gris, no
     // blanca sobre gris.
     "disabled:text-ink-400",
@@ -168,7 +175,19 @@ export const Checkbox = React.forwardRef<
     <CheckboxPrimitive.Root
       ref={ref}
       id={boxId}
-      className={cn(checkboxBox({ invalid }), className)}
+      className={cn(
+        checkboxBox({ invalid }),
+        /* ÁREA TÁCTIL. La fila mide 44 de alto pero la casilla solo 22 y va
+           centrada, asi que las dos bandas de 11 por encima y por debajo de
+           ella eran espacio muerto: un pulgar que apunta un poco alto no
+           acertaba a nada. Este pseudo invisible estira SOLO la zona de clic
+           hasta los 44, sin tocar el dibujo de la casilla.
+           Va unicamente cuando hay label: sin el, la fila la compone el
+           consumidor y una zona que sobresale 11 por arriba y por abajo
+           pisaria a sus vecinos (la matriz de estados, sin ir mas lejos). */
+        label !== undefined && "before:absolute before:inset-x-0 before:-inset-y-[11px]",
+        className,
+      )}
       aria-invalid={invalid || undefined}
       {...props}
     >

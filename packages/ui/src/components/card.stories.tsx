@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Card, CardFeature, CardMedia, CardStat } from "./card";
 
@@ -64,6 +64,19 @@ const IconoTendencia = () => (
   </svg>
 );
 
+const IconoTendenciaBaja = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d="M3 7 9 13l4-4 8 8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M15 17h6v-6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconoTendenciaPlana = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d="M4 12h16" strokeLinecap="round" />
+  </svg>
+);
+
 const IconoAbrir = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="M7 17 17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" />
@@ -80,28 +93,36 @@ const ImagenDemo = () => (
 );
 
 /** Sparkline del documento: relleno lima que se desvanece + linea en tinta. */
-const Sparkline = () => (
-  <svg viewBox="0 0 240 72" preserveAspectRatio="none" aria-hidden="true">
-    <defs>
-      <linearGradient id="tk-spark" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.45" />
-        <stop offset="100%" stopColor="var(--color-lime)" stopOpacity="0" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M0,58 L26,52 L52,55 L78,44 L104,47 L130,36 L156,39 L182,26 L208,22 L240,12 L240,72 L0,72 Z"
-      fill="url(#tk-spark)"
-    />
-    <path
-      d="M0,58 L26,52 L52,55 L78,44 L104,47 L130,36 L156,39 L182,26 L208,22 L240,12"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+const Sparkline = () => {
+  /* El id del gradiente tiene que ser unico por instancia: las stories Stat y
+     Tres tipos conviven en la misma pagina de autodocs, y dos <linearGradient>
+     con el mismo id son HTML invalido — el navegador resuelve `url(#...)`
+     contra el primero que encuentre, asi que el relleno del segundo sparkline
+     depende del orden de montaje. */
+  const idRelleno = useId();
+  return (
+    <svg viewBox="0 0 240 72" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id={idRelleno} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.45" />
+          <stop offset="100%" stopColor="var(--color-lime)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0,58 L26,52 L52,55 L78,44 L104,47 L130,36 L156,39 L182,26 L208,22 L240,12 L240,72 L0,72 Z"
+        fill={`url(#${idRelleno})`}
+      />
+      <path
+        d="M0,58 L26,52 L52,55 L78,44 L104,47 L130,36 L156,39 L182,26 L208,22 L240,12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+};
 
 const Etiqueta = ({ children }: { children: ReactNode }) => (
   <span className="font-meta text-[10px] tracking-[0.06em] text-ink-500 uppercase">{children}</span>
@@ -295,7 +316,15 @@ export const Stat: Story = {
 /** La pildora colorea la tendencia; el signo lo escribe quien usa el componente. */
 export const Tendencias: Story = {
   name: "Tendencias del stat",
-  parameters: { controls: { disable: true } },
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          'El color de la pildora nunca es el unico portador de la tendencia: el componente añade un texto solo-lector ("al alza", "a la baja", "sin cambio") delante del delta, y la muestra acompaña cada caso de su icono para quien no distinga verde de rojo. Se puede sustituir con `trendLabel`, o silenciar con `trendLabel=""` cuando el delta ya lo dice con palabras.',
+      },
+    },
+  },
   render: () => (
     <div className="grid gap-4 sm:grid-cols-3">
       <CardStat
@@ -311,6 +340,7 @@ export const Tendencias: Story = {
         value="$ 312.000"
         delta="8.1%"
         trend="down"
+        trendIcon={<IconoTendenciaBaja />}
         comparison="vs $ 289.000"
       />
       <CardStat
@@ -318,6 +348,7 @@ export const Tendencias: Story = {
         value="$ 90.000"
         delta="0.0%"
         trend="flat"
+        trendIcon={<IconoTendenciaPlana />}
         comparison="sin cambios"
       />
     </div>
@@ -344,7 +375,6 @@ export const TresTipos: Story = {
         actionLabel="Ver detalle de la tarjeta"
       />
       <CardStat
-        className="min-h-[300px]"
         label="Ahorro del mes"
         value="$ 480.000"
         delta="12.4%"

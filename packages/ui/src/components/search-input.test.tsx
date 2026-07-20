@@ -14,6 +14,36 @@ import { SearchInput } from "./search-input";
  * que limpiar avise a `onChange` como lo haria una pulsacion de tecla, que el
  * foco no se pierda y que Escape no se trague el evento cuando no lo usa. */
 
+/**
+ * Reproduce el contrato del DismissableLayer de Radix, que es lo que hay debajo
+ * del Modal y del Popover de este mismo repo: escucha Escape sobre `document`
+ * EN FASE DE CAPTURA — o sea antes de que el evento toque al <input> — y solo
+ * se cierra si nadie ha marcado el evento con `preventDefault`.
+ *
+ * No se usa el Modal real a proposito: aqui lo que se prueba es exactamente ese
+ * contrato, sin arrastrar el trampeo de foco ni el portal, que en jsdom añaden
+ * ruido y no cambian el resultado.
+ */
+function CapaDescartable({
+  onDismiss,
+  children,
+}: {
+  onDismiss: () => void;
+  children: React.ReactNode;
+}) {
+  React.useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (event.defaultPrevented) return;
+      event.preventDefault();
+      onDismiss();
+    };
+    document.addEventListener("keydown", handler, { capture: true });
+    return () => document.removeEventListener("keydown", handler, { capture: true });
+  }, [onDismiss]);
+  return <>{children}</>;
+}
+
 describe("SearchInput", () => {
   it("tiene nombre accesible aunque no se vea ninguna etiqueta", () => {
     // El placeholder NO es un nombre accesible: desaparece al escribir.
@@ -98,29 +128,84 @@ describe("SearchInput", () => {
     expect(input).toHaveFocus();
   });
 
-  it("con el campo vacio, Escape sigue subiendo para que se cierre lo que lo envuelva", async () => {
+  it("con texto, Escape no llega al ancestro de React que lo envuelve", async () => {
     const onEscapeArriba = vi.fn();
-    const { rerender } = render(
+    render(
       <div onKeyDown={onEscapeArriba}>
         <SearchInput defaultValue="Valentina" />
       </div>,
     );
-    const input = screen.getByRole("searchbox");
-    input.focus();
+    screen.getByRole("searchbox").focus();
 
     // Con texto, el buscador se queda el evento: Escape significa "limpiar".
     await userEvent.keyboard("{Escape}");
     expect(onEscapeArriba).not.toHaveBeenCalled();
+  });
 
-    // Ya vacio, el mismo Escape debe llegar al modal o al popover de arriba.
-    rerender(
+  it("recien montado y vacio, Escape sube al ancestro desde la primera pulsacion", async () => {
+    /* Montaje limpio, no un rerender: React ignora `defaultValue` en un
+       componente ya montado, asi que reutilizar el del test anterior nunca
+       ejercitaria el caso de un buscador que nace vacio. */
+    const onEscapeArriba = vi.fn();
+    render(
       <div onKeyDown={onEscapeArriba}>
-        <SearchInput defaultValue="" />
+        <SearchInput />
       </div>,
     );
     screen.getByRole("searchbox").focus();
+
     await userEvent.keyboard("{Escape}");
     expect(onEscapeArriba).toHaveBeenCalledTimes(1);
+  });
+
+  it("dentro de una capa que se cierra con Escape, la primera pulsacion solo limpia", async () => {
+    const onDismiss = vi.fn();
+    render(
+      <CapaDescartable onDismiss={onDismiss}>
+        <SearchInput defaultValue="Valentina" />
+      </CapaDescartable>,
+    );
+    const input = screen.getByRole<HTMLInputElement>("searchbox");
+    input.focus();
+
+    // Una sola pulsacion NO puede vaciar y cerrar a la vez.
+    await userEvent.keyboard("{Escape}");
+    expect(input.value).toBe("");
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    // La segunda, ya con el campo vacio, si cierra la capa.
+    await userEvent.keyboard("{Escape}");
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("readOnly no ofrece limpiar ni se vacia con Escape", async () => {
+    const onClear = vi.fn();
+    render(<SearchInput readOnly defaultValue="Valentina" onClear={onClear} />);
+    const input = screen.getByRole<HTMLInputElement>("searchbox");
+
+    // El setter nativo que usa `clear` no respeta readOnly: si la X existiera,
+    // un campo de solo lectura se podria vaciar.
+    expect(screen.queryByRole("button", { name: "Limpiar" })).not.toBeInTheDocument();
+
+    input.focus();
+    await userEvent.keyboard("{Escape}");
+    expect(input.value).toBe("Valentina");
+    expect(onClear).not.toHaveBeenCalled();
+  });
+
+  it("en carga el aro ocupa el hueco de la lupa", () => {
+    // El comportamiento nuclear del bloque LUPA + LIMPIAR: "en carga, la lupa se
+    // reemplaza por un spinner". Se mira la estructura, no las clases: la lupa
+    // es un <svg> y el aro no.
+    const { rerender } = render(<SearchInput />);
+    const hueco = () => screen.getByRole("searchbox").previousElementSibling as HTMLElement;
+
+    expect(hueco().querySelector("svg")).not.toBeNull();
+
+    rerender(<SearchInput loading />);
+    expect(hueco().querySelector("svg")).toBeNull();
+    // El hueco no se queda vacio: se reemplaza, no se borra.
+    expect(hueco().firstElementChild).not.toBeNull();
   });
 
   it("con clearable={false} no pinta la X y Escape no limpia", async () => {

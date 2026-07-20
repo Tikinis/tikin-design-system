@@ -1,7 +1,16 @@
+import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Snackbar, SnackbarProvider, SnackbarViewport, type SnackbarProps } from "./snackbar";
+import { Toast } from "radix-ui";
+import {
+  Snackbar,
+  SnackbarAction,
+  SnackbarClose,
+  SnackbarProvider,
+  SnackbarViewport,
+  type SnackbarProps,
+} from "./snackbar";
 
 /* Tests de COMPORTAMIENTO, no de apariencia. Las medidas (r12, padding 12/16,
  * barra de 3px, mono 13) se verifican contra el navegador: jsdom no aplica CSS,
@@ -142,6 +151,28 @@ describe("Snackbar", () => {
 
     // El foco va a la <ol>, no a la region que la envuelve.
     expect(screen.getByRole("list")).toHaveFocus();
+  });
+
+  it("con countdown=ring pinta el anillo y le pasa la circunferencia exacta", () => {
+    setup({ countdown: "ring", duration: 5000 });
+
+    // 2·π·9 = 56,548…, no el 57 redondeado del prototipo: si se redondea, el
+    // trazo no cierra justo al agotarse el plazo.
+    const svg = snack()?.querySelector("svg");
+    expect(svg?.style.getPropertyValue("--tk-snack-ring-c")).toBe(String(2 * Math.PI * 9));
+
+    // El arco animado es el unico con la duracion en linea, y va sobre el
+    // mismo plazo que el temporizador.
+    expect(cuenta()?.tagName.toLowerCase()).toBe("circle");
+    expect(cuenta()?.style.animationDuration).toBe("5000ms");
+  });
+
+  it("con countdown=ring el icono cede la ranura leading al anillo", () => {
+    setup({ countdown: "ring", icon: <svg data-testid="icono-propio" /> });
+
+    // Documentado en el JSDoc de `icon`: solo hay una ranura y la ocupa el
+    // anillo. Si algun dia se pintan los dos, este test lo delata.
+    expect(screen.queryByTestId("icono-propio")).not.toBeInTheDocument();
   });
 
   it("en modo controlado no aparece mientras open sea false", () => {
@@ -319,5 +350,125 @@ describe("Snackbar · temporizador", () => {
     // ...y por tanto su cuenta tiene que nacer congelada, no vaciandose sobre
     // un plazo que nadie esta contando.
     expect(cuenta()?.style.animationPlayState).toBe("paused");
+  });
+
+  /* Regresion: la cuenta ignoraba la duracion heredada del provider y se
+   * quedaba en el defecto de 5 s. Con `<SnackbarProvider duration={8000}>` —
+   * 8 s es el tope del rango 5-8 que pide el documento — la barra se vaciaba a
+   * los 5 s y el cierre real llegaba a los 8. */
+  it("la cuenta sigue la duracion heredada del provider, no el defecto", () => {
+    vi.useFakeTimers();
+    const onOpenChange = vi.fn();
+    render(
+      <SnackbarProvider duration={8000}>
+        <Snackbar defaultOpen message="Movimiento eliminado" onOpenChange={onOpenChange} />
+        <SnackbarViewport />
+      </SnackbarProvider>,
+    );
+
+    expect(cuenta()?.style.animationDuration).toBe("8000ms");
+
+    // Y el temporizador real coincide: a los 5,2 s sigue en pantalla.
+    avanzar(5200);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    avanzar(3000);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("la duracion propia del snackbar gana a la del provider", () => {
+    vi.useFakeTimers();
+    const onOpenChange = vi.fn();
+    render(
+      <SnackbarProvider duration={8000}>
+        <Snackbar
+          defaultOpen
+          duration={3000}
+          message="Movimiento eliminado"
+          onOpenChange={onOpenChange}
+        />
+        <SnackbarViewport />
+      </SnackbarProvider>,
+    );
+
+    expect(cuenta()?.style.animationDuration).toBe("3000ms");
+    avanzar(3100);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("Snackbar · viewport", () => {
+  /* Toast.Viewport exige el contexto del provider: sin el, Radix revienta. */
+  const renderViewport = (props: React.ComponentProps<typeof SnackbarViewport> = {}) =>
+    render(
+      <SnackbarProvider>
+        <SnackbarViewport {...props} />
+      </SnackbarProvider>,
+    );
+
+  it("bottom-center centra la lista y bottom-left es el defecto", () => {
+    const { unmount } = renderViewport();
+    expect(screen.getByRole("list").className).toContain("left-0");
+    unmount();
+
+    renderViewport({ placement: "bottom-center" });
+    expect(screen.getByRole("list").className).toContain("-translate-x-1/2");
+  });
+
+  it("el consumidor puede sacar el viewport de fixed por className", () => {
+    // Es lo que hacen las matrices de la documentacion: sin esto no se pueden
+    // pintar varios casos en linea.
+    renderViewport({ className: "static" });
+    const cls = screen.getByRole("list").className;
+    expect(cls).toContain("static");
+    expect(cls).not.toContain("fixed");
+  });
+});
+
+/* Las piezas sueltas no encajan dentro de `<Snackbar>` — su API no acepta
+ * children a proposito — asi que se prueban donde de verdad se usan: dentro de
+ * un `Toast.Root` compuesto a mano. */
+describe("Snackbar · piezas sueltas", () => {
+  function setupPiezas() {
+    const onAction = vi.fn();
+    const onOpenChange = vi.fn();
+    render(
+      <SnackbarProvider>
+        <Toast.Root defaultOpen duration={Infinity} onOpenChange={onOpenChange}>
+          <Toast.Title>Movimiento eliminado</Toast.Title>
+          <SnackbarClose className="px-0">Cerrar</SnackbarClose>
+          <SnackbarAction altText="Deshacer el borrado del movimiento" onClick={onAction}>
+            Deshacer
+          </SnackbarAction>
+        </Toast.Root>
+        <SnackbarViewport />
+      </SnackbarProvider>,
+    );
+    return { onAction, onOpenChange };
+  }
+
+  it("SnackbarAction dispara su onClick y cierra la pieza", async () => {
+    const { onAction, onOpenChange } = setupPiezas();
+
+    await userEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("SnackbarClose cierra sin ejecutar la accion", async () => {
+    const { onAction, onOpenChange } = setupPiezas();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    expect(onAction).not.toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("las dos piezas dejan sobreescribir estilos por className", () => {
+    setupPiezas();
+    const cls = screen.getByRole("button", { name: "Cerrar" }).className;
+    expect(cls).toContain("px-0");
+    // tailwind-merge tiene que descartar el px-2.5 propio, no acumularlo.
+    expect(cls).not.toContain("px-2.5");
   });
 });

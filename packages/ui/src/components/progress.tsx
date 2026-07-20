@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Progress as ProgressPrimitive } from "radix-ui";
+import * as ProgressPrimitive from "radix-ui/progress";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -53,6 +53,13 @@ import { cn } from "../lib/cn";
  * Geometria del circular. Se declara en unidades de viewBox: el SVG escala
  * entero con `diameter`, asi que el trazo y la cifra guardan su proporcion.
  * ------------------------------------------------------------------------- */
+/* El paquete no lleva @types/node y su tsconfig no se toca en este encargo, asi
+ * que `process` se declara aqui como opcional. Se escribe con la forma literal
+ * `process.env.NODE_ENV` a proposito: es la que los empaquetadores sustituyen
+ * por una constante, de modo que el aviso de mas abajo desaparece del bundle
+ * de produccion en vez de viajar como codigo muerto. */
+declare const process: { env?: { NODE_ENV?: string } } | undefined;
+
 const VIEWBOX = 96;
 const RADIUS = 38;
 const STROKE = 12;
@@ -110,7 +117,12 @@ const progressArc = cva(
   {
     variants: {
       indeterminate: {
-        true: "animate-spin motion-reduce:animate-none",
+        /* Sin animacion, un arco congelado al 30% se lee como un progreso
+           determinado del 30%: mentiria. Igual que el lineal se abre a barra
+           completa atenuada, aqui el arco se cierra en circulo completo — el
+           dasharray de la CSS gana al atributo del SVG — y baja de opacidad,
+           que no se confunde con ningun valor concreto. */
+        true: "animate-spin motion-reduce:animate-none motion-reduce:opacity-60 motion-reduce:[stroke-dasharray:none]",
         false: "transition-[stroke-dasharray] duration-300 ease-out motion-reduce:transition-none",
       },
     },
@@ -144,7 +156,11 @@ export interface ProgressProps
   showValue?: boolean;
   /** Clases del relleno (barra o arco). `className` va siempre a la pista. */
   indicatorClassName?: string;
-  /** Clases de la fila que envuelve barra + check. Solo con `showCheck`. */
+  /**
+   * Clases de la fila que envuelve barra + check. Solo con `showCheck` y
+   * `shape="linear"`; en circular no hay fila y se avisa por consola en
+   * desarrollo.
+   */
   rowClassName?: string;
 }
 
@@ -213,6 +229,19 @@ export const Progress = React.forwardRef<
   const percent = clamped == null ? 0 : (clamped / safeMax) * 100;
   const isComplete = clamped != null && clamped >= safeMax;
 
+  /* `showCheck` y `rowClassName` construyen la fila del check, que solo existe
+   * en lineal: con `circular` se descartaban sin decir nada. No se parte el tipo
+   * en una union discriminada a proposito — eso le quitaria al consumidor poder
+   * pasar `shape` en una variable — asi que el aviso va en desarrollo. */
+  const ignoraPropsDeFila = shape !== "linear" && (showCheck || rowClassName != null);
+  React.useEffect(() => {
+    if (!ignoraPropsDeFila) return;
+    if (typeof process !== "undefined" && process?.env?.NODE_ENV === "production") return;
+    console.warn(
+      '[Tikin/Progress] `showCheck` y `rowClassName` solo aplican a shape="linear"; con shape="circular" se ignoran.',
+    );
+  }, [ignoraPropsDeFila]);
+
   const root = (
     <ProgressPrimitive.Root
       ref={ref}
@@ -240,11 +269,16 @@ export const Progress = React.forwardRef<
           aria-hidden="true"
           className="text-ink"
         >
+          {/* La pista lleva su propio data-state porque no es un Indicator de
+              Radix y no lo hereda. Sin el, al 100% el lineal viraba a verde y
+              el circular se quedaba gris: el mismo estado pintado de dos
+              maneras, justo lo que niega la decision (a) de la cabecera. */}
           <circle
             cx={VIEWBOX / 2}
             cy={VIEWBOX / 2}
             r={RADIUS}
-            className="fill-none stroke-surface-2"
+            data-state={isIndeterminate ? "indeterminate" : isComplete ? "complete" : "loading"}
+            className="fill-none stroke-surface-2 data-[state=complete]:stroke-tint-success"
             strokeWidth={STROKE}
           />
           {/* asChild para que el <circle> reciba el data-state de Radix y las
@@ -256,7 +290,10 @@ export const Progress = React.forwardRef<
               r={RADIUS}
               className={cn(progressArc({ indeterminate: isIndeterminate }), indicatorClassName)}
               strokeWidth={STROKE}
-              strokeLinecap="round"
+              /* Un tramo de longitud cero con extremo redondeado NO se dibuja
+                 vacio: el navegador pinta el propio remate, un punto de 12 a
+                 las 12 en punto. Al 0% no hay arco, asi que tampoco remate. */
+              strokeLinecap={percent > 0 || isIndeterminate ? "round" : "butt"}
               strokeDasharray={
                 isIndeterminate
                   ? `${CIRCUMFERENCE * 0.3} ${CIRCUMFERENCE}`

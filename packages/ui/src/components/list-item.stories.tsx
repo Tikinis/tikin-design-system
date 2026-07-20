@@ -283,22 +283,65 @@ export const Deshabilitada: Story = {
   ),
 };
 
-/** Alto 44 / 56 / 68. El 68 es el unico que cumple el ">= 64 en movil". */
+/** Alto 44 / 56 / 68 sin leading. Con avatar o caja el suelo sube: ver abajo. */
 export const Tamanos: Story = {
   name: "Tamaños",
-  parameters: { controls: { disable: true } },
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story: [
+          "El `min-height` es un **suelo**, no una altura fija: el tamaño escala tambien el padding vertical, pero un leading de 38 (caja) o 42 (circulo) es mas alto que la caja de texto y empuja la fila por encima de su nominal.",
+          "",
+          "| size | solo titulo | + caja 38 | + circulo 42 |",
+          "| --- | --- | --- | --- |",
+          "| `sm` | 44 | 54 | 58 |",
+          "| `md` | 56 | 66 | 70 |",
+          "| `lg` | 68 | 70 | 74 |",
+          "",
+          '`md` conserva el padding 14 del prototipo; `lg` sube a 16 para seguir siendo el mas alto tambien con avatar, que es lo que cumple el ">= 64 en movil" del documento.',
+        ].join("\n"),
+      },
+    },
+  },
   render: () => (
-    <List className="w-[360px]">
-      {(["sm", "md", "lg"] as const).map((s) => (
-        <ListItem
-          key={s}
-          size={s}
-          leading={<ListItemIcon shape="box">{Bank}</ListItemIcon>}
-          title={`Tamaño ${s}`}
-          trailing={<ListItemAmount>{s === "sm" ? "44" : s === "md" ? "56" : "68"}</ListItemAmount>}
-        />
-      ))}
-    </List>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+          sin leading · 44 / 56 / 68
+        </span>
+        <List className="w-[360px]">
+          {(["sm", "md", "lg"] as const).map((s) => (
+            <ListItem
+              key={s}
+              size={s}
+              title={`Tamaño ${s}`}
+              trailing={
+                <ListItemAmount>{s === "sm" ? "44" : s === "md" ? "56" : "68"}</ListItemAmount>
+              }
+            />
+          ))}
+        </List>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+          con caja 38 · el leading sube el suelo
+        </span>
+        <List className="w-[360px]">
+          {(["sm", "md", "lg"] as const).map((s) => (
+            <ListItem
+              key={s}
+              size={s}
+              leading={<ListItemIcon shape="box">{Bank}</ListItemIcon>}
+              title={`Tamaño ${s}`}
+              trailing={
+                <ListItemAmount>{s === "sm" ? "54" : s === "md" ? "66" : "70"}</ListItemAmount>
+              }
+            />
+          ))}
+        </List>
+      </div>
+    </div>
   ),
 };
 

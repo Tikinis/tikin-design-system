@@ -50,10 +50,14 @@ import { cn } from "../lib/cn";
  * queda a merced del orden de la hoja de estilos. La forma de variable si entra
  * en su grupo `rounded`, resuelve el conflicto, y sigue apuntando al mismo
  * token --radius-pill (999px). */
+/* select-none NO va en la base, y es deliberado: el JSDoc de Chip defiende que
+ * las mayusculas van por CSS para no romper "lo que el usuario copia al
+ * portapapeles", y select-none impide justamente seleccionar ese texto. El chip
+ * de feedback y el de valor son etiquetas de texto en una lista de movimientos:
+ * deben poder copiarse. Solo lo llevan las dos variantes que se comportan como
+ * boton, donde arrastrar sobre el label seleccionaria texto en vez de pulsar. */
 const chip = cva(
-  [
-    "box-border inline-flex items-center justify-center rounded-(--radius-pill) whitespace-nowrap select-none",
-  ],
+  ["box-border inline-flex items-center justify-center rounded-(--radius-pill) whitespace-nowrap"],
   {
     variants: {
       variant: {
@@ -63,14 +67,14 @@ const chip = cva(
         action: [
           "h-10 gap-2 px-[18px] font-sans text-sm",
           "border border-edge-2 bg-surface text-ink",
-          "cursor-pointer transition-colors duration-140 ease-out",
+          "cursor-pointer transition-colors duration-140 ease-out select-none",
           "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
           "disabled:cursor-not-allowed disabled:border-edge disabled:bg-surface disabled:text-ink-400",
         ],
         /* EXTENSION. Alto 36. El color lo fija el par selected true/false. */
         filter: [
           "h-9 gap-2 border px-4 font-sans text-sm",
-          "cursor-pointer transition-colors duration-140 ease-out",
+          "cursor-pointer transition-colors duration-140 ease-out select-none",
           "disabled:cursor-not-allowed disabled:border-edge disabled:bg-surface disabled:text-ink-400",
         ],
         /* EXTENSION. Alto 36, sin borde, padding asimetrico: el lado derecho
@@ -169,8 +173,25 @@ export interface ChipProps
   extends Omit<React.HTMLAttributes<HTMLElement>, "color">, Omit<ChipVariants, "selected"> {
   /** Estado del filtro. Se expone como `aria-pressed` en `variant="filter"`. */
   selected?: boolean;
-  /** Deshabilita las variantes interactivas y el boton de quitar. */
+  /**
+   * Deshabilita las variantes interactivas y el boton de quitar.
+   *
+   * Cuando el contenedor no es un `<button>` (chip removible o `variant="value"`)
+   * se refleja como `aria-disabled` y se repinta el aspecto apagado a mano: un
+   * `<span>` nunca casa con `:disabled`, asi que las clases `disabled:` de la
+   * variante no se activarian solas. En `variant="feedback"` no hace nada: ese
+   * chip es pintura, no un control.
+   */
   disabled?: boolean;
+  /**
+   * Solo tiene efecto cuando el chip baja a `<button>`, es decir en
+   * `variant="action"` y `variant="filter"` SIN `onRemove`. En el resto de casos
+   * el contenedor es un `<span>` y el manejador se descarta a proposito: un
+   * `<span>` con onClick es clickeable con raton e inalcanzable con teclado,
+   * exactamente la trampa que documenta `onRemove`. Si necesitas una accion,
+   * usa `variant="action"`.
+   */
+  onClick?: React.MouseEventHandler<HTMLElement>;
   /** Icono antes del label. Ignorado en `variant="feedback"`: el chip del archivo no lleva icono. */
   startIcon?: React.ReactNode;
   /** Punto de estado de 8px antes del label, con el hue del feedback. */
@@ -187,7 +208,14 @@ export interface ChipProps
    * unica accion del chip es quitarlo.
    */
   onRemove?: () => void;
-  /** Nombre accesible del boton de quitar. */
+  /**
+   * Nombre accesible del boton de quitar.
+   *
+   * Por defecto se deriva del label — `Quitar Bolsillo · Arriendo` — porque el
+   * caso canonico es una fila de filtros aplicados: con un "Quitar" pelado
+   * todos los botones de la fila comparten nombre y el usuario de lector de
+   * pantalla no puede saber cual quita que.
+   */
   removeLabel?: string;
 }
 
@@ -214,7 +242,8 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
     dot,
     count,
     onRemove,
-    removeLabel = "Quitar",
+    removeLabel,
+    onClick,
     children,
     ...props
   },
@@ -227,11 +256,27 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
   const removible = !esFeedback && Boolean(onRemove);
   const esBoton = !esFeedback && !removible && (variant === "action" || variant === "filter");
 
+  /* El aspecto apagado del contenedor <span>. Las clases `disabled:` de la
+     variante son inertes ahi (un span jamas casa con :disabled) y, al reves,
+     `hover:not-disabled:` SI casaba siempre: el chip deshabilitado seguia
+     cambiando de fondo al pasar el raton y mostrando cursor de mano. Se repinta
+     el mismo aspecto con clases sin pseudoclase, y se neutraliza el hover
+     reescribiendo su color en el mismo grupo para que tailwind-merge lo tumbe. */
+  const apagadoSinBoton = !esBoton && !esFeedback && disabled;
+
   const clases = cn(
-    chip({ variant, tone, size, selected, className }),
+    chip({ variant, tone, size, selected }),
     // Solo lo que puede recibir foco pinta anillo de foco.
     esBoton &&
       "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
+    apagadoSinBoton && [
+      "cursor-not-allowed border-edge bg-surface text-ink-400",
+      "hover:not-disabled:bg-surface active:not-disabled:bg-surface",
+    ],
+    // className va el ULTIMO, despues del anillo y del apagado: si fuese dentro
+    // de chip({...}) los bloques de arriba ganarian y el consumidor no podria
+    // repintar ni el foco ni el estado deshabilitado.
+    className,
   );
 
   const contenido = (
@@ -254,7 +299,11 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
           // que tengamos que escribir un solo manejador de teclado.
           onClick={() => onRemove?.()}
           disabled={disabled}
-          aria-label={removeLabel}
+          // Nombre unico por chip cuando el label es texto: varios "Quitar"
+          // identicos en la misma fila son indistinguibles para el lector.
+          aria-label={
+            removeLabel ?? (typeof children === "string" ? `Quitar ${children}` : "Quitar")
+          }
           className={cn(
             "inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full bg-edge text-ink-700",
             "transition-colors duration-140 ease-out hover:not-disabled:text-ink",
@@ -280,6 +329,7 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
         // hace que el lector anuncie "activado"/"desactivado" al pulsarlo.
         aria-pressed={variant === "filter" ? selected : undefined}
         className={clases}
+        onClick={onClick}
         {...(props as React.ComponentPropsWithoutRef<"button">)}
       >
         {contenido}
@@ -287,8 +337,19 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
     );
   }
 
+  /* onClick NO se reenvia aqui a proposito. El contenedor es un <span> sin rol
+     ni tabindex: colgarle un click lo dejaria pulsable con el raton e
+     inalcanzable con el teclado, la misma trampa que evita bajar a <span>
+     cuando hay onRemove. Se descarta en vez de renderizarlo mal. */
   return (
-    <span ref={ref as React.Ref<HTMLSpanElement>} className={clases} {...props}>
+    <span
+      ref={ref as React.Ref<HTMLSpanElement>}
+      className={clases}
+      // El span no tiene atributo disabled; aria-disabled es lo unico que
+      // llega al lector de pantalla.
+      aria-disabled={apagadoSinBoton || undefined}
+      {...props}
+    >
       {contenido}
     </span>
   );
@@ -298,7 +359,10 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
 
 const badge = cva(
   [
-    "box-border inline-flex items-center rounded-(--radius-pill) whitespace-nowrap select-none",
+    // Sin select-none: el badge es una etiqueta de estado en una lista de
+    // movimientos, texto puro que el usuario debe poder seleccionar y copiar.
+    // Bloquearlo contradiria el motivo por el que las mayusculas van por CSS.
+    "box-border inline-flex items-center rounded-(--radius-pill) whitespace-nowrap",
     // Ubuntu Mono (font-meta), MAYUSCULAS por CSS y +2% de tracking.
     "font-meta font-normal tracking-[0.02em] uppercase",
     // Los numeros del label (V2.1, +3) siempre tabulares.

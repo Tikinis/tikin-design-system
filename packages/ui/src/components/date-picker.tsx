@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Popover as PopoverPrimitive } from "radix-ui";
+import * as PopoverPrimitive from "radix-ui/popover";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -28,8 +28,8 @@ import { cn } from "../lib/cn";
  *   accion inferior  alto 48 · r12 · bg tinta · mono 14 · +2% tracking
  *   variante movil   padding 12/16/16 · cabecera de dias 26
  *
- * DOS DESVIACIONES DELIBERADAS RESPECTO AL EXPORT DE FIGMA
- * -------------------------------------------------------
+ * DESVIACIONES DELIBERADAS RESPECTO AL EXPORT DE FIGMA
+ * ----------------------------------------------------
  * 1. La celda es un circulo de 34 y no un cuadrado de 32 con r8.
  *    docs/figma-export/components/CalendarDayButton.jsx da 32x32 (--width-w-8),
  *    radio 8, tipografia Geist 14 y colores --base-primary / --base-accent.
@@ -44,6 +44,16 @@ import { cn } from "../lib/cn";
  *    en relleno no se distinguiria hoy de la seleccion. Gana el documento.
  *    El borde va como inset shadow, no como `border`, para que la celda no
  *    cambie de tamaño al ser hoy.
+ *
+ * 3. El resumen del rango se pinta SIEMPRE con los badges del bloque movil
+ *    (bg tinta · texto surface · r8 · padding 5/10 · mono 12 · margin-bottom 10),
+ *    tambien en density="comodo". El bloque de escritorio "RANGO · DESDE–HASTA"
+ *    pide ahi una etiqueta plana `dpRangeLabel` en Ubuntu Sans Mono 12 sobre
+ *    tk-800, pero `dpRangeLabel` es un hueco de plantilla sin contenido
+ *    especificado: el unico sitio donde el documento DESGLOSA ese resumen es el
+ *    bloque movil — "8 JUL → 15 JUL · 8 dias" — y de ahi sale lo que hay que
+ *    pintar. Mantener dos presentaciones distintas del mismo dato obligaria a
+ *    inventar la de escritorio, asi que manda la unica que esta dibujada.
  *
  * FUERA DE ALCANCE
  * ----------------
@@ -173,11 +183,14 @@ const panel = cva(
   {
     variants: {
       /* La unica diferencia real entre el panel de escritorio y el que va
-       * dentro del bottom sheet es la densidad: padding y alto de la fila de
-       * cabecera. El resto de la metrica es identica en el prototipo. */
+       * dentro del bottom sheet es la densidad: padding, alto de la fila de
+       * cabecera y hueco bajo el titulo del mes (12 en escritorio, 8 en el
+       * bloque movil). El resto de la metrica es identica en el prototipo.
+       * Van como variables y no como clases sueltas porque quien las consume
+       * son elementos internos del panel, no el panel. */
       density: {
-        comodo: "p-[18px] [--tk-dp-head:28px]",
-        movil: "px-4 pt-3 pb-4 [--tk-dp-head:26px]",
+        comodo: "p-[18px] [--tk-dp-gap:12px] [--tk-dp-head:28px]",
+        movil: "px-4 pt-3 pb-4 [--tk-dp-gap:8px] [--tk-dp-head:26px]",
       },
     },
     defaultVariants: { density: "comodo" },
@@ -188,6 +201,12 @@ const panel = cva(
  * llegar de borde a borde de la celda: si se pintara dentro, entre columna y
  * columna quedaria una costura blanca. Solo se redondea por el lado exterior en
  * los extremos.
+ *
+ * Ese redondeo obliga a que la tabla vaya en `border-separate` con espaciado 0
+ * y NO en `border-collapse`: por especificacion CSS, border-radius no se aplica
+ * a las celdas de una tabla colapsada, asi que con collapse estas dos clases
+ * serian codigo muerto y los extremos de la banda saldrian cuadrados. Con
+ * espaciado 0 la rejilla mide exactamente igual y sigue sin costuras.
  *
  * Ojo: aqui NO puede haber `flex`. Un <td> con display:flex deja de ser una
  * celda de tabla, el navegador envuelve los siete dias de la fila en UNA sola
@@ -250,8 +269,13 @@ const diaBoton = cva(
   },
 );
 
+/* Las flechas se apagan con aria-disabled, no con el atributo `disabled`, por
+ * la misma razon que las celdas de dia: un boton deshabilitado deja de ser
+ * enfocable, y al llegar navegando al mes de minDate la flecha se apagaria bajo
+ * el propio foco, que caeria al <body> — fuera del panel, que ademas es no
+ * modal por defecto. Apagada sigue enfocable y el manejador ignora el clic. */
 const flechaMes =
-  "inline-flex size-8 items-center justify-center rounded-sm border border-edge text-ink cursor-pointer transition-colors duration-140 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface hover:not-disabled:bg-surface-2 disabled:cursor-not-allowed disabled:text-ink-400";
+  "inline-flex size-8 items-center justify-center rounded-sm border border-edge text-ink cursor-pointer transition-colors duration-140 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface [&:not([aria-disabled=true])]:hover:bg-surface-2 aria-disabled:cursor-not-allowed aria-disabled:text-ink-400";
 
 const chipPreset =
   "box-border inline-flex shrink-0 cursor-pointer items-center rounded-(--radius-pill) px-3 py-1.5 font-mono text-xs tracking-[0.02em] uppercase transition-colors duration-140 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface";
@@ -383,6 +407,10 @@ interface DatePickerBaseProps extends PropsBoton {
    * Disparador propio. Debe ser UN elemento capaz de recibir foco; se le
    * inyectan `aria-expanded` y `aria-haspopup`. Sin el se dibuja el disparador
    * por defecto — que es EXTENSION: el documento no lo especifica.
+   *
+   * El resto de props de boton (`disabled`, `className`, `id`, `data-*`,
+   * `onFocus`…) se componen sobre ese elemento; lo que el propio elemento
+   * declare gana, porque es lo mas cercano a la intencion del consumidor.
    */
   children?: React.ReactNode;
   /** Clases del panel. `className` va al disparador, que es lo que ocupa sitio en el layout. */
@@ -526,6 +554,11 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     const [abiertoInterno, setAbiertoInterno] = React.useState(defaultOpen ?? false);
     const abierto = open ?? abiertoInterno;
     const cambiarApertura = (siguiente: boolean) => {
+      /* Deshabilitado no abre. El atributo ya lo impide en un <button>, pero un
+       * disparador propio puede no serlo — un <div role="button"> recibe el
+       * clic igual — y entonces solo esta guarda evita el panel. Cerrar si se
+       * permite: quedarse abierto por deshabilitarse a mitad seria una trampa. */
+      if (disabled && siguiente) return;
       if (open === undefined) setAbiertoInterno(siguiente);
       onOpenChange?.(siguiente);
     };
@@ -752,7 +785,21 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
 
     return (
       <PopoverPrimitive.Root open={abierto} onOpenChange={cambiarApertura} modal={modal}>
-        <PopoverPrimitive.Trigger asChild ref={ref}>
+        {/* Con disparador propio las props de boton no tienen donde caer: el
+            hijo lo pone el consumidor. Se pasan al Trigger, que con `asChild`
+            las fusiona sobre el hijo (Slot compone manejadores, concatena
+            className y deja ganar lo que el hijo declare). Sin esto, `disabled`
+            no apagaba nada y className, id, data-* y aria-* se perdian en
+            silencio, aunque el tipo del componente promete props de <button>.
+            `type` solo viaja si esta definido: Radix ya pone type="button" en
+            el Trigger y mandarle undefined lo borraria. */}
+        <PopoverPrimitive.Trigger
+          asChild
+          ref={ref}
+          {...(children
+            ? { disabled, className, ...(type ? { type } : {}), ...restoDisparador }
+            : {})}
+        >
           {children ?? (
             <button
               // Sin type explicito un <button> dentro de un <form> lo envia, y
@@ -787,8 +834,11 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
             }}
             className={cn(panel({ density }), contentClassName)}
           >
+            {/* Tira de chips: 12 de padding y 4 de margen, no al reves. El
+                padding va dentro del area que hace scroll horizontal, que es
+                donde deja sitio al anillo de foco del chip. */}
             {esRango && presets && presets.length > 0 && (
-              <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              <div className="mb-1 flex gap-2 overflow-x-auto pb-3">
                 {presets.map((preset) => {
                   const activo = claveSeleccion(preset.range) === claveSeleccion(rango);
                   return (
@@ -835,7 +885,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
               </div>
             )}
 
-            <div className="mb-3 flex items-center">
+            <div className="mb-[var(--tk-dp-gap)] flex items-center">
               {/* aria-live: al cambiar de mes con las flechas del teclado el
                   foco no se mueve de sitio, asi que sin esto el lector no
                   anunciaria que el calendario ya es otro mes. */}
@@ -851,8 +901,10 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                   type="button"
                   className={flechaMes}
                   aria-label="Mes anterior"
-                  disabled={previoApagado}
-                  onClick={() => irAlMes(-1)}
+                  aria-disabled={previoApagado || undefined}
+                  onClick={() => {
+                    if (!previoApagado) irAlMes(-1);
+                  }}
                 >
                   <GlifoCaret direccion="izquierda" />
                 </button>
@@ -860,8 +912,10 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                   type="button"
                   className={flechaMes}
                   aria-label="Mes siguiente"
-                  disabled={siguienteApagado}
-                  onClick={() => irAlMes(1)}
+                  aria-disabled={siguienteApagado || undefined}
+                  onClick={() => {
+                    if (!siguienteApagado) irAlMes(1);
+                  }}
                 >
                   <GlifoCaret direccion="derecha" />
                 </button>
@@ -873,7 +927,10 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
               role="grid"
               aria-labelledby={idTitulo}
               onKeyDown={alPulsarTecla}
-              className="w-full table-fixed border-collapse"
+              /* border-separate con espaciado 0, no border-collapse: es lo que
+                 permite que los extremos de la banda lima se redondeen — ver el
+                 comentario de `celdaDia`. */
+              className="w-full table-fixed border-separate border-spacing-0"
             >
               <thead>
                 <tr>
@@ -906,7 +963,11 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                         <td
                           key={clave(dia)}
                           role="gridcell"
-                          aria-selected={elegido}
+                          /* Solo la celda elegida lo lleva, como marca el patron
+                             de rejilla de fechas de APG. Emitirlo en las 35
+                             hace que el lector anuncie "no seleccionado" en cada
+                             dia que se recorre con las flechas. */
+                          aria-selected={elegido || undefined}
                           className={celdaDia({ band: banda })}
                         >
                           <div className="flex h-[38px] items-center justify-center">
@@ -925,18 +986,26 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                                  fuera de limites. */
                               aria-disabled={apagado || undefined}
                               onClick={() => seleccionar(dia)}
-                              className={diaBoton({
-                                variant: fuera
-                                  ? "outside"
-                                  : mismoDia(dia, hoy)
-                                    ? "current"
-                                    : "default",
-                                state: elegido
-                                  ? "selected"
-                                  : banda === "middle"
-                                    ? "in-range"
-                                    : "default",
-                              })}
+                              /* Por cn() y no directo: cva concatena sin
+                                 resolver conflictos, y variante y estado pintan
+                                 los dos el color del texto — un dia de fuera de
+                                 mes que sea extremo del rango emitiria
+                                 `text-ink-400 text-surface` y el ganador
+                                 dependeria del orden en la hoja compilada. */
+                              className={cn(
+                                diaBoton({
+                                  variant: fuera
+                                    ? "outside"
+                                    : mismoDia(dia, hoy)
+                                      ? "current"
+                                      : "default",
+                                  state: elegido
+                                    ? "selected"
+                                    : banda === "middle"
+                                      ? "in-range"
+                                      : "default",
+                                }),
+                              )}
                             >
                               {dia.getDate()}
                             </button>

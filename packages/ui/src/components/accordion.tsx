@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Accordion as AccordionPrimitive } from "radix-ui";
+import * as AccordionPrimitive from "radix-ui/accordion";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
@@ -37,9 +37,12 @@ import { cn } from "../lib/cn";
  *    keyframes sobre --radix-accordion-content-height en el tema compartido,
  *    que este componente no puede tocar. Lo unico que se anima es el caret,
  *    que es lo que el documento especifica.
- * 2. El anillo de foco va por dentro (`inset-ring`) y no con `ring-offset`.
- *    La fila lleva `overflow-hidden` para que el fondo del hover respete los
- *    r12; un anillo con offset quedaria recortado justo por ese clip.
+ * 2. El anillo de foco va por dentro (`ring-inset`) y no con `ring-offset`.
+ *    En `boxed` la fila lleva `overflow-hidden` para que el fondo del hover
+ *    respete los r12, y un anillo con offset quedaria recortado justo por ese
+ *    clip. Es el mismo idioma que ya usan list-item y menu-button para filas
+ *    recortadas. En `flush` no hay clip, pero se conserva el mismo anillo para
+ *    que el foco no cambie de forma al cambiar de piel.
  */
 
 type AccordionVariant = "boxed" | "flush";
@@ -81,13 +84,18 @@ const accordionTrigger = cva(
     // apague de una sola vez, sin repetir color en el <span>.
     "text-ink",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
-    "outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-ink",
+    // Anillo por dentro: el idioma del sistema para filas que viven dentro de
+    // un contenedor que recorta (list-item.tsx, menu-button.tsx).
+    "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset",
     "disabled:cursor-not-allowed disabled:text-ink-400",
   ],
   {
     variants: {
       variant: {
-        boxed: "p-4 hover:not-disabled:bg-page",
+        /* `rounded-t-lg` no pinta nada por si mismo — el fondo ya lo recorta el
+           `overflow-hidden` de la fila — pero hace que el anillo de foco siga la
+           curva r12 arriba en vez de quedar con las esquinas mordidas. */
+        boxed: "rounded-t-lg p-4 hover:not-disabled:bg-page",
         /* En flush no hay caja que recorte el hover, asi que la fila se separa
            12 de los lados para que el resalte no quede pegado al texto. */
         flush: "px-3 py-4 hover:not-disabled:bg-page",
@@ -101,8 +109,12 @@ const accordionContent = cva(
   [
     // La respuesta va en Sans (la familia por defecto), 14/1.55 y en ink-700:
     // un peldaño por debajo de la pregunta para que la jerarquia se lea sola.
+    /* Sin estilos de foco: Radix no hace focusable el contenido y este
+       componente tampoco le pone tabIndex, asi que un `focus-visible:` aqui
+       nunca se dispararia. Lo que si importa es NO poner `outline-none`: el
+       consumidor que le pase `tabIndex={-1}` para mover el foco al abrir se
+       quedaria sin ningun indicador. Que herede el nativo. */
     "text-sm leading-[1.55] text-ink-700",
-    "outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-ink",
   ],
   {
     variants: {
@@ -133,6 +145,10 @@ function Caret({ className }: { className?: string }) {
       focusable="false"
       className={cn(
         "size-4 shrink-0 text-ink-600 transition-transform duration-150 ease-out",
+        // Es el unico movimiento del componente, asi que es el unico que hay
+        // que poder apagar con prefers-reduced-motion: el caret sigue girando,
+        // pero salta al estado final en vez de recorrerlo.
+        "motion-reduce:transition-none",
         "group-disabled:text-ink-400",
         // El trigger lleva la clase `group`; Radix le pone data-state=open al
         // abrir y el caret gira 180 grados.
@@ -235,7 +251,13 @@ export interface AccordionTriggerProps
    * `<h2>` deberia usar 3, pero bajo un `<h3>` toca 4.
    */
   headingLevel?: 2 | 3 | 4 | 5 | 6;
-  /** Icono antes de la pregunta, a 16px. Util en listas de ajustes. */
+  /**
+   * Icono antes de la pregunta. Util en listas de ajustes.
+   *
+   * Se renderiza tal cual, sin envoltorio: el tamaño lo fijas tu en el propio
+   * icono (`size-4` para los 16px de la escala del sistema, que es lo que pide
+   * la fila). Mismo trato que `startIcon` en Chip.
+   */
   startIcon?: React.ReactNode;
 }
 

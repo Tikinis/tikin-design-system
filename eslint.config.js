@@ -26,7 +26,10 @@ export default tseslint.config(
       "**/vitest.config.ts",
     ],
     languageOptions: {
-      globals: { ...globals.node },
+      // Node y navegador a la vez: auditar-stories.mjs corre en Node, pero la
+      // funcion que recolecta datos se serializa y se ejecuta DENTRO de la
+      // pagina, donde document y getComputedStyle si existen.
+      globals: { ...globals.node, ...globals.browser },
     },
   },
   {

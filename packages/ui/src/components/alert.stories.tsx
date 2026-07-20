@@ -182,6 +182,42 @@ export const MatrizDeTonos: Story = {
 };
 
 /**
+ * La accion casi siempre lleva a otra pantalla. Con `asChild` el `AlertAction`
+ * presta sus estilos al `<a>` (o al `Link` del router) en vez de renderizar un
+ * `<button>`: se conserva el click derecho, el abrir en pestaña nueva y el
+ * lector de pantalla anuncia "enlace" y no "boton".
+ *
+ * El segundo alert muestra el estado `disabled`, que solo existe en la version
+ * `<button>`: se usa mientras la accion esta en curso y no debe repetirse.
+ */
+export const AccionComoEnlace: Story = {
+  name: "Acción como enlace",
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="flex w-[560px] max-w-full flex-col gap-3">
+      <Alert
+        tone="warning"
+        title="Verifica tu identidad"
+        action={
+          <AlertAction asChild>
+            <a href="#verificacion">Verificar</a>
+          </AlertAction>
+        }
+      >
+        Para enviar más de $1.000.000 necesitas confirmar tu documento.
+      </Alert>
+      <Alert
+        tone="info"
+        title="Estamos revisando tu documento"
+        action={<AlertAction disabled>Verificar</AlertAction>}
+      >
+        Te avisamos en cuanto termine la revisión; no hace falta que hagas nada.
+      </Alert>
+    </div>
+  ),
+};
+
+/**
  * El cuerpo largo se parte dentro del alert en vez de desbordarlo: la columna
  * de texto lleva `min-w-0`, que es lo que permite a un hijo flex encogerse por
  * debajo de su ancho de contenido.

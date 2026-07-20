@@ -103,8 +103,16 @@ export const Deshabilitado: Story = {
   parameters: {
     docs: {
       description: {
-        story:
-          "Se retira el `href`: eso lo saca del orden de tabulacion igual que haria un control nativo deshabilitado. `aria-disabled` sobre un `<a>` con href seguiria siendo activable con el teclado.",
+        story: [
+          "Se retira el `href`: el navegador deja de navegar y el elemento sale del orden de tabulacion.",
+          'Como un `<a>` sin href tampoco tiene rol, se declara `role="link"` junto a `aria-disabled`,',
+          "para que el lector de pantalla siga anunciando que hay una accion apagada — sobre un elemento",
+          "generico, `aria-disabled` no lo expone nadie.",
+          "",
+          "Con `asChild` el href lo pone el consumidor y Slot le da prioridad, asi que ahi el bloqueo son",
+          "`aria-disabled`, `tabIndex=-1` y el corte del click en fase de captura (Slot llama antes al",
+          "`onClick` del hijo que al nuestro).",
+        ].join("\n"),
       },
     },
   },
@@ -236,8 +244,12 @@ export const IconButtonTamanos: IconButtonStory = {
     controls: { disable: true },
     docs: {
       description: {
-        story:
-          "Por debajo de 44 el area tactil se amplia a 44 con un pseudoelemento, sin mover la caja visible. Entre vecinos siempre hay gap 4–8.",
+        story: [
+          "Por debajo de 44 el area tactil se amplia con un pseudoelemento, sin mover la caja visible.",
+          "La ampliacion es de 2px por lado —la mitad del gap minimo de 4 que manda la seccion—, asi que",
+          "dos vecinos como mucho se tocan y nunca se roban el click: en `m` eso deja el target en 44 y en",
+          "`s` en 36.",
+        ].join("\n"),
       },
     },
   },

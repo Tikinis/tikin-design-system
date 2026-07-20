@@ -1,3 +1,4 @@
+import * as React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -6,7 +7,9 @@ import {
   LoadMore,
   LoadMoreSentinel,
   Pagination,
+  PaginationArrow,
   PaginationBar,
+  PaginationItem,
   PaginationJump,
 } from "./pagination";
 
@@ -217,6 +220,36 @@ describe("Pagination", () => {
     expect(cls).not.toMatch(/(^|\s)flex(\s|$)/);
   });
 
+  it("la lista lleva role=list explicito", () => {
+    render(<Pagination page={1} totalPages={5} />);
+    /* Redundante en jsdom, pero WebKit le quita la semantica de lista a un <ul>
+       sin viñeta — que es lo que deja el reset — y el lector no diria cuantas
+       paginas hay. */
+    expect(screen.getByRole("list")).toHaveAttribute("role", "list");
+  });
+
+  it("pinta los puntos suspensivos fuera del arbol de accesibilidad", () => {
+    render(<Pagination page={6} totalPages={12} />);
+    // Se pinta como texto, pero leerlo en voz alta no aporta nada.
+    const huecos = screen.getAllByText("…");
+    expect(huecos).toHaveLength(2);
+    for (const hueco of huecos) expect(hueco).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("siblingCount ensancha la ventana de celdas del componente", () => {
+    render(<Pagination page={10} totalPages={20} siblingCount={2} />);
+    // Dos vecinas a cada lado: 8, 9, [10], 11, 12.
+    expect(screen.getByRole("button", { name: "Página 8" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Página 12" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Página 7" })).not.toBeInTheDocument();
+  });
+
+  it("expone el nodo por ref", () => {
+    const ref = React.createRef<HTMLElement>();
+    render(<Pagination page={1} totalPages={3} ref={ref} />);
+    expect(ref.current?.tagName).toBe("NAV");
+  });
+
   it("acepta cero paginas sin romperse", () => {
     render(<Pagination page={1} totalPages={0} />);
     // Solo quedan las dos flechas, ambas en tope.
@@ -225,6 +258,32 @@ describe("Pagination", () => {
       "aria-disabled",
       "true",
     );
+  });
+});
+
+describe("PaginationItem y PaginationArrow sueltos", () => {
+  it("exponen su boton por ref", () => {
+    const itemRef = React.createRef<HTMLButtonElement>();
+    const arrowRef = React.createRef<HTMLButtonElement>();
+    render(
+      <>
+        <PaginationItem ref={itemRef}>3</PaginationItem>
+        <PaginationArrow direction="prev" aria-label="Anterior" ref={arrowRef} />
+      </>,
+    );
+    expect(itemRef.current).toBeInstanceOf(HTMLButtonElement);
+    expect(arrowRef.current).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it("dejan sobreescribir clases por className", () => {
+    render(
+      <PaginationItem className="rounded-none" aria-label="Celda">
+        3
+      </PaginationItem>,
+    );
+    const cls = screen.getByRole("button", { name: "Celda" }).className;
+    expect(cls).toContain("rounded-none");
+    expect(cls).not.toContain("rounded-md");
   });
 });
 
@@ -293,6 +352,30 @@ describe("PaginationJump", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Ir a la página" }), "{Enter}");
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it("con cero paginas no se inventa una pagina 1", async () => {
+    const onPageChange = vi.fn();
+    const { container } = render(
+      <PaginationJump page={1} totalPages={0} onPageChange={onPageChange} />,
+    );
+    const input = screen.getByRole("textbox", { name: "Ir a la página" });
+
+    // Ni "Ir a 1 de 1": no hay ninguna pagina a la que ir.
+    expect(input).toHaveValue("0");
+    expect(container).toHaveTextContent("de 0");
+
+    await userEvent.clear(input);
+    await userEvent.type(input, "3{Enter}");
+    // Notificar la 1 haria que el consumidor pidiese datos inexistentes.
+    expect(onPageChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue("0");
+  });
+
+  it("expone el nodo por ref", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    render(<PaginationJump page={1} totalPages={3} ref={ref} />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+  });
 });
 
 describe("PaginationBar", () => {
@@ -306,9 +389,11 @@ describe("PaginationBar", () => {
     expect(screen.getByRole("status")).toHaveTextContent("121–128 de 128");
   });
 
-  it("con la tabla vacia no inventa un rango", () => {
+  it("con la tabla vacia no inventa un rango ni una pagina", () => {
     render(<PaginationBar page={1} pageSize={20} total={0} />);
     expect(screen.getByRole("status")).toHaveTextContent("0–0 de 0");
+    // Tampoco "Página 1 de 1" para el lector: no se esta en ninguna pagina.
+    expect(screen.getByRole("group")).not.toHaveTextContent("Página");
   });
 
   it("sin onPageSizeChange no pinta el selector", () => {
@@ -337,6 +422,46 @@ describe("PaginationBar", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Página anterior" }));
     expect(onPageChange).toHaveBeenCalledWith(6);
+  });
+
+  it("es un grupo con nombre y dice en que pagina estas", () => {
+    render(<PaginationBar page={3} pageSize={20} total={128} />);
+    const grupo = screen.getByRole("group", { name: "Paginación" });
+    // El rango cuenta filas; sin este resumen el lector no sabe la pagina.
+    expect(grupo).toHaveTextContent("Página 3 de 7");
+  });
+
+  it("traduce TODOS los textos que acepta, no solo las flechas", () => {
+    render(
+      <PaginationBar
+        page={3}
+        pageSize={20}
+        total={128}
+        labels={{
+          root: "Pagination",
+          previous: "Previous page",
+          next: "Next page",
+          status: (page, totalPages) => `Page ${page} of ${totalPages}`,
+        }}
+      />,
+    );
+    // Si `root` o `status` no aterrizasen en ningun sitio, quien localiza la
+    // barra creeria haberla traducido entera y no seria verdad.
+    const grupo = screen.getByRole("group", { name: "Pagination" });
+    expect(grupo).toHaveTextContent("Page 3 of 7");
+    expect(screen.getByRole("button", { name: "Previous page" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next page" })).toBeInTheDocument();
+  });
+
+  it("un role o un aria-label propios ganan sobre los del sistema", () => {
+    render(<PaginationBar page={1} pageSize={20} total={128} aria-label="Pie de movimientos" />);
+    expect(screen.getByRole("group", { name: "Pie de movimientos" })).toBeInTheDocument();
+  });
+
+  it("expone el nodo por ref", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    render(<PaginationBar page={1} pageSize={20} total={128} ref={ref} />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
   });
 });
 
@@ -395,6 +520,27 @@ describe("LoadMore", () => {
     );
     await userEvent.click(screen.getByRole("button"));
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("en carga mantiene el label junto al spinner", () => {
+    render(<LoadMore loaded={40} total={128} loading label="Cargar más" />);
+    // El spinner ACOMPAÑA al texto; sustituirlo dejaria el boton sin nombre.
+    expect(screen.getByRole("button")).toHaveTextContent("Cargar más");
+  });
+
+  it("hideProgress quita la barra y deja el contador", () => {
+    const { container, rerender } = render(<LoadMore loaded={40} total={128} />);
+    expect(container.querySelectorAll("[aria-hidden='true']")).toHaveLength(1);
+
+    rerender(<LoadMore loaded={40} total={128} hideProgress />);
+    expect(container.querySelectorAll("[aria-hidden='true']")).toHaveLength(0);
+    expect(screen.getByRole("status")).toHaveTextContent("Mostrando 40 de 128");
+  });
+
+  it("expone el nodo por ref", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    render(<LoadMore loaded={40} total={128} ref={ref} />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
   });
 });
 
@@ -507,5 +653,20 @@ describe("LoadMoreSentinel", () => {
   it("sin IntersectionObserver se queda inerte en vez de romper", () => {
     vi.stubGlobal("IntersectionObserver", undefined);
     expect(() => render(<LoadMoreSentinel onReachEnd={vi.fn()} />)).not.toThrow();
+  });
+
+  it("anticipa la carga con el rootMargin pedido", () => {
+    render(<LoadMoreSentinel onReachEnd={vi.fn()} />);
+    // Por defecto dispara 200px antes de asomar.
+    expect(last().rootMargin).toBe("200px");
+
+    render(<LoadMoreSentinel onReachEnd={vi.fn()} rootMargin="0px" />);
+    expect(last().rootMargin).toBe("0px");
+  });
+
+  it("expone el nodo por ref", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    render(<LoadMoreSentinel onReachEnd={vi.fn()} ref={ref} />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
   });
 });

@@ -5,7 +5,13 @@ import { Alert, AlertAction } from "./alert";
 
 /* Estos tests cubren COMPORTAMIENTO, no apariencia. Las medidas del prototipo
  * (padding 14/16, radio 12, titulo 14.5px) se verifican contra el navegador, no
- * aqui: jsdom no aplica CSS, asi que comprobar clases seria tautologico. */
+ * aqui: jsdom no aplica CSS, asi que comprobar clases seria tautologico.
+ *
+ * Con UNA excepcion deliberada, el bloque "tono → color": ahi la clase no es
+ * decorado sino el mapeo mismo. Cuatro pares tint/fg y cuatro glifos escritos a
+ * mano se pueden desparejar (success apuntando al amarillo de warning, el
+ * triangulo saliendo en error) sin que ningun test de comportamiento se entere.
+ * Es lo unico que ata esas ocho constantes. */
 
 describe("Alert", () => {
   it("expone titulo y cuerpo dentro de una region viva", () => {
@@ -151,6 +157,123 @@ describe("Alert", () => {
     render(<Alert ref={ref}>Cuerpo</Alert>);
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
   });
+
+  it("reenvia al div las props que no consume", () => {
+    render(
+      <Alert id="aviso-kyc" data-testid="raiz" aria-describedby="pie">
+        Cuerpo
+      </Alert>,
+    );
+    const region = screen.getByTestId("raiz");
+    expect(region).toHaveAttribute("id", "aviso-kyc");
+    expect(region).toHaveAttribute("aria-describedby", "pie");
+  });
+});
+
+describe("Alert · tono → color", () => {
+  // Cada tono declara el mismo hue en las tres piezas: fondo, variable de
+  // recorte del glifo y variable de tinta del icono. Desparejarlas pinta un
+  // alert verde con icono amarillo sin que falle nada mas.
+  const PARES = [
+    ["info", "info"],
+    ["success", "success"],
+    ["warning", "warning"],
+    ["error", "error"],
+  ] as const;
+
+  it.each(PARES)("tone=%s pinta el hue %s en las tres piezas", (tone, hue) => {
+    const { container } = render(<Alert tone={tone}>Cuerpo</Alert>);
+    const cls = container.firstElementChild!.className;
+    expect(cls).toContain(`bg-tint-${hue}`);
+    expect(cls).toContain(`[--tk-alert-bg:var(--tk-tint-${hue})]`);
+    expect(cls).toContain(`[--tk-alert-fg:var(--tk-fg-${hue})]`);
+  });
+
+  it("el tono por defecto es info", () => {
+    const { container } = render(<Alert>Cuerpo</Alert>);
+    const cls = container.firstElementChild!.className;
+    expect(cls).toContain("bg-tint-info");
+    expect(cls).toContain("[--tk-alert-fg:var(--tk-fg-info)]");
+  });
+
+  it("el glifo toma su tinta de la variable del tono, no de la del texto", () => {
+    const { container } = render(<Alert tone="error">Cuerpo</Alert>);
+    expect(container.querySelector("svg")!.getAttribute("class")).toContain(
+      "text-[var(--tk-alert-fg)]",
+    );
+  });
+
+  it("cada tono dibuja SU glifo y no el del vecino", () => {
+    // Los cuatro salen de una tabla escrita a mano: si se intercambian dos
+    // entradas, el alert de error muestra el triangulo de warning.
+    const glifo = (tone: "info" | "success" | "warning" | "error") => {
+      const { container } = render(<Alert tone={tone}>Cuerpo</Alert>);
+      const svg = container.querySelector("svg")!;
+      return {
+        redondo: svg.querySelector('circle[r="9"]') !== null,
+        paths: Array.from(svg.querySelectorAll("path")).map((p) => p.getAttribute("d") ?? ""),
+      };
+    };
+
+    const info = glifo("info");
+    expect(info.redondo).toBe(true);
+    // Punto de la i arriba y palo debajo.
+    expect(info.paths.join(" ")).toContain("M10 9.1v5.2");
+
+    const success = glifo("success");
+    expect(success.redondo).toBe(true);
+    expect(success.paths.join(" ")).toContain("m5.9 10.2 2.7 2.7 5.5-5.5");
+
+    const warning = glifo("warning");
+    // El unico que NO es un circulo: es el triangulo.
+    expect(warning.redondo).toBe(false);
+    expect(warning.paths[0]).toContain("M8.63 2.6");
+
+    const error = glifo("error");
+    expect(error.redondo).toBe(true);
+    // Aspa: dos trazos cruzados dentro del circulo.
+    expect(error.paths.join(" ")).toContain("m7.2 7.2 5.6 5.6M12.8 7.2l-5.6 5.6");
+  });
+
+  it("deja repintar el fondo y la variable de recorte a la vez", () => {
+    // Si solo se cambiara el fondo, la marca interior del glifo se quedaria del
+    // color viejo. La escapatoria documentada es cambiar las dos.
+    render(<Alert className="bg-surface [--tk-alert-bg:var(--tk-surface)]">Cuerpo</Alert>);
+    const cls = screen.getByRole("status").className;
+    expect(cls).toContain("bg-surface");
+    expect(cls).not.toContain("bg-tint-info");
+    expect(cls).toContain("[--tk-alert-bg:var(--tk-surface)]");
+    expect(cls).not.toContain("[--tk-alert-bg:var(--tk-tint-info)]");
+  });
+});
+
+describe("Alert · icono propio", () => {
+  it("no lo anuncia dentro de la region viva", () => {
+    // El alert es una live region: un icono con nombre accesible se anunciaria
+    // ademas del titulo y el cuerpo.
+    render(
+      <Alert tone="error" title="Saldo insuficiente" icon={<svg role="img" aria-label="Error" />}>
+        Recarga e inténtalo de nuevo.
+      </Alert>,
+    );
+    // queryByRole ignora los subarboles aria-hidden, que es exactamente lo que
+    // hace tambien el arbol de accesibilidad del navegador.
+    expect(screen.queryByRole("img", { name: "Error" })).not.toBeInTheDocument();
+  });
+
+  it("no se encoge y hereda el color pleno del hue", () => {
+    // Suelto en una fila flex se comprimia por debajo de 20px con cuerpos
+    // largos, y heredaba la tinta del contenedor en vez de la del tono.
+    render(
+      <Alert tone="warning" icon={<span data-testid="propio">!</span>}>
+        Cuerpo
+      </Alert>,
+    );
+    const hueco = screen.getByTestId("propio").parentElement!;
+    expect(hueco).toHaveAttribute("aria-hidden", "true");
+    expect(hueco.className).toContain("shrink-0");
+    expect(hueco.className).toContain("text-[var(--tk-alert-fg)]");
+  });
 });
 
 describe("AlertAction", () => {
@@ -191,5 +314,49 @@ describe("AlertAction", () => {
     const cls = screen.getByRole("button").className;
     expect(cls).toContain("h-10");
     expect(cls).not.toContain("h-9");
+  });
+
+  it("reenvia la ref al boton", () => {
+    const ref = { current: null as HTMLButtonElement | null };
+    render(<AlertAction ref={ref}>Verificar</AlertAction>);
+    expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it("con asChild renderiza un enlace de verdad, no un boton", async () => {
+    // La accion canonica de la seccion navega a la verificacion de identidad:
+    // tiene que ser <a href> para conservar click derecho, abrir en pestaña
+    // nueva y que el lector anuncie "enlace".
+    const onClick = vi.fn((e: React.MouseEvent) => e.preventDefault());
+    render(
+      <AlertAction asChild>
+        <a href="/verificacion" onClick={onClick}>
+          Verificar
+        </a>
+      </AlertAction>,
+    );
+
+    const enlace = screen.getByRole("link", { name: "Verificar" });
+    expect(enlace).toHaveAttribute("href", "/verificacion");
+    // `type` es de <button>: en un <a> significa el MIME del destino, asi que
+    // no debe colarse.
+    expect(enlace).not.toHaveAttribute("type");
+    expect(enlace.className).toContain("h-9");
+
+    await userEvent.click(enlace);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("con asChild no le cuelga disabled al enlace", () => {
+    // <a disabled> no existe en HTML: quedaria un atributo invalido que no
+    // deshabilita nada y ensucia el DOM.
+    const { container } = render(
+      <AlertAction asChild disabled>
+        <a href="/verificacion">Verificar</a>
+      </AlertAction>,
+    );
+    // El enlace es la raiz: no queda ningun <button> envolviendolo.
+    expect(container.firstElementChild!.tagName).toBe("A");
+    expect(screen.getByRole("link")).not.toHaveAttribute("disabled");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

@@ -23,6 +23,7 @@ const meta = {
           "- **Limpiar / Aplicar.** Limpiar deja el grupo en cero sin cerrar; Aplicar confirma y cierra. Lo marcado es un borrador: si el panel se cierra con Escape o con un click fuera, se descarta y el badge no se mueve.",
           "- **Listas cortas.** Con `applyOnSelect` cada marca aplica al instante y el boton APLICAR desaparece.",
           "- **Filter vs tabs.** Filter combina varios criterios a la vez; para una sola dimension con pocas opciones, usa un segmented control.",
+          '- **FilterChip vs `Chip variant="filter"`.** No son el mismo control: `Chip` (seccion 09) es la etiqueta de 36 en caja normal, con eje `selected`, que pinta un filtro YA aplicado y deja quitarlo; `FilterChip` es el disparador de 40 en mono y mayusculas que ABRE el popover donde se eligen. Suelen convivir: el FilterChip arriba, los Chips debajo.',
           "",
           "Medidas del bloque ESTADOS DEL BOTON: alto 40 · px 16 · gap 8 · radio 999 · icono 16 · label mono 14 con +2% de tracking.",
           "Medidas del panel del bloque EN VIVO: min-width 230 · radio 16 · padding 8 · filas r8 con casilla 20 · acciones de 36 con radio 10.",

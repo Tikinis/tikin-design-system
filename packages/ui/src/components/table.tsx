@@ -23,17 +23,27 @@ import { cn } from "../lib/cn";
  *                         tabla colapsa a tarjetas-fila (eso vive en Cards ·
  *                         list row, no aqui).
  *
- * MEDIDAS, leidas de los style= del prototipo:
+ * MEDIDAS, leidas de los style= del prototipo. El archivo dibuja CUATRO juegos
+ * de medidas, uno por bloque, y no son consistentes entre si (el eje horizontal
+ * salta de 14 a 16 sin criterio). Se destilan en tres densidades:
  *
  *   marco ........... borde 1px --tk-border, radio 16, overflow oculto
- *   header .......... fondo hueso, padding 12/16, borde inferior 1px --tk-border
- *                     celdas Ubuntu Mono 10px, tracking .1em, tinta 600
- *   fila ............ padding 14/16, borde inferior 1px --tk-surface-2
- *                     texto Ubuntu Sans 14; la ultima fila no lleva borde
- *   compacta ........ header padding 8/14 y texto 9px; fila padding 8/14 y
- *                     texto 13px, mono 12px
+ *   default ......... bloque de dispersion. header padding 12/16 y texto 10px;
+ *                     fila padding 14/16, sans 14, mono 13, DM Mono 14
+ *   medium .......... bloque "CON SELECCION & ACCIONES". header padding 10/14 y
+ *                     texto 9px; fila padding 12/14, sans 14, DM Mono 13.
+ *                     Es tambien la densidad del bloque "CON TOTAL", que usa
+ *                     fila 12/16: se respeta el 12 vertical y se queda en 14
+ *                     lateral antes que inventar una cuarta densidad para dos
+ *                     pixeles que el propio prototipo no mantiene.
+ *   compact ......... bloque "COMPACTA · DENSA". header padding 8/14 y texto
+ *                     9px; fila padding 8/14, sans 13, mono 12, DM Mono 13
  *   total ........... borde superior 2px tinta, fondo hueso, padding 14/16,
- *                     label Funnel Display 15/600 y cifra DM Mono 16/500
+ *                     label Funnel Display 15/600 y cifra DM Mono 16/500.
+ *                     El pie NO se comprime con la densidad (ver TableCell).
+ *
+ * El header y la fila comparten borde inferior: --tk-border arriba,
+ * --tk-surface-2 entre filas; la ultima fila no lleva borde.
  *
  * POR QUE UNA <table> DE VERDAD Y NO LA REJILLA DEL PROTOTIPO
  * -----------------------------------------------------------
@@ -46,7 +56,7 @@ import { cn } from "../lib/cn";
  * las fija el consumidor con anchos en la cabecera o con un <colgroup>.
  */
 
-type TableDensity = "default" | "compact";
+type TableDensity = "default" | "medium" | "compact";
 type TableSection = "head" | "body" | "foot";
 
 /* La densidad se propaga por contexto en vez de repetirse en cada celda: una
@@ -70,6 +80,7 @@ const SectionContext = React.createContext<TableSection>("body");
 export interface TableProps extends React.ComponentPropsWithoutRef<"table"> {
   /**
    * `default` es la tabla de dispersion (filas 14/16, texto 14).
+   * `medium` son los bloques con seleccion y con total (filas 12/14, texto 14).
    * `compact` es el bloque "COMPACTA · DENSA" (filas 8/14, texto 13).
    */
   density?: TableDensity;
@@ -87,6 +98,13 @@ export interface TableProps extends React.ComponentPropsWithoutRef<"table"> {
    * habria forma de tocar el radio o el borde sin envolver el componente.
    */
   containerClassName?: string;
+  /**
+   * Ref al contenedor que scrollea. `ref` apunta al `<table>`, que no es el
+   * elemento con overflow: sin esta via no se puede llevar el scroll horizontal
+   * a una columna por programacion (`scrollLeft`, `scrollIntoView`) pese a que
+   * ese contenedor ya es parte de la API publica via `containerClassName`.
+   */
+  containerRef?: React.Ref<HTMLDivElement>;
 }
 
 /**
@@ -97,7 +115,7 @@ export interface TableProps extends React.ComponentPropsWithoutRef<"table"> {
  * cifras. En movil no se encoje: se cambia por tarjetas-fila.
  */
 export const Table = React.forwardRef<HTMLTableElement, TableProps>(function Table(
-  { className, containerClassName, density = "default", frame = true, ...props },
+  { className, containerClassName, containerRef, density = "default", frame = true, ...props },
   ref,
 ) {
   return (
@@ -106,6 +124,7 @@ export const Table = React.forwardRef<HTMLTableElement, TableProps>(function Tab
      * overflow-x el eje vertical pasa a auto, que es justo lo que recorta las
      * esquinas contra el radio del marco. */
     <div
+      ref={containerRef}
       className={cn(
         "w-full max-w-full overflow-x-auto",
         frame && "rounded-xl border border-edge",
@@ -198,8 +217,15 @@ const tableRow = cva("transition-colors duration-140 ease-out", {
 
 export interface TableRowProps extends React.ComponentPropsWithoutRef<"tr"> {
   /**
-   * Marca la fila como seleccionada. Ademas del fondo pone `aria-selected`,
-   * que es lo que anuncia el lector de pantalla al entrar en la fila.
+   * Marca la fila como seleccionada: pinta el fondo y publica `aria-selected`
+   * y `data-state="selected"`.
+   *
+   * `aria-selected` es valido en `role="row"`, pero en una tabla estatica su
+   * anuncio depende del lector: la seleccion se explota de verdad en grid y
+   * treegrid. Por eso el patron correcto sigue siendo poner una casilla real
+   * con su propio nombre accesible en la primera celda — el atributo es un
+   * refuerzo, no el mecanismo. Para seleccion navegable por celdas hace falta
+   * `role="grid"` y su modelo de foco, que este componente no implementa.
    */
   selected?: boolean;
   /**
@@ -251,6 +277,8 @@ const tableCell = cva("align-middle", {
     density: {
       /* padding 14/16 */
       default: "px-4 py-3.5",
+      /* padding 12/14 */
+      medium: "px-3.5 py-3",
       /* padding 8/14 */
       compact: "px-3.5 py-2",
     },
@@ -259,8 +287,15 @@ const tableCell = cva("align-middle", {
       /* Fecha y estado en mono. El 600 va aqui, en la base, para que un `tone`
          explicito lo pise por orden de variante. */
       mono: "font-mono text-ink-600",
-      /* "Los montos en DM Mono": peso 500 y cifras de ancho fijo para que las
-         columnas de importes alineen digito con digito. */
+      /* "Los montos en DM Mono" y cifras de ancho fijo para que las columnas de
+         importes alineen digito con digito.
+
+         El peso 500 es una UNIFICACION nuestra, no una medida del archivo: alli
+         solo van en 500 los montos de la dispersion y la cifra del Total; los
+         de COMPACTA, CON SELECCION y las filas del bloque CON TOTAL van sin
+         peso declarado (400). Un mismo rol —un importe— no puede pesar distinto
+         segun el bloque en el que caiga, y el 500 es el que aparece en la tabla
+         canonica de la seccion. Quien necesite el 400 pone `font-normal`. */
       num: "font-num font-medium text-ink tabular-nums",
     },
     /* "entradas en verde, salidas en tinta". El signo lo escribe el consumidor;
@@ -275,16 +310,48 @@ const tableCell = cva("align-middle", {
   },
   compoundVariants: [
     /* El tamaño depende de la familia Y de la densidad, no de una sola:
-       sans 14/13 · mono 13/12 · num 14/13. */
+       sans 14/14/13 · mono 13/13/12 · num 14/13/13. */
     { density: "default", font: "sans", class: "text-sm" },
     { density: "default", font: "mono", class: "text-[13px]" },
     { density: "default", font: "num", class: "text-sm" },
+    /* medium mantiene el sans en 14 y baja solo la cifra a 13: es lo que hace
+       el bloque CON SELECCION, donde el nombre pesa mas que el importe. */
+    { density: "medium", font: "sans", class: "text-sm" },
+    { density: "medium", font: "mono", class: "text-[13px]" },
+    { density: "medium", font: "num", class: "text-[13px]" },
     { density: "compact", font: "sans", class: "text-[13px]" },
     { density: "compact", font: "mono", class: "text-xs" },
     { density: "compact", font: "num", class: "text-[13px]" },
   ],
   defaultVariants: { density: "default", font: "sans", tone: "default", align: "left" },
 });
+
+/* Clases de una celda de datos, ya resuelto lo que depende del contexto.
+ *
+ * Vive fuera del cva porque la seccion es contexto y no variante, y porque el
+ * pie debe ganar al tamaño y al padding que fija la densidad. Lo usan tanto
+ * TableCell como el TableHead que hace de cabecera de fila (scope="row"), para
+ * que una fila no mezcle dos tipografias por el hecho de empezar en un <th>. */
+function cellClasses(opts: {
+  density: TableDensity;
+  section: TableSection;
+  font: CellFont;
+  tone: CellTone;
+  align: CellAlign;
+}) {
+  const { density, section, font, tone, align } = opts;
+
+  return cn(
+    tableCell({ density, font, tone, align }),
+    /* El pie NO se comprime con la densidad: un total es un resumen, no una
+       fila de datos, y el archivo lo pinta siempre en 14/16 con Funnel Display
+       15/600 y DM Mono 16/500. Si escalara con la densidad, una tabla compacta
+       tendria un pie a medio camino que nadie ha especificado. */
+    section === "foot" && "px-4 py-3.5",
+    section === "foot" && font === "sans" && "font-display text-[15px] font-semibold",
+    section === "foot" && font === "num" && "text-base",
+  );
+}
 
 export interface TableCellProps extends React.ComponentPropsWithoutRef<"td"> {
   /**
@@ -318,16 +385,7 @@ export const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
   return (
     <td
       ref={ref}
-      className={cn(
-        tableCell({ density, font, tone, align: resolvedAlign }),
-        /* La fila de total invierte la tipografia: el concepto sube a Funnel
-           Display 15/600 y la cifra a DM Mono 16/500. Va fuera del cva porque
-           depende de la seccion, que es contexto y no variante, y porque debe
-           ganar al tamaño que fija la densidad. */
-        section === "foot" && font === "sans" && "font-display text-[15px] font-semibold",
-        section === "foot" && font === "num" && "text-base",
-        className,
-      )}
+      className={cn(cellClasses({ density, section, font, tone, align: resolvedAlign }), className)}
       {...props}
     />
   );
@@ -343,6 +401,8 @@ const tableHead = cva(
       density: {
         /* padding 12/16 · texto 10 */
         default: "px-4 py-3 text-[10px]",
+        /* padding 10/14 · texto 9 */
+        medium: "px-3.5 py-2.5 text-[9px]",
         /* padding 8/14 · texto 9 */
         compact: "px-3.5 py-2 text-[9px]",
       },
@@ -371,21 +431,52 @@ export interface TableHeadProps extends React.ComponentPropsWithoutRef<"th"> {
 /**
  * Celda de cabecera.
  *
- * Por defecto `scope="col"`. Pasa `scope="row"` cuando la primera columna sea
- * el nombre de la fila: es lo que permite al lector de pantalla decir
- * "Maria Rojas, MONTO, 120.000" en vez de leer numeros sueltos.
+ * Dentro de `TableHeader` es una cabecera de columna: `scope="col"`, Ubuntu
+ * Mono en MAYUSCULAS. Dentro del cuerpo o del pie es la cabecera de la fila:
+ * basta con no pasar `scope` (se resuelve a `"row"`) o pasarlo explicitamente,
+ * y entonces se pinta como la celda que es —Ubuntu Sans 14 en tinta— porque el
+ * nombre de una fila es un dato, no un rotulo de columna. Es lo que permite al
+ * lector de pantalla decir "Maria Rojas, MONTO, 120.000" sin que la primera
+ * columna salga en mono de 10px.
  */
 export const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(function TableHead(
   { className, align, sortable = false, sortDirection, onSort, children, scope, ...props },
   ref,
 ) {
   const density = React.useContext(DensityContext);
+  const section = React.useContext(SectionContext);
+
+  /* Un th fuera del thead nombra su fila; dentro del thead nombra su columna. */
+  const resolvedScope = scope ?? (section === "head" ? "col" : "row");
+  const isRowHeader = resolvedScope === "row";
+
+  /* El <button> solo aparece si hay a quien avisar: un boton sin onSort se
+   * queda en el recorrido de Tab prometiendo una accion que no existe. Sin
+   * handler se pinta el rotulo con su flecha, que sigue comunicando el estado
+   * de orden a quien lo ve, y aria-sort a quien no. */
+  const interactive = sortable && Boolean(onSort);
 
   return (
     <th
       ref={ref}
-      scope={scope ?? "col"}
-      className={cn(tableHead({ density, align: align ?? "left" }), className)}
+      scope={resolvedScope}
+      className={
+        isRowHeader
+          ? cn(
+              // Los th nacen en negrita por defecto del navegador; el archivo
+              // pinta el nombre de la fila en regular.
+              "font-normal",
+              cellClasses({
+                density,
+                section,
+                font: "sans",
+                tone: "default",
+                align: align ?? "left",
+              }),
+              className,
+            )
+          : cn(tableHead({ density, align: align ?? "left" }), className)
+      }
       /* aria-sort es lo unico que comunica el orden a quien no ve la flecha, y
          solo tiene sentido en una columna ordenable: "none" en una columna que
          no se puede ordenar es enganoso. */
@@ -400,10 +491,12 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
       }
       {...props}
     >
-      {sortable ? (
+      {interactive ? (
         /* Un <button> de verdad, no un th con onClick: asi el foco, el teclado
          * (Enter y Espacio) y el rol vienen del navegador. El boton hereda la
-         * tipografia mono de la celda; solo añade el gap para la flecha. */
+         * tipografia de la celda; solo añade el gap para la flecha. La
+         * alineacion horizontal la da el text-align del <th>, no el flex: el
+         * boton se ajusta a su contenido. */
         <button
           type="button"
           onClick={onSort}
@@ -412,13 +505,16 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
             "transition-colors duration-140 ease-out outline-none",
             "hover:text-ink",
             "focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
-            // Con align right el boton debe quedar pegado al borde derecho.
-            align === "right" && "justify-end",
           )}
         >
           {children}
           <SortGlyph direction={sortDirection} />
         </button>
+      ) : sortable ? (
+        <span className="inline-flex items-center gap-1">
+          {children}
+          <SortGlyph direction={sortDirection} />
+        </span>
       ) : (
         children
       )}
@@ -463,6 +559,27 @@ function SortGlyph({ direction }: { direction?: TableSortDirection }) {
 /* Caption                                                             */
 /* ------------------------------------------------------------------ */
 
+/* Rotulo de bloque, no cabecera de columna: por eso Ubuntu Sans Mono 13 con
+ * tracking .14em (`font-mono`) y no la Ubuntu Mono 10 de las columnas
+ * (`font-meta`). Son los dos rotulos que dibuja el archivo y cada uno tiene su
+ * familia; el caption hace de "COMPACTA · DENSA", no de "CONTACTO".
+ *
+ * El padding sigue a la densidad para que el rotulo alinee a la izquierda con
+ * la primera columna en vez de flotar sobre ella. */
+const tableCaption = cva(
+  "caption-top text-left font-mono tracking-[0.14em] text-ink-600 uppercase",
+  {
+    variants: {
+      density: {
+        default: "px-4 py-3 text-[13px]",
+        medium: "px-3.5 py-2.5 text-[13px]",
+        compact: "px-3.5 py-2 text-xs",
+      },
+    },
+    defaultVariants: { density: "default" },
+  },
+);
+
 export interface TableCaptionProps extends React.ComponentPropsWithoutRef<"caption"> {
   /**
    * Deja el titulo solo para lectores de pantalla. Es lo habitual: la tabla ya
@@ -472,14 +589,25 @@ export interface TableCaptionProps extends React.ComponentPropsWithoutRef<"capti
   visuallyHidden?: boolean;
 }
 
-/** Nombre accesible de la tabla. Se renderiza arriba, no abajo. */
+/**
+ * Nombre accesible de la tabla. Se renderiza arriba, no abajo.
+ *
+ * Un caption VISIBLE cae dentro del marco (`frame`), porque el `<caption>` es
+ * parte de la `<table>` y el borde lo dibuja el contenedor que scrollea. En el
+ * archivo los rotulos de bloque van fuera del marco: para reproducir eso, pon
+ * el rotulo como un elemento tuyo encima de la tabla y deja el caption en
+ * `visuallyHidden` — la tabla conserva su nombre accesible y el rotulo queda
+ * donde el archivo lo pinta.
+ */
 export const TableCaption = React.forwardRef<HTMLTableCaptionElement, TableCaptionProps>(
   function TableCaption({ className, visuallyHidden = false, ...props }, ref) {
+    const density = React.useContext(DensityContext);
+
     return (
       <caption
         ref={ref}
         className={cn(
-          "caption-top px-4 py-3 text-left font-mono text-xs tracking-[0.1em] text-ink-600 uppercase",
+          tableCaption({ density }),
           // sr-only y no display:none: lo oculto por display no lo lee nadie.
           visuallyHidden && "sr-only",
           className,

@@ -71,6 +71,40 @@ describe("RadioGroup", () => {
     expect(screen.getByRole("radio", { name: "Ahorro" })).toHaveFocus();
   });
 
+  it("anuncia aria-orientation solo cuando el grupo es horizontal", () => {
+    /* role=radiogroup implica "vertical", asi que en vertical callar es correcto
+     * y en horizontal callar seria anunciar lo contrario de lo que se ve. Radix
+     * no lo emite porque `orientation` no se le reenvia (ver componente). */
+    const { unmount } = render(<Grupo />);
+    expect(screen.getByRole("radiogroup")).not.toHaveAttribute("aria-orientation");
+    unmount();
+
+    render(<Grupo orientation="horizontal" />);
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-orientation", "horizontal");
+  });
+
+  it("en horizontal las cuatro flechas siguen moviendo el foco", async () => {
+    /* La contrapartida de declarar aria-orientation a mano: el roving focus de
+     * Radix debe seguir en modo de dos ejes, no atarse al eje anunciado. */
+    render(<Grupo orientation="horizontal" />);
+    screen.getByRole("radio", { name: "Ahorro" }).focus();
+
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Corriente" })).toHaveFocus();
+
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("radio", { name: "Nómina" })).toHaveFocus();
+
+    await userEvent.keyboard("{ArrowUp}");
+    expect(screen.getByRole("radio", { name: "Corriente" })).toHaveFocus();
+  });
+
+  it("el consumidor puede sobreescribir los aria que pone el componente", () => {
+    // Los atributos van antes del spread, no despues: mandan las props.
+    render(<Grupo orientation="horizontal" aria-orientation="vertical" />);
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-orientation", "vertical");
+  });
+
   it("la barra espaciadora selecciona la opcion enfocada", async () => {
     const onValueChange = vi.fn();
     render(<Grupo onValueChange={onValueChange} />);
@@ -154,6 +188,17 @@ describe("RadioGroup", () => {
     expect(screen.getByRole("radio", { name: "A" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("radio", { name: "B" })).not.toHaveAttribute("aria-invalid");
   });
+
+  it("marca el error tambien en el grupo, no solo en cada opcion", () => {
+    /* Quien tabula hasta aqui aterriza en el radiogroup: si el error solo
+     * viviera en las opciones, no lo percibiria hasta enfocar una. */
+    const { unmount } = render(<Grupo invalid />);
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-invalid", "true");
+    unmount();
+
+    render(<Grupo />);
+    expect(screen.getByRole("radiogroup")).not.toHaveAttribute("aria-invalid");
+  });
 });
 
 describe("Radio", () => {
@@ -207,7 +252,76 @@ describe("Radio", () => {
         <Radio value="a">Cuenta de ahorro</Radio>
       </RadioGroup>,
     );
-    expect(screen.getByRole("radio", { name: "Cuenta de ahorro" })).toBeInTheDocument();
+    // Si alguien metiera .toUpperCase(), el nombre accesible pasaria a
+    // "CUENTA DE AHORRO" y ninguna de estas dos aserciones casaria.
+    const radio = screen.getByRole("radio", { name: "Cuenta de ahorro" });
+    expect(radio).toHaveTextContent(/^Cuenta de ahorro$/);
+  });
+
+  it("la fila ocupa el ancho completo aunque el consumidor la envuelva", async () => {
+    /* "Cada fila entera es clicable" no puede depender de que Radio sea hijo
+     * directo del grupo: en cuanto se envuelve (un badge al lado, un separador)
+     * una regla de hijo directo dejaria de aplicar sin ningun aviso. */
+    render(
+      <RadioGroup defaultValue="a">
+        <div className="flex items-center justify-between">
+          <Radio value="a">A</Radio>
+          <span>badge</span>
+        </div>
+        <Radio value="b">B</Radio>
+      </RadioGroup>,
+    );
+
+    expect(screen.getByRole("radio", { name: "A" }).className).toContain("w-full");
+    expect(screen.getByRole("radio", { name: "B" }).className).toContain("w-full");
+  });
+
+  it("en horizontal la opcion se ciñe a su contenido y el consumidor manda", () => {
+    render(
+      <RadioGroup defaultValue="a" orientation="horizontal">
+        <Radio value="a">A</Radio>
+      </RadioGroup>,
+    );
+    expect(screen.getByRole("radio", { name: "A" }).className).not.toContain("w-full");
+  });
+
+  it("className puede ceñir una fila concreta en vertical", () => {
+    // El ancho lo pone el componente ANTES de className: no lo bloquea.
+    render(
+      <RadioGroup defaultValue="a">
+        <Radio value="a" className="w-auto">
+          A
+        </Radio>
+      </RadioGroup>,
+    );
+    const cls = screen.getByRole("radio", { name: "A" }).className;
+    expect(cls).toContain("w-auto");
+    expect(cls).not.toContain("w-full");
+  });
+
+  it("en tarjeta la opcion sigue siendo un unico control enfocable", async () => {
+    const onValueChange = vi.fn();
+    render(
+      <RadioGroup label="Envío" defaultValue="estandar" onValueChange={onValueChange}>
+        <Radio value="estandar" appearance="card" description="Llega en minutos · $0">
+          Envío estándar
+        </Radio>
+        <Radio value="programado" appearance="card" description="Eliges día y hora">
+          Programado
+        </Radio>
+      </RadioGroup>,
+    );
+
+    // El titulo de la tarjeta no es un control aparte: el click sube al radio.
+    await userEvent.click(screen.getByText("Programado"));
+    expect(onValueChange).toHaveBeenCalledWith("programado");
+
+    const seleccionada = screen.getByRole("radio", { name: "Programado" });
+    expect(seleccionada).toBeChecked();
+    expect(seleccionada).toHaveFocus();
+    expect(screen.getByRole("radio", { name: "Envío estándar" })).not.toBeChecked();
+    // Cada tarjeta describe la suya, no la de al lado.
+    expect(seleccionada).toHaveAccessibleDescription("Eliges día y hora");
   });
 
   it("toda la fila es el control, incluida la descripcion", async () => {
