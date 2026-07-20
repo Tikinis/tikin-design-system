@@ -1,0 +1,746 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "tikin",
+  "homepage": "https://tikin-ds.vercel.app",
+  "items": [
+    {
+      "name": "cn",
+      "type": "registry:lib",
+      "title": "cn",
+      "description": "Une clases condicionales y resuelve conflictos de Tailwind. Lo usan todos los componentes.",
+      "dependencies": [
+        "clsx",
+        "tailwind-merge"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/lib/cn.ts",
+          "type": "registry:lib",
+          "target": "lib/cn.ts"
+        }
+      ]
+    },
+    {
+      "name": "accordion",
+      "type": "registry:ui",
+      "title": "Accordion",
+      "description": "Seccion 35 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Accordion, AccordionItem, AccordionTrigger, AccordionContent.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/accordion.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/accordion.tsx"
+        }
+      ]
+    },
+    {
+      "name": "alert",
+      "type": "registry:ui",
+      "title": "Alerts",
+      "description": "Seccion 25 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Alert, AlertAction.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/alert.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/alert.tsx"
+        }
+      ]
+    },
+    {
+      "name": "avatar",
+      "type": "registry:ui",
+      "title": "Avatars",
+      "description": "Seccion 27 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Avatar, AvatarGroup, initialsFromName, toneFromName.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/avatar.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/avatar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "banner",
+      "type": "registry:ui",
+      "title": "Banners",
+      "description": "Seccion 38 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Banner, BannerAction.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/banner.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/banner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Botones",
+      "description": "Seccion 05 del sistema de diseño. Del archivo de Figma. Exporta: Button.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/button.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/button.tsx"
+        }
+      ]
+    },
+    {
+      "name": "calendar",
+      "type": "registry:ui",
+      "title": "Calendario y pickers",
+      "description": "Seccion 13 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: getCalendarGrid, CalendarDay, CalendarWeekday, CalendarNavButton, Calendar.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/calendar.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/calendar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "title": "Cards",
+      "description": "Seccion 10 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Card, CardFeature, CardMedia, CardStat.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/card.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "title": "Checkbox & radio",
+      "description": "Seccion 20 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Checkbox.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/checkbox.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/checkbox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "chip",
+      "type": "registry:ui",
+      "title": "Chips & badges",
+      "description": "Seccion 09 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Chip, Badge.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/chip.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/chip.tsx"
+        }
+      ]
+    },
+    {
+      "name": "date-picker",
+      "type": "registry:ui",
+      "title": "Date picker",
+      "description": "Seccion 23 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: DatePicker.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/date-picker.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/date-picker.tsx"
+        }
+      ]
+    },
+    {
+      "name": "empty-state",
+      "type": "registry:ui",
+      "title": "Empty states",
+      "description": "Seccion 32 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: EmptyState, EmptyStateAction.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/empty-state.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/empty-state.tsx"
+        }
+      ]
+    },
+    {
+      "name": "file-upload",
+      "type": "registry:ui",
+      "title": "File upload",
+      "description": "Seccion 31 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: fileKindFromName, FileTypeIcon, FileUpload, FileUploadList, FileUploadItem, FileUploadThumbnail.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/file-upload.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/file-upload.tsx"
+        }
+      ]
+    },
+    {
+      "name": "filter-chip",
+      "type": "registry:ui",
+      "title": "Filter",
+      "description": "Seccion 22 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: FilterChip.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/filter-chip.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/filter-chip.tsx"
+        }
+      ]
+    },
+    {
+      "name": "keypad",
+      "type": "registry:ui",
+      "title": "Teclado numerico & monto",
+      "description": "Seccion 43 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: formatAmount, parseAmount, AmountDisplay, Keypad.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/keypad.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/keypad.tsx"
+        }
+      ]
+    },
+    {
+      "name": "link",
+      "type": "registry:ui",
+      "title": "Links e icon buttons",
+      "description": "Seccion 06 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Link, IconButton.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/link.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/link.tsx"
+        }
+      ]
+    },
+    {
+      "name": "list-item",
+      "type": "registry:ui",
+      "title": "List items & filas",
+      "description": "Seccion 45 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: List, ListItem, ListItemIcon, ListItemAmount, ListItemValue, ListItemCheck.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/list-item.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/list-item.tsx"
+        }
+      ]
+    },
+    {
+      "name": "menu-button",
+      "type": "registry:ui",
+      "title": "Menu, split & group",
+      "description": "Seccion 07 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: MenuItem, MenuSeparator, MenuButton, SplitButton, ButtonGroup, ButtonGroupItem.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/menu-button.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/menu-button.tsx"
+        }
+      ]
+    },
+    {
+      "name": "modal",
+      "type": "registry:ui",
+      "title": "Modales & bottom sheets",
+      "description": "Seccion 42 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Modal, ModalTrigger, ModalClose, ModalContent, ModalIcon, ModalTitle, ModalDescription, ModalFooter, ModalAction, BottomSheet, BottomSheetTrigger, BottomSheetClose, BottomSheetContent, BottomSheetTitle, BottomSheetDescription, BottomSheetList, BottomSheetItem.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/modal.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/modal.tsx"
+        }
+      ]
+    },
+    {
+      "name": "navigation",
+      "type": "registry:ui",
+      "title": "Navigation",
+      "description": "Seccion 26 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: TopBar, TopBarAction, TopBarLink, TabBar, TabBarItem, TabBarAction, Sidebar, SidebarItem, SidebarFooter, SidebarUser.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/navigation.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/navigation.tsx"
+        }
+      ]
+    },
+    {
+      "name": "notification",
+      "type": "registry:ui",
+      "title": "Notifications",
+      "description": "Seccion 37 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: NotificationItem, NotificationAction.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/notification.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/notification.tsx"
+        }
+      ]
+    },
+    {
+      "name": "otp-input",
+      "type": "registry:ui",
+      "title": "OTP",
+      "description": "Seccion 36 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: OtpInput.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/otp-input.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/otp-input.tsx"
+        }
+      ]
+    },
+    {
+      "name": "pagination",
+      "type": "registry:ui",
+      "title": "Pagination",
+      "description": "Seccion 28 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: getPaginationRange, PaginationItem, PaginationArrow, Pagination, PaginationJump, PaginationBar, LoadMore, LoadMoreSentinel.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/pagination.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/pagination.tsx"
+        }
+      ]
+    },
+    {
+      "name": "pin-input",
+      "type": "registry:ui",
+      "title": "PIN",
+      "description": "Seccion 44 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: PinInput.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/pin-input.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/pin-input.tsx"
+        }
+      ]
+    },
+    {
+      "name": "progress",
+      "type": "registry:ui",
+      "title": "Progress & sliders",
+      "description": "Seccion 18 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Progress.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/progress.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/progress.tsx"
+        }
+      ]
+    },
+    {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "title": "Radio button",
+      "description": "Seccion 21 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: RadioGroup, Radio.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/radio-group.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/radio-group.tsx"
+        }
+      ]
+    },
+    {
+      "name": "range-slider",
+      "type": "registry:ui",
+      "title": "Range slider",
+      "description": "Seccion 40 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: RangeSlider.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/range-slider.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/range-slider.tsx"
+        }
+      ]
+    },
+    {
+      "name": "search-input",
+      "type": "registry:ui",
+      "title": "Search",
+      "description": "Seccion 24 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: SearchInput.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/search-input.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/search-input.tsx"
+        }
+      ]
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "title": "Skeletons",
+      "description": "Seccion 33 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Skeleton.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/skeleton.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/skeleton.tsx"
+        }
+      ]
+    },
+    {
+      "name": "snackbar",
+      "type": "registry:ui",
+      "title": "Snackbar & undo",
+      "description": "Seccion 39 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: SnackbarProvider, SnackbarViewport, Snackbar, SnackbarAction, SnackbarClose.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/snackbar.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/snackbar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "spinner",
+      "type": "registry:ui",
+      "title": "Loading states",
+      "description": "Seccion 41 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Spinner, LoadingOverlay.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/spinner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "steps",
+      "type": "registry:ui",
+      "title": "Steps",
+      "description": "Seccion 34 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Steps, StepsDots.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/steps.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/steps.tsx"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "title": "Tables",
+      "description": "Seccion 29 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Table, TableHeader, TableBody, TableFooter, TableRow, TableCell, TableHead, TableCaption.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/table.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/table.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "title": "Tabs & controles",
+      "description": "Seccion 08 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Tabs, TabsList, TabsTrigger, TabsContent, SegmentedControl, SegmentedControlItem.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/tabs.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/tabs.tsx"
+        }
+      ]
+    },
+    {
+      "name": "text-field",
+      "type": "registry:ui",
+      "title": "Inputs",
+      "description": "Seccion 11 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: TextField, Textarea.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/text-field.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/text-field.tsx"
+        }
+      ]
+    },
+    {
+      "name": "toast",
+      "type": "registry:ui",
+      "title": "Toast",
+      "description": "Seccion 17 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: Toast, ToastProvider, ToastViewport, ToastAction.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/toast.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/toast.tsx"
+        }
+      ]
+    },
+    {
+      "name": "toggle",
+      "type": "registry:ui",
+      "title": "Toggle",
+      "description": "Seccion 16 del sistema de diseño. Mezcla partes del archivo con extensiones. Exporta: Toggle, SwitchField.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/toggle.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/toggle.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "title": "Tooltips",
+      "description": "Seccion 19 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: TooltipProvider, Tooltip.",
+      "dependencies": [
+        "radix-ui",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "https://tikin-ds.vercel.app/r/cn.json"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/tooltip.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/tooltip.tsx"
+        }
+      ]
+    }
+  ]
+}

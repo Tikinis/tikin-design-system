@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un PR que recibe varios push seguidos solo necesita validar el ultimo.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Tipos
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Formato
+        run: pnpm format:check
+
+      - name: Tests
+        run: pnpm test
+
+      # Compila el paquete Y el registry. Si el build del paquete se rompe, da
+      # igual que los tests pasen: nadie podra instalarlo.
+      - name: Build
+        run: pnpm build
+
+      - name: Storybook y registry
+        run: |
+          pnpm registry
+          pnpm build:storybook
+
+  # Comprueba lo unico que de verdad importa al consumidor: que el tarball
+  # publicado se instale y funcione en un proyecto limpio, sin el monorepo
+  # alrededor. Es distinto de `pnpm build`, que se apoya en el workspace.
+  instalable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Empaquetar
+        run: |
+          mkdir -p /tmp/packs
+          pnpm --filter @tikin/tokens pack --pack-destination /tmp/packs
+          pnpm --filter @tikin/ui pack --pack-destination /tmp/packs
+
+      - name: Instalar en un proyecto limpio y compilar
+        run: node scripts/prueba-instalacion.mjs /tmp/packs

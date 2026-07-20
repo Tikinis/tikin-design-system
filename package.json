@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "storybook": "pnpm --filter @tikin/storybook dev",
     "build:storybook": "pnpm --filter @tikin/storybook build",
-    "registry": "shadcn build --output apps/storybook/public/r",
+    "registry": "node scripts/generar-registry.mjs && shadcn build --output apps/storybook/public/r && node scripts/alias-registry.mjs apps/storybook/public/r",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish"
