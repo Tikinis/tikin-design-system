@@ -1,0 +1,104 @@
+/* Capa semantica de Tikin — extraida VERBATIM de "Sistema de Diseño.dc.html".
+   Estas variables --tk-* son las que usa el propio documento de diseño (1531 usos)
+   para superficies, tinta, bordes y tints de feedback. Son la fuente de verdad
+   del tema claro/oscuro a nivel de pagina; los tokens por componente
+   (--button-*, --textfield-*, ...) viven en figma.css.
+
+   El documento tambien redefine aqui --chip-text-* a tinta oscura fija en AMBOS
+   modos: es la correccion intencional al placeholder roto que Figma exporta en
+   el bloque .dark de figma.css (--chip-typo-family-label: "String value").
+   Los rellenos de chip son siempre claros, asi que la tinta nunca se invierte.
+
+   Los acentos de marca (lima, lavanda, dorado, rojo) NO viven aqui: el documento
+   los toma directo de las primitivas de Figma (--colours-limegreen-400, etc.). */
+
+:root {
+  --tk-bg: rgb(250,248,244);
+  --tk-surface: rgb(255,255,255);
+  --tk-surface-2: rgb(243,243,243);
+  --tk-ink: rgb(11,15,16);
+  --tk-ink-strong: rgb(11,11,11);
+  --tk-line: rgb(240,240,240);
+  --tk-border: rgb(230,230,230);
+  --tk-border-2: rgb(217,217,217);
+  --tk-400: rgb(191,191,191);
+  --tk-500: rgb(166,166,166);
+  --tk-600: rgb(110,110,110);
+  --tk-700: rgb(74,74,74);
+  --tk-800: rgb(43,43,43);
+  --tk-on-accent: rgb(11,15,16);
+  --chip-text-info: rgb(11,15,16);
+  --chip-text-success: rgb(11,15,16);
+  --chip-text-warning: rgb(11,15,16);
+  --chip-text-error: rgb(11,15,16);
+  --tk-surface-3: rgb(238,238,238);
+  --tk-tint-success: rgb(239,255,239);
+  --tk-tint-warning: rgb(255,251,235);
+  --tk-tint-error: rgb(255,240,240);
+  --tk-tint-info: rgb(238,239,255);
+  --tk-fg-success: rgb(6,112,6);
+  --tk-fg-warning: rgb(156,127,18);
+  --tk-fg-error: rgb(196,0,0);
+  --tk-fg-info: rgb(90,70,200);
+}
+
+/* Tema oscuro. Se activa con la clase .dark (igual que en el documento)
+   o con [data-theme="dark"], para alinearse con figma.css. */
+:root[data-theme="dark"],
+.dark {
+  --tk-bg: rgb(18,18,18);
+  --tk-surface: rgb(27,27,27);
+  --tk-surface-2: rgb(36,36,36);
+  --tk-ink: rgb(244,244,244);
+  --tk-ink-strong: rgb(255,255,255);
+  --tk-line: rgb(38,38,38);
+  --tk-border: rgb(50,50,50);
+  --tk-border-2: rgb(60,60,60);
+  --tk-400: rgb(92,92,92);
+  --tk-500: rgb(110,110,110);
+  --tk-600: rgb(154,154,154);
+  --tk-700: rgb(201,201,201);
+  --tk-800: rgb(230,230,230);
+  --tk-on-accent: rgb(11,15,16);
+  --chip-text-info: rgb(11,15,16);
+  --chip-text-success: rgb(11,15,16);
+  --chip-text-warning: rgb(11,15,16);
+  --chip-text-error: rgb(11,15,16);
+  --tk-surface-3: rgb(58,58,58);
+  --tk-tint-success: rgb(20,44,24);
+  --tk-tint-warning: rgb(46,40,18);
+  --tk-tint-error: rgb(52,26,26);
+  --tk-tint-info: rgb(26,28,52);
+  --tk-fg-success: rgb(133,255,133);
+  --tk-fg-warning: rgb(255,214,110);
+  --tk-fg-error: rgb(255,138,138);
+  --tk-fg-info: rgb(199,201,255);
+  --primary-base-black: rgb(244,244,244);
+}
+
+/* Congela el tema claro sin importar el contexto. El documento lo usa en las
+   matrices de especificacion, donde las muestras deben verse siempre igual. */
+.tk-static {
+  --tk-bg: rgb(250,248,244);
+  --tk-surface: rgb(255,255,255);
+  --tk-surface-2: rgb(243,243,243);
+  --tk-surface-3: rgb(238,238,238);
+  --tk-ink: rgb(11,15,16);
+  --tk-ink-strong: rgb(11,11,11);
+  --tk-line: rgb(240,240,240);
+  --tk-border: rgb(230,230,230);
+  --tk-border-2: rgb(217,217,217);
+  --tk-400: rgb(191,191,191);
+  --tk-500: rgb(166,166,166);
+  --tk-600: rgb(110,110,110);
+  --tk-700: rgb(74,74,74);
+  --tk-800: rgb(43,43,43);
+  --tk-tint-success: rgb(239,255,239);
+  --tk-tint-warning: rgb(255,251,235);
+  --tk-tint-error: rgb(255,240,240);
+  --tk-tint-info: rgb(238,239,255);
+  --tk-fg-success: rgb(6,112,6);
+  --tk-fg-warning: rgb(156,127,18);
+  --tk-fg-error: rgb(196,0,0);
+  --tk-fg-info: rgb(90,70,200);
+}

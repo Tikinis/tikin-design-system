@@ -1,0 +1,35 @@
+{
+  "name": "@tikin/tokens",
+  "version": "0.1.0",
+  "description": "Tikin Design System — design tokens (Figma variables + capa semántica + tema Tailwind 4)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": true,
+  "files": ["src"],
+  "exports": {
+    ".": "./src/index.css",
+    "./index.css": "./src/index.css",
+    "./theme.css": "./src/theme.css",
+    "./figma.css": "./src/figma.css",
+    "./semantic.css": "./src/semantic.css",
+    "./fonts.css": "./src/fonts.css"
+  },
+  "scripts": {
+    "build": "node -e \"console.log('@tikin/tokens es CSS puro — no requiere build')\"",
+    "typecheck": "node -e \"process.exit(0)\""
+  },
+  "peerDependencies": {
+    "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  },
+  "dependencies": {
+    "@fontsource/dm-mono": "^5.3.0",
+    "@fontsource/funnel-display": "^5.3.0",
+    "@fontsource/ubuntu-mono": "^5.3.0",
+    "@fontsource/ubuntu-sans": "^5.3.0",
+    "@fontsource/ubuntu-sans-mono": "^5.3.0"
+  }
+}

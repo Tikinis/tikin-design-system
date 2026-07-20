@@ -1,0 +1,38 @@
+/* Fuentes del sistema, auto-hospedadas via @fontsource.
+   Import OPCIONAL: si tu app ya carga estas familias, no lo importes.
+
+       import "@tikin/tokens/fonts.css";
+
+   Se auto-hospedan a proposito, en vez de tirar del CDN de Google como hace el
+   documento de diseño: evita una peticion a un tercero en el critical path y no
+   filtra las IPs de tus usuarios a Google. Los pesos son exactamente los que usa
+   el sistema (seccion 02) — nada mas, para no inflar el bundle.
+
+   Roles:
+     Funnel Display   — titulares
+     Ubuntu Sans      — voz de lectura
+     Ubuntu Sans Mono — cifras, botones, etiquetas
+     DM Mono          — montos heroe
+     Ubuntu Mono      — metadatos y chips */
+
+/* Funnel Display — 400 / 500 / 600 */
+@import "@fontsource/funnel-display/400.css";
+@import "@fontsource/funnel-display/500.css";
+@import "@fontsource/funnel-display/600.css";
+
+/* Ubuntu Sans — 400 / 500 / italic 400 */
+@import "@fontsource/ubuntu-sans/400.css";
+@import "@fontsource/ubuntu-sans/500.css";
+@import "@fontsource/ubuntu-sans/400-italic.css";
+
+/* Ubuntu Sans Mono — 400 / 500 / 600 */
+@import "@fontsource/ubuntu-sans-mono/400.css";
+@import "@fontsource/ubuntu-sans-mono/500.css";
+@import "@fontsource/ubuntu-sans-mono/600.css";
+
+/* Ubuntu Mono — 400 / 700 */
+@import "@fontsource/ubuntu-mono/400.css";
+@import "@fontsource/ubuntu-mono/700.css";
+
+/* DM Mono — 500 (montos XL) */
+@import "@fontsource/dm-mono/500.css";

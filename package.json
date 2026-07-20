@@ -1,0 +1,38 @@
+{
+  "name": "tikin-design-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tikin Design System — monorepo (npm package + shadcn-compatible registry)",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm --filter \"./packages/*\" build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "storybook": "pnpm --filter @tikin/storybook dev",
+    "build:storybook": "pnpm --filter @tikin/storybook build",
+    "registry": "shadcn build --output apps/storybook/public/r",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.1",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "shadcn": "^4.13.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.64.0"
+  },
+  "//typescript": "Fijada en 5.9.3 a proposito. TypeScript 7 (el port nativo) salio el 2026-07-08 y es demasiado reciente para una libreria compartida cuya emision de .d.ts consume toda la empresa. Revisar en unos meses."
+}

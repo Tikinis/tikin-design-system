@@ -1,0 +1,147 @@
+/* Capa Tailwind 4 de Tikin.
+   Mapea las primitivas de Figma y la capa semantica del documento a utilidades
+   de Tailwind. Este SI es un archivo editable a mano.
+
+   Por que `@theme inline` y no `@theme`:
+   los colores semanticos apuntan a variables que cambian con el tema. Con
+   `@theme` a secas, Tailwind copiaria el valor a :root y lo congelaria ahi, asi
+   que un `.dark` anidado (como el que aplica Storybook al root de cada story)
+   no lo afectaria. Con `inline`, la utilidad emite `var(--tk-surface)` directo
+   y se resuelve en el elemento, heredando del ancestro `.dark` mas cercano.
+
+   POR QUE figma.css VA EN SU PROPIA CAPA
+   --------------------------------------
+   figma.css declara nombres que chocan de frente con los namespaces de tema de
+   Tailwind 4, y ademas SIN unidad:
+
+       --radius-md: 8;      --radius-none: 0;      --font-weight-normal: 400;
+       --spacing-0 .. --spacing-4
+
+   Tailwind emite su tema dentro de `@layer theme`, pero el `:root` de figma.css
+   iria sin capa — y en CSS lo no-encapado siempre gana a lo encapado, sin
+   importar el orden. Resultado medido antes de este arreglo:
+
+       .rounded-md { border-radius: var(--radius-md) }  ->  8   (invalido)
+
+   Metiendo figma.css en la capa `tikin-figma`, declarada ANTES que las de
+   Tailwind, sus variables siguen disponibles para `var()` pero pierden
+   cualquier pulso de cascada contra nuestro tema. El orden se declara arriba
+   del todo porque una sentencia `@layer` fija la prioridad en el momento en que
+   aparece: si se declarara despues del import de Tailwind, `tikin-figma`
+   quedaria como la capa MAS fuerte y el bug volveria.
+
+   semantic.css va deliberadamente SIN capa: asi su correccion de --chip-text-*
+   gana a los placeholders rotos que figma.css trae en el bloque .dark. */
+
+@layer tikin-figma, theme, base, components, utilities;
+
+@import "tailwindcss";
+@import "./figma.css" layer(tikin-figma);
+@import "./semantic.css";
+
+/* El documento alterna el tema con la clase .dark. Aceptamos ademas
+   [data-theme="dark"] porque figma.css ya emite ese selector. */
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  /* ---------------------------------------------------------------
+     Superficies y tinta — cambian con el tema (fuente: --tk-*)
+     --------------------------------------------------------------- */
+  --color-page: var(--tk-bg);
+  --color-surface: var(--tk-surface);
+  --color-surface-2: var(--tk-surface-2);
+  --color-surface-3: var(--tk-surface-3);
+
+  --color-ink: var(--tk-ink);
+  --color-ink-strong: var(--tk-ink-strong);
+  --color-ink-400: var(--tk-400);
+  --color-ink-500: var(--tk-500);
+  --color-ink-600: var(--tk-600);
+  --color-ink-700: var(--tk-700);
+  --color-ink-800: var(--tk-800);
+
+  --color-line: var(--tk-line);
+  --color-edge: var(--tk-border);
+  --color-edge-2: var(--tk-border-2);
+
+  /* Tinta estable sobre rellenos de acento (siempre claros en ambos modos). */
+  --color-on-accent: var(--tk-on-accent);
+
+  /* ---------------------------------------------------------------
+     Feedback — tint = superficie, fg = texto/icono
+     --------------------------------------------------------------- */
+  --color-tint-success: var(--tk-tint-success);
+  --color-tint-warning: var(--tk-tint-warning);
+  --color-tint-error: var(--tk-tint-error);
+  --color-tint-info: var(--tk-tint-info);
+
+  --color-fg-success: var(--tk-fg-success);
+  --color-fg-warning: var(--tk-fg-warning);
+  --color-fg-error: var(--tk-fg-error);
+  --color-fg-info: var(--tk-fg-info);
+
+  /* ---------------------------------------------------------------
+     Acentos de marca — identicos en ambos modos.
+     El documento los toma directo de las primitivas de Figma.
+     --------------------------------------------------------------- */
+  --color-lime: var(--colours-limegreen-400);
+  --color-lavender: var(--colours-lavenderblue-100);
+  --color-gold: var(--colours-goldenyellow-300);
+  --color-red: var(--colours-purered-600);
+  --color-red-soft: var(--colours-purered-400);
+  --color-red-tint: var(--colours-purered-transparent);
+}
+
+@theme {
+  /* ---------------------------------------------------------------
+     Radios. La escala del sistema es 6 / 8 / 10 / 12 (+ 16, 20, pill).
+     Nombres alineados con los tokens button-corner-* y textfield-corner-*.
+     --------------------------------------------------------------- */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-none: 0px;
+  --radius-pill: 999px;
+
+  /* ---------------------------------------------------------------
+     Tipografia. Cinco familias con roles distintos — ver seccion 02.
+     Las monoespaciadas cargan TODAS las cifras, botones y etiquetas.
+     --------------------------------------------------------------- */
+  --font-display: "Funnel Display", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Ubuntu Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-num: "DM Mono", ui-monospace, monospace;
+  --font-meta: "Ubuntu Mono", ui-monospace, monospace;
+
+  /* ---------------------------------------------------------------
+     Espaciado. Base 4 con los tres pasos unicos de Tikin — 6, 10, 14 —
+     que le dan su densidad caracteristica (seccion 03).
+     --------------------------------------------------------------- */
+  --spacing: 4px;
+
+  /* ---------------------------------------------------------------
+     Elevacion. Interfaz plana: el borde de 1px define las tarjetas y la
+     sombra queda reservada para lo que flota (seccion 04).
+     --------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+
+  /* Alturas de control, del mapa de anatomia (seccion 03). */
+  --height-control-l: 48px;
+  --height-control-m: 40px;
+  --height-control-s: 32px;
+  --height-control-xs: 28px;
+}
+
+/* Estilos base de pagina. Replican lo que el documento aplica a <body>. */
+@layer base {
+  body {
+    background-color: var(--tk-bg);
+    color: var(--tk-ink);
+    font-family: var(--font-sans);
+  }
+}

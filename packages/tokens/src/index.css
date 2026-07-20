@@ -1,0 +1,10 @@
+/* Punto de entrada de @tikin/tokens.
+
+       @import "@tikin/tokens";          / * o * /
+       import "@tikin/tokens/index.css";
+
+   Incluye Tailwind, las variables de Figma, la capa semantica --tk-* del
+   documento y el mapeo a utilidades. Las fuentes van aparte y son opcionales:
+   import "@tikin/tokens/fonts.css". */
+
+@import "./theme.css";
