@@ -86,7 +86,7 @@ const IconoAbrir = () => (
 /** Marca el hueco de la imagen sin inventarse un gradiente decorativo. */
 const ImagenDemo = () => (
   <div className="flex size-full items-center justify-center bg-surface-3">
-    <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+    <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
       Imagen de marca
     </span>
   </div>
@@ -125,7 +125,7 @@ const Sparkline = () => {
 };
 
 const Etiqueta = ({ children }: { children: ReactNode }) => (
-  <span className="font-meta text-[10px] tracking-[0.06em] text-ink-500 uppercase">{children}</span>
+  <span className="font-meta text-[10px] tracking-[0.06em] text-ink-600 uppercase">{children}</span>
 );
 
 /* ------------------------------------------------------------------ */
@@ -409,7 +409,7 @@ export const MatrizDeEspecificacion: Story = {
               {surfaces.map((s) => (
                 <th
                   key={s}
-                  className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase"
+                  className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase"
                 >
                   {s}
                 </th>
@@ -419,7 +419,7 @@ export const MatrizDeEspecificacion: Story = {
           <tbody>
             {radios.map(([radius, etiqueta]) => (
               <tr key={radius}>
-                <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+                <td className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                   {etiqueta}
                 </td>
                 {surfaces.map((s) => (

@@ -182,7 +182,7 @@ export const Posicion: Story = {
           Envío completado
         </Toast>
       </ToastProvider>
-      <div className="absolute inset-x-0 bottom-0 flex h-16 items-center justify-around border-t border-edge bg-surface font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+      <div className="absolute inset-x-0 bottom-0 flex h-16 items-center justify-around border-t border-edge bg-surface font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
         <span>Inicio</span>
         <span>Enviar</span>
         <span>Perfil</span>

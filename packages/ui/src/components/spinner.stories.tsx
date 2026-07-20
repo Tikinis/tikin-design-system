@@ -57,7 +57,7 @@ export const Tamanos: Story = {
           <Spinner size={size} label={null} />
           {/* Mayusculas por CSS, nunca con .toUpperCase(): en JS romperia el
               texto accesible y lo que se copia al portapapeles. */}
-          <span className="font-meta text-[10px] text-ink-500 uppercase">
+          <span className="font-meta text-[10px] text-ink-600 uppercase">
             {size} · {{ s: 16, m: 24, l: 40 }[size]}
           </span>
         </div>
@@ -140,7 +140,7 @@ export const MatrizDeEspecificacion: Story = {
       { size: "m", px: 24, trazo: "2.5" },
       { size: "l", px: 40, trazo: "3" },
     ] as const;
-    const th = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase text-left";
+    const th = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase text-left";
     return (
       <table className="tk-static border-separate border-spacing-4 bg-page p-4">
         <thead>

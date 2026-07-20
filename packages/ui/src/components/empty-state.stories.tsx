@@ -248,7 +248,7 @@ export const AccionesDeEspecificacion: Story = {
           <tr>
             <th />
             {variantes.map((v) => (
-              <th key={v} className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <th key={v} className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                 {v}
               </th>
             ))}
@@ -257,7 +257,7 @@ export const AccionesDeEspecificacion: Story = {
         <tbody>
           {(["default", "con icono", "disabled"] as const).map((estado) => (
             <tr key={estado}>
-              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                 {estado}
               </td>
               {variantes.map((v) => (

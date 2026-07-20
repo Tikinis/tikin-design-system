@@ -179,7 +179,7 @@ export const TiposDeArchivo: Story = {
             <div className="flex size-11 items-center justify-center rounded-md bg-surface-2">
               <FileTypeIcon kind={kind} className="size-[22px]" />
             </div>
-            <span className="font-meta text-[11px] text-ink-500 uppercase">{kind}</span>
+            <span className="font-meta text-[11px] text-ink-600 uppercase">{kind}</span>
           </div>
         ))}
       </div>
@@ -211,7 +211,7 @@ export const MatrizDeEstados: Story = {
             {["estado", "sin acciones", "con quitar"].map((h) => (
               <th
                 key={h}
-                className="pr-4 text-left font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase"
+                className="pr-4 text-left font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase"
               >
                 {h}
               </th>
@@ -221,7 +221,7 @@ export const MatrizDeEstados: Story = {
         <tbody>
           {filas.map((fila) => (
             <tr key={fila.status}>
-              <td className="pr-4 align-middle font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <td className="pr-4 align-middle font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                 {fila.status}
               </td>
               <td className="w-[320px] pr-4">

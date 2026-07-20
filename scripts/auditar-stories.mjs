@@ -26,9 +26,26 @@ import { chromium } from "playwright";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createServer } from "node:http";
-import { stat, readFile } from "node:fs/promises";
+import { stat, readFile, mkdir } from "node:fs/promises";
+import { writeFileSync, existsSync } from "node:fs";
 
 const dir = resolve(process.argv[2] ?? "apps/storybook/storybook-static");
+
+/* El barrido completo son ~700 vistas y tarda de sobra para que cualquier
+   supervisor lo mate a media ejecucion. Por eso va por tramos y va volcando el
+   resultado segun avanza: se puede reanudar y nunca se pierde lo hecho.
+
+     node scripts/auditar-stories.mjs <dir> --desde 0 --hasta 120
+     node scripts/auditar-stories.mjs <dir>            # todo de una vez
+
+   Los parciales se acumulan en .review/audit-visual.json. */
+const arg = (nombre, pordefecto) => {
+  const i = process.argv.indexOf(nombre);
+  return i === -1 ? pordefecto : Number(process.argv[i + 1]);
+};
+const DESDE = arg("--desde", 0);
+const HASTA = arg("--hasta", Infinity);
+const SALIDA = resolve(".review/audit-visual.json");
 
 const MIME = {
   ".html": "text/html",
@@ -131,12 +148,21 @@ function recolectar() {
 
     const tinta = rgb(cs.color);
     if (!tinta) continue;
+    // WCAG 1.4.3 exime a los controles inactivos del minimo de contraste, asi
+    // que se marcan en vez de tratarlos como el resto: un disabled apagado es
+    // correcto, pero uno ilegible del todo sigue siendo mal diseño.
+    const inactivo = Boolean(
+      el.closest(
+        "[disabled],[aria-disabled='true'],[data-disabled],[data-state='checked'][data-disabled]",
+      ),
+    );
     textos.push({
       texto: texto.slice(0, 40),
       tinta,
       fondo: fondoEfectivo(el),
       tam: parseFloat(cs.fontSize),
       peso: cs.fontWeight,
+      inactivo,
     });
   }
 
@@ -147,26 +173,52 @@ const { servidor, puerto } = await servir(dir);
 const base = `http://127.0.0.1:${puerto}`;
 
 const indice = JSON.parse(readFileSync(join(dir, "index.json"), "utf8"));
-const stories = Object.values(indice.entries ?? indice.stories ?? {}).filter(
+const todas = Object.values(indice.entries ?? indice.stories ?? {}).filter(
   (e) => e.type !== "docs",
 );
+const stories = todas.slice(DESDE, HASTA === Infinity ? undefined : HASTA);
 
 const navegador = await chromium.launch();
-const problemas = [];
-let revisadas = 0;
+
+/* UNA sola pestaña para las ~700 vistas. Abrir una por vista agota los recursos
+   del navegador y acaba tumbandolo a mitad del barrido ("Target page, context or
+   browser has been closed"). Navegar sobre la misma pestaña es ademas mas
+   rapido: no repite el arranque del contexto. */
+const pagina = await navegador.newPage({ viewport: { width: 900, height: 700 } });
+let errores = [];
+pagina.on("console", (m) => m.type() === "error" && errores.push(m.text()));
+pagina.on("pageerror", (e) => errores.push(String(e)));
+await mkdir(resolve(".review"), { recursive: true });
+const previo = existsSync(SALIDA) && DESDE > 0 ? JSON.parse(readFileSync(SALIDA, "utf8")) : null;
+const problemas = previo?.problemas ?? [];
+let revisadas = previo?.revisadas ?? 0;
+const volcar = () =>
+  writeFileSync(SALIDA, JSON.stringify({ revisadas, total: todas.length * 2, problemas }, null, 2));
 
 for (const story of stories) {
   for (const tema of ["Claro", "Oscuro"]) {
-    const pagina = await navegador.newPage({ viewport: { width: 900, height: 700 } });
-    const errores = [];
-    pagina.on("console", (m) => m.type() === "error" && errores.push(m.text()));
-    pagina.on("pageerror", (e) => errores.push(String(e)));
-
+    errores = [];
     const url = `${base}/iframe.html?id=${story.id}&globals=theme:${tema}&viewMode=story`;
     try {
-      await pagina.goto(url, { waitUntil: "networkidle", timeout: 20000 });
-      // Las animaciones de entrada (stagger, count-up) necesitan asentarse.
-      await pagina.waitForTimeout(350);
+      await pagina.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+
+      /* Esperar por TIEMPO no vale y ademas mentia. Reutilizando la pestaña,
+         al saltar de una story clara a una oscura hay un instante en que el
+         texto ya resuelve con los tokens del tema nuevo y el fondo todavia no:
+         medir ahi daba "texto invisible" a punta pala — 189 avisos de tinta
+         casi negra sobre fondo casi negro que en el navegador se ven
+         perfectamente. Se espera a que el fondo del body sea EL del tema
+         pedido, que es la señal de que el cambio ya aterrizo. */
+      await pagina.waitForFunction(
+        (t) => {
+          const bg = getComputedStyle(document.body).backgroundColor;
+          return t === "Oscuro" ? bg === "rgb(18, 18, 18)" : bg === "rgb(250, 248, 244)";
+        },
+        tema,
+        { timeout: 10000 },
+      );
+      // Y un respiro corto para las animaciones de entrada (stagger, count-up).
+      await pagina.waitForTimeout(120);
       const datos = await pagina.evaluate(recolectar);
 
       for (const v of datos.varsSinResolver) {
@@ -183,11 +235,23 @@ for (const story of stories) {
         // Umbral WCAG AA: 3:1 para texto grande, 4.5:1 para el resto.
         const grande = t.tam >= 24 || (t.tam >= 18.66 && Number(t.peso) >= 700);
         const minimo = grande ? 3 : 4.5;
-        if (ratio < minimo) {
+        if (t.inactivo) {
+          // Solo interesa el inactivo que ni siquiera se intuye.
+          if (ratio < 2) {
+            problemas.push({
+              story: story.id,
+              tema,
+              tipo: "inactivo-ilegible",
+              par: `${t.tinta.join(",")} sobre ${t.fondo.join(",")}`,
+              detalle: `"${t.texto}" ${ratio.toFixed(2)}:1 ${t.tam}px`,
+            });
+          }
+        } else if (ratio < minimo) {
           problemas.push({
             story: story.id,
             tema,
             tipo: ratio < 1.5 ? "texto-invisible" : "contraste-bajo",
+            par: `${t.tinta.join(",")} sobre ${t.fondo.join(",")}`,
             detalle: `"${t.texto}" ${ratio.toFixed(2)}:1 (min ${minimo}) ${t.tam}px`,
           });
         }
@@ -198,14 +262,17 @@ for (const story of stories) {
       }
 
       revisadas++;
+      // Volcado periodico: si algo corta el proceso, no se pierde el trabajo.
+      if (revisadas % 40 === 0) volcar();
     } catch (e) {
       problemas.push({ story: story.id, tema, tipo: "no-carga", detalle: String(e).slice(0, 140) });
     }
-    await pagina.close();
   }
 }
 
+await pagina.close();
 await navegador.close();
+volcar();
 servidor.close();
 
 /* Informe. Se agrupa por tipo porque un mismo defecto suele aparecer en muchas
@@ -220,18 +287,17 @@ if (!problemas.length) {
   console.log("no hay variables sin resolver, texto ilegible ni errores.\n");
 } else {
   for (const [tipo, lista] of Object.entries(porTipo).sort((a, b) => b[1].length - a[1].length)) {
-    console.log(`\n### ${tipo} — ${lista.length}`);
-    const vistos = new Set();
-    for (const p of lista) {
-      const clave = `${p.story}|${p.detalle}`;
-      if (vistos.has(clave)) continue;
-      vistos.add(clave);
-      if (vistos.size > 12) {
-        console.log(`  … y ${lista.length - 12} mas`);
-        break;
-      }
-      console.log(`  [${p.tema}] ${p.story}\n      ${p.detalle}`);
+    const porPar = {};
+    for (const p of lista) (porPar[p.par ?? p.detalle] ??= []).push(p);
+    const pares = Object.entries(porPar).sort((a, b) => b[1].length - a[1].length);
+    console.log(`\n### ${tipo} — ${lista.length} avisos, ${pares.length} causas distintas`);
+    for (const [par, casos] of pares.slice(0, 10)) {
+      const ej = casos[0];
+      console.log(`  ${par}`);
+      console.log(`      ${ej.detalle}`);
+      console.log(`      ${casos.length} apariciones · p.ej. [${ej.tema}] ${ej.story}`);
     }
+    if (pares.length > 10) console.log(`  … y ${pares.length - 10} causas mas`);
   }
   console.log("");
 }

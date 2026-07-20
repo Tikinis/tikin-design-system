@@ -112,7 +112,7 @@ export const Navegable: Story = {
     return (
       <div className="flex w-[420px] flex-col gap-6">
         <Steps {...args} value={value} onStepSelect={setValue} />
-        <p className="font-meta text-[11px] text-ink-500">
+        <p className="font-meta text-[11px] text-ink-600">
           Paso {value + 1} de {PASOS.length} · pulsa un paso hecho para regresar
         </p>
       </div>
@@ -126,7 +126,7 @@ export const Puntos: Story = {
   render: () => (
     <div className="flex flex-col gap-3">
       <StepsDots count={5} value={2} />
-      <p className="font-meta text-[11px] text-ink-500">
+      <p className="font-meta text-[11px] text-ink-600">
         progreso compacto para onboarding y carruseles · actual = píldora alargada
       </p>
     </div>
@@ -191,7 +191,7 @@ export const MatrizDeEstados: Story = {
       <div className="flex flex-col gap-8">
         {filas.map((fila) => (
           <div key={fila.titulo} className="flex flex-col gap-3">
-            <div className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+            <div className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
               {fila.titulo}
             </div>
             {fila.node}

@@ -124,7 +124,7 @@ export const MatrizDelArchivo: Story = {
       warning: "PENDIENTE",
       error: "RECHAZADO",
     };
-    const rotulo = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase";
+    const rotulo = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase";
 
     return (
       <table className="border-separate border-spacing-3">

@@ -150,7 +150,7 @@ export const MatrizDeEspecificacion: Story = {
             unread={unread}
             time={hora}
           >
-            <span className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+            <span className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
               {etiqueta} · {unread ? "no leída" : "leída"}
             </span>
             <br />
@@ -173,7 +173,7 @@ export const AgrupadaPorTiempo: Story = {
           normal, el lector lo contaria en el total y diria "elemento 1 de 5,
           Hoy" en vez de anunciarlo como cabecera del grupo. */}
       <li role="presentation">
-        <h3 className="px-0.5 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+        <h3 className="px-0.5 font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
           Hoy
         </h3>
       </li>
@@ -185,7 +185,7 @@ export const AgrupadaPorTiempo: Story = {
       </NotificationItem>
 
       <li role="presentation">
-        <h3 className="px-0.5 pt-2 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+        <h3 className="px-0.5 pt-2 font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
           Antes
         </h3>
       </li>

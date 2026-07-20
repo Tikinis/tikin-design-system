@@ -163,7 +163,7 @@ export const MatrizDeEstados: Story = {
           <div key={nombre} className="flex flex-col items-center gap-2">
             <Checkbox {...props} aria-label={nombre} />
             <span
-              className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase"
+              className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase"
               title={nota}
             >
               {nombre}

@@ -340,7 +340,7 @@ export const Ruta: Story = {
 
 const Fila = ({ titulo, children }: { titulo: string; children: React.ReactNode }) => (
   <div className="flex flex-col gap-2">
-    <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">{titulo}</span>
+    <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">{titulo}</span>
     {children}
   </div>
 );

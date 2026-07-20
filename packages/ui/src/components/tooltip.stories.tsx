@@ -206,7 +206,7 @@ export const MatrizDeEspecificacion: Story = {
           <Tooltip {...props} open>
             <IconTrigger label={caption} glyph="info" />
           </Tooltip>
-          <span className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+          <span className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
             {caption}
           </span>
         </div>

@@ -489,7 +489,7 @@ function Especimen({
   const [container, setContainer] = React.useState<HTMLDivElement | null>(null);
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+      <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
         {etiqueta}
       </span>
       <div

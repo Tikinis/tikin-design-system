@@ -152,7 +152,7 @@ export const Group: StoryObj = {
             <ButtonGroupItem value="semana">Semana</ButtonGroupItem>
             <ButtonGroupItem value="mes">Mes</ButtonGroupItem>
           </ButtonGroup>
-          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
             valor · {rango}
           </span>
           <ButtonGroup defaultValue="semana" disabled aria-label="Rango deshabilitado">
@@ -181,7 +181,7 @@ export const MatrizDeEstados: StoryObj = {
     ),
   ],
   render: () => {
-    const head = "font-meta text-ink-500 text-left text-[11px] tracking-[0.1em] uppercase";
+    const head = "font-meta text-ink-600 text-left text-[11px] tracking-[0.1em] uppercase";
     const filas = [
       { estado: "default", open: false, disabled: false },
       { estado: "open / activa", open: true, disabled: false },

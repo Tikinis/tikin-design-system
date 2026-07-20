@@ -115,7 +115,7 @@ export const EstadosDelPunto: Story = {
               aria-label={fila.etiqueta}
               className="gap-0"
             />
-            <span className="font-meta text-[11px] text-ink-500">{fila.etiqueta}</span>
+            <span className="font-meta text-[11px] text-ink-600">{fila.etiqueta}</span>
           </div>
         ))}
       </div>

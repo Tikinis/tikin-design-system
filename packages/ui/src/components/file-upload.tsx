@@ -654,7 +654,7 @@ export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(f
           (variant === "inline" ? (
             <>
               <PaperclipGlyph className="size-[18px] text-ink-600" />
-              <span className="min-w-0 flex-1 truncate text-sm text-ink-500">{placeholder}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink-600">{placeholder}</span>
               {/* Es un <span>, no un <button>: un boton dentro de otro es HTML
                     invalido y ademas partiria la zona en dos paradas de
                     tabulador que hacen exactamente lo mismo. */}

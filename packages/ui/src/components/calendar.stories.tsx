@@ -149,7 +149,7 @@ export const Controlado: Story = {
 /* Matrices de especificacion                                                */
 /* ------------------------------------------------------------------------ */
 
-const CELL_LABEL = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase";
+const CELL_LABEL = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase";
 
 /**
  * Las 10 combinaciones del nodo `Calendar / Day Button`.

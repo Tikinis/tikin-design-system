@@ -114,7 +114,7 @@ export const Controlado: Story = {
             formatValue={pesos}
             thumbLabels={["Monto mínimo", "Monto máximo"]}
           />
-          <p className="font-meta text-xs text-ink-500">
+          <p className="font-meta text-xs text-ink-600">
             última consulta lanzada: {pesos(consultado[0])} – {pesos(consultado[1])}
           </p>
         </div>

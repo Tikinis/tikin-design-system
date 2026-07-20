@@ -172,13 +172,13 @@ export const MatrizDeEspecificacion: Story = {
       <div className="flex flex-col gap-8">
         {variantes.map((variant) => (
           <div key={variant} className="flex flex-col gap-3">
-            <div className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+            <div className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
               {variant}
             </div>
             <div className="grid grid-cols-3 gap-6">
               {estados.map((estado) => (
                 <div key={estado.label} className="flex flex-col gap-2">
-                  <div className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+                  <div className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                     {estado.label}
                   </div>
                   <Accordion

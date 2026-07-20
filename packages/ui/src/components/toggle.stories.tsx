@@ -75,7 +75,7 @@ export const Tamanos: Story = {
       {(["l", "m", "s"] as const).map((size) => (
         <div key={size} className="flex flex-col items-center gap-2">
           <Toggle size={size} defaultChecked aria-label={`Tamaño ${size}`} />
-          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
             {size}
           </span>
         </div>
@@ -97,7 +97,7 @@ export const MatrizDeEspecificacion: Story = {
   parameters: { controls: { disable: true } },
   render: () => {
     const sizes = ["l", "m", "s"] as const;
-    const head = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase";
+    const head = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase";
     return (
       <table className="border-separate border-spacing-4">
         <thead>

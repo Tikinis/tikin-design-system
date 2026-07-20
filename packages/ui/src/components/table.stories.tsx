@@ -440,7 +440,7 @@ export const MatrizDeEspecificacion: Story = {
   render: () => (
     <div className="flex w-[720px] max-w-full flex-col gap-8">
       <section className="flex flex-col gap-3">
-        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           Familias y tonos · densidad default
         </h3>
         <Table>
@@ -476,7 +476,7 @@ export const MatrizDeEspecificacion: Story = {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           Densidad medium · header 10/14 · fila 12/14
         </h3>
         <Table density="medium">
@@ -504,7 +504,7 @@ export const MatrizDeEspecificacion: Story = {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           Densidad compact · header 8/14 · texto 13
         </h3>
         <Table density="compact">
@@ -533,7 +533,7 @@ export const MatrizDeEspecificacion: Story = {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <h3 className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           Estados de columna ordenable
         </h3>
         {/* Estas tres columnas van sin `onSort` a proposito: muestran el glifo y

@@ -136,7 +136,7 @@ export const ValidacionViva: Story = {
  * Matrices de especificacion
  * ------------------------------------------------------------------ */
 
-const rotulo = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase";
+const rotulo = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase";
 
 /** Las cuatro teclas del documento: numerica, borrar, decimal y biometria. */
 export const VariantesDeTecla: Story = {

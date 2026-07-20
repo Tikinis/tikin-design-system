@@ -305,7 +305,7 @@ export const MatrizDeEspecificacion: Story = {
               <span className="font-mono text-[13px] tracking-[0.14em] text-ink-600 uppercase">
                 {fila.variant} · {fila.origen}
               </span>
-              <span className="ml-auto font-meta text-xs text-ink-500">{fila.medidas}</span>
+              <span className="ml-auto font-meta text-xs text-ink-600">{fila.medidas}</span>
             </div>
             {/* Los paneles no son decorativos: Radix emite siempre
                 `aria-controls` en cada pestaña, asi que una matriz sin

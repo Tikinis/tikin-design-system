@@ -247,7 +247,13 @@ const diaBoton = cva(
         default: "text-ink",
         // Hoy: borde por inset shadow para no alterar el tamaño de la celda.
         current: "text-ink shadow-[inset_0_0_0_1px_var(--tk-ink)]",
-        outside: "text-ink-400",
+        /* Los dias de los meses vecinos siguen siendo clicables y
+           seleccionables, asi que su tinta tiene que cumplir contraste. El
+           text-ink-400 anterior daba 1.84:1 y ademas era MAS claro que lo que
+           pide Figma, que usa --base-muted-foreground (rgb 115). --tk-600 es
+           practicamente ese mismo gris y pasa AA en los dos temas, sin perder la
+           distincion con los dias del mes en curso, que van a tinta plena. */
+        outside: "text-ink-600",
       },
       state: {
         default: "[&:not([aria-disabled=true])]:hover:bg-surface-2",
@@ -874,7 +880,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                     {corto(rango.to)}
                   </span>
                 ) : (
-                  <span className="font-meta text-[11px] text-ink-500">Elige el fin</span>
+                  <span className="font-meta text-[11px] text-ink-600">Elige el fin</span>
                 )}
                 {rango.to && (
                   <span className="ml-auto font-meta text-[11px] text-ink-600 tabular-nums">
@@ -938,7 +944,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                     <th
                       key={cabecera.largo}
                       scope="col"
-                      className="h-[var(--tk-dp-head)] font-meta text-[10px] font-normal text-ink-500 uppercase"
+                      className="h-[var(--tk-dp-head)] font-meta text-[10px] font-normal text-ink-600 uppercase"
                     >
                       {/* La inicial suelta ("L") no dice nada leida en voz alta;
                           el nombre completo viaja aparte para el lector. */}

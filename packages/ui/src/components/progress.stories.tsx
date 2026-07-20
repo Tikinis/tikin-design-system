@@ -167,7 +167,7 @@ export const MatrizDeEstados: Story = {
         {filas.map((fila) => (
           <div key={fila.nota} className="flex flex-col gap-1.5">
             <Progress {...fila.props} aria-label={fila.nota} />
-            <span className="font-meta text-[10px] tracking-[0.08em] text-ink-500 uppercase">
+            <span className="font-meta text-[10px] tracking-[0.08em] text-ink-600 uppercase">
               {fila.nota}
             </span>
           </div>

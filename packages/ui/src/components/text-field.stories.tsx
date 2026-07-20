@@ -284,7 +284,7 @@ export const MatrizDeEstados: Story = {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-5">
         {filas.map(({ rotulo, props }) => (
           <div key={rotulo} className="flex flex-col gap-2">
-            <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+            <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
               {rotulo}
             </span>
             <TextField {...props} />
@@ -356,7 +356,7 @@ export const MatrizTextarea: TextareaStory = {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-5">
         {filas.map(({ rotulo, props }) => (
           <div key={rotulo} className="flex flex-col gap-2">
-            <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+            <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
               {rotulo}
             </span>
             <Textarea {...props} />

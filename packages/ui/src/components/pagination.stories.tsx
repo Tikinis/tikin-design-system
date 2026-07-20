@@ -87,7 +87,7 @@ export const Extremos: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           Primera página · anterior en tope
         </span>
         {/* Nombre propio: dos <nav> homonimos en la misma pagina no se pueden
@@ -95,7 +95,7 @@ export const Extremos: Story = {
         <Pagination page={1} totalPages={12} aria-label="Paginación · primera página" />
       </div>
       <div className="flex flex-col gap-2">
-        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           Última página · siguiente en tope
         </span>
         <Pagination page={12} totalPages={12} aria-label="Paginación · última página" />
@@ -124,7 +124,7 @@ export const SaltarAPagina: Story = {
     return (
       <div className="flex flex-col gap-4">
         <PaginationJump page={page} totalPages={12} onPageChange={setPage} />
-        <p className="font-meta text-[11px] text-ink-500">
+        <p className="font-meta text-[11px] text-ink-600">
           página {page} · escribe un número y pulsa Enter · fuera de rango se satura
         </p>
       </div>
@@ -290,7 +290,7 @@ export const EstadosDeCelda: Story = {
         {celdas.map((celda) => (
           <div key={celda.titulo} className="flex flex-col items-center gap-2">
             {celda.node}
-            <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+            <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
               {celda.titulo}
             </span>
           </div>
@@ -299,7 +299,7 @@ export const EstadosDeCelda: Story = {
         {flechas.map((flecha) => (
           <div key={flecha.titulo} className="flex flex-col items-center gap-2">
             {flecha.node}
-            <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+            <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
               {flecha.titulo}
             </span>
           </div>
@@ -383,7 +383,7 @@ export const MatrizDeFormatos: Story = {
       <div className="flex flex-col gap-8">
         {filas.map((fila) => (
           <div key={fila.titulo} className="flex flex-col gap-3">
-            <div className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+            <div className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
               {fila.titulo}
             </div>
             {fila.node}

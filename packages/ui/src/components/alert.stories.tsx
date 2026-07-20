@@ -127,7 +127,7 @@ export const Descartables: Story = {
           <span className="font-mono text-[13px] tracking-[0.14em] text-ink-600 uppercase">
             En vivo · descartables
           </span>
-          <span className="font-meta text-[11px] text-ink-500 tabular-nums">
+          <span className="font-meta text-[11px] text-ink-600 tabular-nums">
             {visibles.length}/{AVISOS.length}
           </span>
           <button

@@ -100,7 +100,7 @@ export const PanelControlado: Story = {
         <FilterChip options={ESTADOS} value={aplicados} onValueChange={setAplicados}>
           Filter
         </FilterChip>
-        <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+        <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
           {aplicados.length ? aplicados.join(" · ") : "sin filtros"}
         </span>
       </div>
@@ -174,7 +174,7 @@ export const Interactivo: Story = {
         </FilterChip>
         <button
           type="button"
-          className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase underline"
+          className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase underline"
           onClick={() => setActivos((n) => (n + 1) % 4)}
         >
           Cambiar conteo
@@ -206,7 +206,7 @@ export const MatrizDeEstados: Story = {
         {estados.map((e) => (
           <div key={e.label} className="flex flex-col items-center gap-2">
             {e.node}
-            <span className="font-meta text-[10px] text-ink-500 uppercase">{e.label}</span>
+            <span className="font-meta text-[10px] text-ink-600 uppercase">{e.label}</span>
           </div>
         ))}
       </div>

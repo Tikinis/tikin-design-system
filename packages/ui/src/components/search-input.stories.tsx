@@ -241,7 +241,7 @@ export const EnVivo: Story = {
             className="flex flex-col gap-0.5 rounded-xl border border-edge bg-surface p-1.5 shadow-xs"
           >
             {recientes && (
-              <span className="px-3 pt-2 pb-1 font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+              <span className="px-3 pt-2 pb-1 font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
                 Recientes
               </span>
             )}
@@ -282,7 +282,7 @@ export const MatrizDeEspecificacion: Story = {
   parameters: { controls: { disable: true } },
   decorators: [],
   render: () => {
-    const rotulo = "font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase";
+    const rotulo = "font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase";
     return (
       <div className="tk-static flex w-[460px] max-w-full flex-col gap-5 bg-page p-6">
         <div className="flex flex-col gap-2">

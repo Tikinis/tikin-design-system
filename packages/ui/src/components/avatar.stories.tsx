@@ -102,7 +102,7 @@ export const Tamanos: Story = {
       ).map(([size, px]) => (
         <div key={size} className="flex flex-col items-center gap-2">
           <Avatar name="Valentina Cruz" size={size} />
-          <span className="font-meta text-[10px] text-ink-500 uppercase">
+          <span className="font-meta text-[10px] text-ink-600 uppercase">
             {size} · {px}
           </span>
         </div>
@@ -131,7 +131,7 @@ export const MatrizDeEspecificacion: Story = {
           <tr>
             <th />
             {sizes.map((s) => (
-              <th key={s} className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <th key={s} className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                 {s}
               </th>
             ))}
@@ -140,7 +140,7 @@ export const MatrizDeEspecificacion: Story = {
         <tbody>
           {filas.map((fila) => (
             <tr key={fila.label}>
-              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                 {fila.label}
               </td>
               {sizes.map((s) => (
@@ -216,7 +216,7 @@ export const GrupoPorTamano: Story = {
     <div className="flex flex-col gap-5">
       {(["xs", "s", "m", "l", "xl"] as const).map((size) => (
         <div key={size} className="flex items-center gap-4">
-          <span className="w-8 font-meta text-[11px] text-ink-500 uppercase">{size}</span>
+          <span className="w-8 font-meta text-[11px] text-ink-600 uppercase">{size}</span>
           <AvatarGroup size={size} max={3} total={9} aria-label={`Equipo ${size}`}>
             <Avatar name="Marta Ruiz" />
             <Avatar name="Carlos Diaz" />

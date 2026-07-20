@@ -38,7 +38,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /* Etiqueta mono de los bloques del documento: 11px, tracking .1em, gris 500. */
-const rotulo = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase";
+const rotulo = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase";
 
 export const Basico: Story = {
   name: "Básico",
@@ -445,7 +445,7 @@ export const MatrizDeEspecificacion: Story = {
       { shape: "circle", medida: "40 × 40", radio: "50%" },
       { shape: "block", medida: "alto 56 · ancho 100%", radio: "10 · md" },
     ] as const;
-    const th = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase text-left";
+    const th = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase text-left";
     return (
       <table className="tk-static w-[560px] border-separate border-spacing-4 bg-page p-4">
         <thead>

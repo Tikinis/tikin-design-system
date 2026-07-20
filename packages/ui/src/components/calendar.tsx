@@ -254,7 +254,11 @@ const calendarDay = cva(
       variant: {
         default: "bg-transparent text-[var(--base-foreground)]",
         current: "bg-[var(--base-accent)] text-[var(--base-accent-foreground)]",
-        outside: "bg-transparent text-[var(--base-muted-foreground)] opacity-50",
+        /* Sin `opacity-50`: la opacidad se aplicaba ENCIMA del gris y hundia
+           los dias de meses vecinos a 2.2:1, cuando siguen siendo clicables.
+           Figma no pide opacidad, solo un gris apagado. --tk-600 es
+           practicamente el --base-muted-foreground que especifica y pasa AA. */
+        outside: "bg-transparent text-ink-600",
       },
       selected: {
         true: "bg-[var(--base-primary)] text-[var(--base-primary-foreground)]",
@@ -382,7 +386,12 @@ export const CalendarWeekday = React.forwardRef<HTMLDivElement, CalendarWeekdayP
           "flex h-[21px] w-8 shrink-0 items-center justify-center",
           // Mayusculas iniciales POR CSS. Intl devuelve "lun" en minuscula y
           // pasarlo por JS romperia el texto que copia el usuario.
-          "font-mono text-xs leading-4 text-[var(--base-muted-foreground)] capitalize select-none",
+          /* --tk-600 y no --base-muted-foreground. Ese ultimo sale de la escala
+             neutral de Tailwind que el archivo de Figma arrastro de otra
+             libreria, no de la paleta de Tikin, y en claro da 4.47:1 sobre el
+             fondo hueso: se queda a 0.03 del minimo AA. El gris del sistema
+             pasa en los dos temas (4.93:1 claro, 6.63:1 oscuro). */
+          "font-mono text-xs leading-4 text-ink-600 capitalize select-none",
           className,
         )}
         {...props}

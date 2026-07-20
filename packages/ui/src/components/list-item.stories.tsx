@@ -307,7 +307,7 @@ export const Tamanos: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           sin leading · 44 / 56 / 68
         </span>
         <List className="w-[360px]">
@@ -324,7 +324,7 @@ export const Tamanos: Story = {
         </List>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           con caja 38 · el leading sube el suelo
         </span>
         <List className="w-[360px]">
@@ -379,7 +379,7 @@ export const MatrizDeTrailings: Story = {
     ];
     return (
       <div className="flex w-[420px] flex-col gap-2">
-        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+        <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
           trailing · pieza a la derecha
         </span>
         <List>
@@ -416,7 +416,7 @@ export const MatrizDeLeadings: Story = {
       <div className="flex flex-col gap-6">
         {(["circle", "box"] as const).map((shape) => (
           <div key={shape} className="flex flex-col gap-3">
-            <span className="font-meta text-[11px] tracking-[0.14em] text-ink-500 uppercase">
+            <span className="font-meta text-[11px] tracking-[0.14em] text-ink-600 uppercase">
               {shape === "circle" ? "circle · 42 · personas" : "box · 38 · r10 · conceptos"}
             </span>
             <div className="flex flex-wrap items-center gap-3">

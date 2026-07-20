@@ -187,7 +187,7 @@ const VIEWPORT_ESTATICO = "static translate-x-0 items-start gap-4 p-0 pb-0 max-w
 function Celda({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+      <span className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
         {rotulo}
       </span>
       <SnackbarProvider>
@@ -310,7 +310,7 @@ export const Posicion: Story = {
   render: () => (
     <div className="flex flex-wrap gap-6">
       <div className="relative h-[200px] w-[420px] overflow-hidden rounded-xl border border-edge bg-page">
-        <span className="absolute top-3 left-4 font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+        <span className="absolute top-3 left-4 font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
           Web · abajo a la izquierda
         </span>
         <SnackbarProvider>
@@ -321,7 +321,7 @@ export const Posicion: Story = {
       </div>
 
       <div className="relative h-[200px] w-[320px] overflow-hidden rounded-xl border border-edge bg-page">
-        <span className="absolute top-3 left-4 font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+        <span className="absolute top-3 left-4 font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
           Móvil · sobre la barra
         </span>
         <SnackbarProvider>
@@ -330,7 +330,7 @@ export const Posicion: Story = {
           <SnackbarViewport placement="bottom-center" className="absolute bottom-16" />
           <Snackbar duration={Infinity} message="Bolsillo archivado" actionLabel="Deshacer" />
         </SnackbarProvider>
-        <div className="absolute inset-x-0 bottom-0 flex h-16 items-center justify-around border-t border-edge bg-surface font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+        <div className="absolute inset-x-0 bottom-0 flex h-16 items-center justify-around border-t border-edge bg-surface font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
           <span>Inicio</span>
           <span>Enviar</span>
           <span>Perfil</span>
@@ -355,7 +355,7 @@ export const CuandoUsarlo: Story = {
     return (
       <table className="w-full max-w-[720px] border-collapse text-left">
         <thead>
-          <tr className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+          <tr className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
             <th className="pb-2 font-normal">Acción del usuario</th>
             <th className="pb-2 font-normal">Mensaje</th>
             <th className="pb-2 font-normal">Respuesta</th>

@@ -115,7 +115,7 @@ export const Longitudes: Story = {
     <div className="flex flex-col gap-8">
       {[4, 6].map((n) => (
         <div key={n} className="flex flex-col gap-3.5">
-          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
             {n} casillas
           </span>
           <OtpInput length={n} defaultValue="8" />
@@ -152,7 +152,7 @@ export const MatrizDeEstados: Story = {
       <div className="flex flex-col gap-8">
         {filas.map(({ estado, props }) => (
           <div key={estado} className="flex flex-col gap-3.5">
-            <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+            <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
               {estado}
             </span>
             <OtpInput {...props} />

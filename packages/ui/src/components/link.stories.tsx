@@ -260,7 +260,7 @@ export const IconButtonTamanos: IconButtonStory = {
           <IconButton label="Notificaciones" variant="outline" size={size}>
             <Glifo d={iconos.filtro} />
           </IconButton>
-          <span className="font-meta text-[10px] text-ink-500">
+          <span className="font-meta text-[10px] text-ink-600">
             {["44 · glifo 20 · r12", "40 · glifo 18 · r10", "32 · glifo 16 · r8"][i]}
           </span>
         </div>

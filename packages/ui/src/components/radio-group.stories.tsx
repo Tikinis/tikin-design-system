@@ -127,7 +127,7 @@ export const Controlado: Story = {
             <Radio value="corriente">Cuenta corriente</Radio>
             <Radio value="nomina">Cuenta nómina</Radio>
           </RadioGroup>
-          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
             value: {value}
           </span>
         </div>
@@ -162,7 +162,7 @@ export const MatrizDeEstados: Story = {
           <RadioGroup value={seleccion}>
             <Radio {...props}>Opción</Radio>
           </RadioGroup>
-          <span className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">
+          <span className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
             {nombre}
           </span>
         </div>
@@ -171,7 +171,7 @@ export const MatrizDeEstados: Story = {
         <RadioGroup value="otra">
           <Radio value="x">Pásame el ratón</Radio>
         </RadioGroup>
-        <span className="font-meta text-[10px] tracking-[0.1em] text-ink-500 uppercase">hover</span>
+        <span className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">hover</span>
       </div>
     </div>
   ),

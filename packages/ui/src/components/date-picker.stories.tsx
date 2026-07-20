@@ -229,7 +229,7 @@ export const Controlado: Story = {
           value={rango}
           onValueChange={setRango}
         />
-        <p className="font-meta text-[11px] text-ink-500">
+        <p className="font-meta text-[11px] text-ink-600">
           {dias ? `${dias} días seleccionados` : "elige el fin del rango"}
         </p>
       </div>
@@ -265,7 +265,7 @@ export const MatrizDeCeldas: Story = {
             {["estado", "origen", "regla"].map((th) => (
               <th
                 key={th}
-                className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase"
+                className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase"
               >
                 {th}
               </th>
@@ -276,7 +276,7 @@ export const MatrizDeCeldas: Story = {
           {filas.map((fila) => (
             <tr key={fila.estado}>
               <td className="font-mono text-[13px] text-ink">{fila.estado}</td>
-              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                 {fila.origen}
               </td>
               <td className="font-sans text-sm text-ink-700">{fila.nota}</td>
@@ -309,7 +309,7 @@ export const Especificacion: Story = {
         <tbody>
           {medidas.map(([clave, valor]) => (
             <tr key={clave}>
-              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
                 {clave}
               </td>
               <td className="font-mono text-[13px] text-ink">{valor}</td>
