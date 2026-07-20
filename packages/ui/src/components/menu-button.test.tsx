@@ -1,0 +1,296 @@
+import * as React from "react";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import {
+  ButtonGroup,
+  ButtonGroupItem,
+  MenuButton,
+  MenuItem,
+  MenuSeparator,
+  SplitButton,
+} from "./menu-button";
+
+/* Tests de COMPORTAMIENTO. Los valores visuales (40 de alto, r10, divisor de
+ * 1px en gris 700) se verifican contra el navegador: jsdom no aplica CSS, asi
+ * que comprobar clases aqui seria tautologico.
+ *
+ * Lo que si se comprueba es todo lo que el documento describe como conducta:
+ * abrir/cerrar, Escape, click fuera, foco de vuelta al trigger, y la regla de
+ * que el group siempre tiene exactamente una opcion activa. */
+
+beforeAll(() => {
+  // El posicionador de Radix (floating-ui) observa el tamaño del panel. jsdom
+  // no trae ResizeObserver, asi que lo stubeamos con un doble inerte: aqui no
+  // medimos posiciones, solo comportamiento.
+  if (!("ResizeObserver" in globalThis)) {
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+  }
+  // Radix usa captura de puntero para distinguir click de drag sobre el
+  // trigger. jsdom no implementa la Pointer Events API.
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+    Element.prototype.setPointerCapture = () => {};
+    Element.prototype.releasePointerCapture = () => {};
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+  }
+});
+
+function Menu(props: Partial<React.ComponentProps<typeof MenuButton>> = {}) {
+  return (
+    <MenuButton label="Acciones" {...props}>
+      <MenuItem>Enviar dinero</MenuItem>
+      <MenuItem>Recibir</MenuItem>
+      <MenuSeparator />
+      <MenuItem destructive>Cancelar envío</MenuItem>
+    </MenuButton>
+  );
+}
+
+describe("MenuButton", () => {
+  it("abre el panel al pulsar el trigger y lo anuncia con aria-expanded", async () => {
+    render(<Menu />);
+    const trigger = screen.getByRole("button", { name: /acciones/i });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    await userEvent.click(trigger);
+
+    expect(await screen.findByRole("menu")).toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("menuitem")).toHaveLength(3);
+  });
+
+  it("cierra al elegir una opcion y avisa al consumidor", async () => {
+    const onSelect = vi.fn();
+    render(
+      <MenuButton label="Acciones">
+        <MenuItem onSelect={onSelect}>Enviar dinero</MenuItem>
+        <MenuItem>Recibir</MenuItem>
+      </MenuButton>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /acciones/i }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Enviar dinero" }));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  });
+
+  it("cierra con Escape y devuelve el foco al trigger", async () => {
+    render(<Menu />);
+    const trigger = screen.getByRole("button", { name: /acciones/i });
+
+    await userEvent.click(trigger);
+    await screen.findByRole("menu");
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    // Perder el foco al cerrar dejaria al usuario de teclado al principio de la
+    // pagina.
+    expect(trigger).toHaveFocus();
+  });
+
+  it("se maneja entero con teclado: abre y recorre las opciones con las flechas", async () => {
+    render(<Menu />);
+    const trigger = screen.getByRole("button", { name: /acciones/i });
+    trigger.focus();
+
+    await userEvent.keyboard("{Enter}");
+    const items = await screen.findAllByRole("menuitem");
+    // Radix enfoca la primera opcion al abrir con teclado.
+    await waitFor(() => expect(items[0]).toHaveFocus());
+
+    await userEvent.keyboard("{ArrowDown}");
+    expect(items[1]).toHaveFocus();
+  });
+
+  it("no abre nada cuando esta deshabilitado", async () => {
+    render(<Menu disabled />);
+    const trigger = screen.getByRole("button", { name: /acciones/i });
+
+    expect(trigger).toBeDisabled();
+    await userEvent.click(trigger);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("no envia el formulario que lo contiene", async () => {
+    // Un <button> sin type dentro de un <form> envia. El trigger es un boton.
+    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <Menu />
+      </form>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /acciones/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("no pone los textos en mayusculas en JS, solo por CSS", () => {
+    render(<Menu />);
+    // Importa para el nombre accesible y para lo que se copia al portapapeles.
+    expect(screen.getByRole("button")).toHaveTextContent("Acciones");
+  });
+
+  it("permite sobreescribir estilos por className", () => {
+    render(<Menu className="rounded-none" />);
+    const cls = screen.getByRole("button").className;
+    // tailwind-merge debe descartar el rounded-md del tamaño, no acumularlo.
+    expect(cls).toContain("rounded-none");
+    expect(cls).not.toContain("rounded-md");
+  });
+});
+
+describe("SplitButton", () => {
+  function Split(props: Partial<React.ComponentProps<typeof SplitButton>> = {}) {
+    return (
+      <SplitButton label="Enviar" {...props}>
+        <MenuItem>Enviar a bolsillo</MenuItem>
+        <MenuItem>Programar envío</MenuItem>
+      </SplitButton>
+    );
+  }
+
+  it("la accion por defecto se dispara sin abrir el menu", async () => {
+    const onAction = vi.fn();
+    render(<Split onAction={onAction} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Enviar" }));
+
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("el segmento del chevron abre el menu sin disparar la accion", async () => {
+    const onAction = vi.fn();
+    render(<Split onAction={onAction} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Más opciones" }));
+
+    expect(await screen.findByRole("menu")).toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("el segmento del chevron tiene nombre accesible propio", () => {
+    render(<Split menuLabel="Otras formas de enviar" />);
+    // Sin texto visible, sin aria-label seria un boton anonimo para el lector.
+    expect(screen.getByRole("button", { name: "Otras formas de enviar" })).toBeInTheDocument();
+  });
+
+  it("deshabilitado no dispara la accion ni abre el menu", async () => {
+    const onAction = vi.fn();
+    render(<Split disabled onAction={onAction} />);
+
+    const action = screen.getByRole("button", { name: "Enviar" });
+    const menu = screen.getByRole("button", { name: "Más opciones" });
+    expect(action).toBeDisabled();
+    expect(menu).toBeDisabled();
+
+    await userEvent.click(action);
+    await userEvent.click(menu);
+
+    expect(onAction).not.toHaveBeenCalled();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("ninguno de los dos segmentos envia el formulario que lo contiene", async () => {
+    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <Split />
+      </form>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Enviar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Más opciones" }));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe("ButtonGroup", () => {
+  function Group(props: Partial<React.ComponentProps<typeof ButtonGroup>> = {}) {
+    return (
+      <ButtonGroup defaultValue="dia" aria-label="Rango" {...props}>
+        <ButtonGroupItem value="dia">Día</ButtonGroupItem>
+        <ButtonGroupItem value="semana">Semana</ButtonGroupItem>
+        <ButtonGroupItem value="mes">Mes</ButtonGroupItem>
+      </ButtonGroup>
+    );
+  }
+
+  it("arranca con exactamente una opcion activa", () => {
+    render(<Group />);
+    const items = screen.getAllByRole("radio");
+    expect(items).toHaveLength(3);
+    expect(items.filter((i) => i.getAttribute("aria-checked") === "true")).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: "Día" })).toBeChecked();
+  });
+
+  it("cambia la activa al pulsar otra opcion", async () => {
+    const onValueChange = vi.fn();
+    render(<Group onValueChange={onValueChange} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: "Semana" }));
+
+    expect(onValueChange).toHaveBeenCalledWith("semana");
+    expect(screen.getByRole("radio", { name: "Semana" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Día" })).not.toBeChecked();
+  });
+
+  it("pulsar la activa NO la desactiva: el grupo nunca se queda vacio", async () => {
+    const onValueChange = vi.fn();
+    render(<Group onValueChange={onValueChange} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: "Día" }));
+
+    // Radix ToggleGroup en modo single desmarcaria por su cuenta; el componente
+    // intercepta ese "" para cumplir la regla del documento.
+    expect(screen.getByRole("radio", { name: "Día" })).toBeChecked();
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it("controlado, no cambia solo: manda el valor del padre", async () => {
+    const onValueChange = vi.fn();
+    render(<Group value="mes" onValueChange={onValueChange} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: "Semana" }));
+
+    expect(onValueChange).toHaveBeenCalledWith("semana");
+    // El padre no ha movido `value`, asi que la activa sigue siendo la suya.
+    expect(screen.getByRole("radio", { name: "Mes" })).toBeChecked();
+  });
+
+  it("es una sola parada de tabulador y se recorre con flechas", async () => {
+    render(<Group />);
+    await userEvent.tab();
+
+    const dia = screen.getByRole("radio", { name: "Día" });
+    expect(dia).toHaveFocus();
+
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Semana" })).toHaveFocus();
+
+    // loop: desde la ultima vuelve a la primera.
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+    expect(dia).toHaveFocus();
+  });
+
+  it("deshabilitado ignora los clicks pero conserva la activa", async () => {
+    const onValueChange = vi.fn();
+    render(<Group disabled onValueChange={onValueChange} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: "Semana" }));
+
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("radio", { name: "Día" })).toBeChecked();
+  });
+
+  it("no pone los labels en mayusculas en JS", () => {
+    render(<Group />);
+    expect(screen.getByRole("radio", { name: "Semana" })).toHaveTextContent("Semana");
+  });
+});

@@ -1,0 +1,413 @@
+import * as React from "react";
+import { Slot } from "radix-ui";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "../lib/cn";
+
+/* Seccion 10 · Cards — EXTENSION construida con los tokens del archivo.
+ *
+ * El propio documento lo dice en su bajada: "Contenedores de informacion de la
+ * app. Extension construida con los tokens del archivo". No hay componente
+ * Card en el export de Figma (docs/figma-export/components/ no trae ninguno),
+ * asi que NADA de esta seccion es especificacion aprobada: es una propuesta
+ * coherente montada sobre superficies, bordes, radios y sombras que si son
+ * canonicos.
+ *
+ * Contenedor base — radio 20 · padding 24 (movil 20) · borde 1 · shadow xs.
+ * Sobre el se especializan tres roles:
+ *
+ *   feature  presenta una funcion. Superficie gris 100, icono 56 en tile
+ *            blanco, titulo Funnel 22, descripcion Sans 15.
+ *   media    promocion con imagen a sangre, scrim inferior, eyebrow glass,
+ *            accion en la esquina y titulo Funnel blanco.
+ *   stat     una metrica: label mono, pildora de delta con tendencia, cifra
+ *            DM Mono 38, comparacion y sparkline.
+ *
+ * OJO CON EL BLOQUE "PRUEBALO · EN VIVO"
+ * --------------------------------------
+ * Esa demo usa tarjetas de 150px con radio 16 y cifra de 32 para que quepan en
+ * la rejilla del documento. Las medidas buenas son las de los bloques
+ * "CONTENEDOR BASE · ANATOMIA" y "TRES TIPOS PRINCIPALES": radio 20, padding
+ * 24 y cifra 38.
+ */
+
+const card = cva(
+  [
+    // relative: la media card apila imagen y scrim en absoluto sobre el.
+    "relative flex flex-col",
+    "transition-[box-shadow,transform,background-color,border-color] duration-140 ease-out",
+  ],
+  {
+    variants: {
+      /* "Blanco sobre fondo hueso, o gris 100 cuando la tarjeta va sobre
+         blanco. Nunca dos blancos seguidos sin borde." */
+      surface: {
+        // La sombra NUNCA reemplaza al borde: van juntos.
+        default: "bg-surface text-ink border border-edge shadow-xs",
+        // Gris 100 ya se separa del blanco por si mismo, no lleva borde.
+        muted: "bg-surface-2 text-ink",
+        // Tinta: reservada a la balance card (saldo, resumen). bg-ink +
+        // text-surface se invierten los dos con el tema, asi que el contraste
+        // se mantiene en oscuro sin congelar nada.
+        ink: "bg-ink text-surface",
+      },
+
+      /* radio 20 por defecto; 16 en tarjetas densas, 24 en contenedores
+         grandes. El 24 no tiene utilidad propia en el tema — la escala se
+         corta en --radius-2xl (20) — asi que va por sintaxis arbitraria. */
+      radius: {
+        sm: "rounded-xl",
+        md: "rounded-2xl",
+        lg: "rounded-[24px]",
+      },
+
+      /* Padding 24, que baja a 20 en movil. Mobile-first: p-5 y a partir de sm
+         p-6. */
+      padding: {
+        none: "p-0",
+        sm: "p-4",
+        md: "p-5 sm:p-6",
+      },
+
+      /* Tocable: reposo shadow xs -> hover shadow md + lift 2 -> pressed hueso
+         sin sombra. El lift se hace con translate, no con margin, para no
+         reflowear a los hermanos de la rejilla. */
+      interactive: {
+        true: [
+          "cursor-pointer text-left outline-none",
+          "hover:-translate-y-0.5 hover:border-edge-2 hover:shadow-md",
+          "active:translate-y-0 active:border-edge-2 active:bg-page active:shadow-none",
+          "focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
+        ],
+        false: "",
+      },
+    },
+
+    compoundVariants: [
+      /* El pressed generico (hueso) borraria la tarjeta de tinta. Sobre tinta
+         el feedback va al reves: sube a ink-strong, que en claro es mas negro
+         y en oscuro mas blanco. */
+      { surface: "ink", interactive: true, class: "active:bg-ink-strong" },
+    ],
+
+    defaultVariants: {
+      surface: "default",
+      radius: "md",
+      padding: "md",
+      interactive: false,
+    },
+  },
+);
+
+type CardVariants = VariantProps<typeof card>;
+
+export interface CardProps extends React.ComponentPropsWithoutRef<"div">, CardVariants {
+  /**
+   * Renderiza el hijo en vez de un <div>, heredando los estilos.
+   * Es la forma PREFERIDA de hacer una tarjeta tocable: pasa un <button> o un
+   * <a> y el foco, el rol y el teclado vienen del navegador.
+   */
+  asChild?: boolean;
+}
+
+/**
+ * Contenedor base del sistema Tikin.
+ *
+ * Todas las tarjetas parten de aqui: superficie, borde de 1px y radio del
+ * sistema. La elevacion es un refuerzo, nunca un sustituto del borde.
+ */
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
+  {
+    className,
+    surface,
+    radius,
+    padding,
+    interactive,
+    asChild = false,
+    role,
+    tabIndex,
+    onKeyDown,
+    ...props
+  },
+  ref,
+) {
+  const Comp = asChild ? Slot.Root : "div";
+
+  /* Una tarjeta tocable sin semantica es una trampa para teclado y para lector
+   * de pantalla. Lo correcto es `asChild` con un <button> o un <a>; cuando el
+   * consumidor no lo hace, le damos el minimo imprescindible — rol, foco y
+   * Enter/Espacio — en vez de dejar la tarjeta accesible solo con raton.
+   *
+   * No se pisa lo que el consumidor haya puesto a mano: si trae su propio role
+   * o tabIndex, manda el suyo. */
+  const fallbackSemantics = Boolean(interactive) && !asChild && role === undefined;
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown?.(event);
+    if (!fallbackSemantics || event.defaultPrevented) return;
+    // Si la tecla nace en un hijo interactivo (el boton de accion de la media
+    // card, un enlace del cuerpo) es suya, no de la tarjeta.
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    // Espacio hace scroll de pagina por defecto; Enter en un div no hace nada,
+    // pero se corta igual para que ningun ancestro lo interprete dos veces.
+    event.preventDefault();
+    // .click() en vez de llamar a onClick a mano: asi disparan tambien los
+    // listeners nativos que el consumidor haya podido añadir al nodo.
+    event.currentTarget.click();
+  };
+
+  return (
+    <Comp
+      ref={ref}
+      className={cn(card({ surface, radius, padding, interactive, className }))}
+      role={fallbackSemantics ? "button" : role}
+      tabIndex={fallbackSemantics ? (tabIndex ?? 0) : tabIndex}
+      onKeyDown={handleKeyDown}
+      {...props}
+    />
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Rol FEATURE                                                         */
+/* ------------------------------------------------------------------ */
+
+type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "div";
+
+export interface CardFeatureProps extends Omit<CardProps, "title"> {
+  /** Icono del tile de 56. Se dibuja a 28px. */
+  icon?: React.ReactNode;
+  /** Titulo en Funnel Display 22. */
+  title: React.ReactNode;
+  /** Descripcion en Sans 15. */
+  description?: React.ReactNode;
+  /**
+   * Etiqueta del titulo. Por defecto h3, pero el nivel correcto depende de
+   * donde caiga la tarjeta en la pagina: un esquema de encabezados roto es un
+   * fallo de accesibilidad real.
+   */
+  titleAs?: HeadingTag;
+  /** Contenido extra bajo la descripcion (un boton, un enlace). */
+  children?: React.ReactNode;
+}
+
+/**
+ * Tarjeta que presenta una funcion de la app.
+ *
+ * Superficie gris 100 — va sobre blanco — con el icono arriba y el bloque de
+ * texto anclado abajo, para que varias feature cards en una rejilla alineen
+ * sus titulos aunque los iconos difieran.
+ */
+export const CardFeature = React.forwardRef<HTMLDivElement, CardFeatureProps>(function CardFeature(
+  { className, icon, title, description, titleAs: Title = "h3", children, ...props },
+  ref,
+) {
+  return (
+    <Card ref={ref} surface="muted" className={cn("min-h-[300px]", className)} {...props}>
+      {icon ? (
+        // Tile blanco de 56 con radio 16 y shadow xs: el icono flota sobre el
+        // gris 100 sin necesitar borde.
+        <div className="flex size-14 items-center justify-center rounded-xl bg-surface text-ink shadow-xs [&_svg]:size-7">
+          {icon}
+        </div>
+      ) : null}
+      {/* Empuja el texto al fondo de la tarjeta. */}
+      <div className="flex-1" />
+      <div className="flex flex-col gap-2">
+        <Title className="font-display text-[22px] leading-tight font-medium text-ink-700">
+          {title}
+        </Title>
+        {description ? <p className="text-[15px] leading-[1.5]">{description}</p> : null}
+        {children}
+      </div>
+    </Card>
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Rol MEDIA                                                           */
+/* ------------------------------------------------------------------ */
+
+export interface CardMediaProps extends Omit<CardProps, "surface" | "padding" | "title"> {
+  /** Imagen a sangre. Se estira al contenedor y se recorta con object-cover. */
+  image?: React.ReactNode;
+  /** Etiqueta corta sobre cristal, arriba a la izquierda. */
+  eyebrow?: React.ReactNode;
+  /** Titulo en Funnel Display 26. */
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  /** Icono de la accion circular de la esquina (la ↗ del documento). */
+  action?: React.ReactNode;
+  /** Nombre accesible de esa accion. Obligatorio si hay `action`. */
+  actionLabel?: string;
+  onActionClick?: React.MouseEventHandler<HTMLButtonElement>;
+  titleAs?: HeadingTag;
+  children?: React.ReactNode;
+}
+
+/**
+ * Tarjeta de promocion con imagen a sangre.
+ *
+ * El color entra por la imagen, nunca por un gradiente decorativo: el unico
+ * gradiente permitido aqui es el scrim que garantiza el contraste del texto.
+ */
+export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(function CardMedia(
+  {
+    className,
+    image,
+    eyebrow,
+    title,
+    description,
+    action,
+    actionLabel,
+    onActionClick,
+    titleAs: Title = "h3",
+    children,
+    ...props
+  },
+  ref,
+) {
+  return (
+    <Card
+      ref={ref}
+      // Tinta de fondo para el hueco mientras la imagen carga, y para que el
+      // scrim tenga sobre que caer si no hay imagen.
+      surface="ink"
+      padding="none"
+      className={cn("min-h-[300px] overflow-hidden", className)}
+      {...props}
+    >
+      {image ? (
+        <div className="absolute inset-0 [&>*]:size-full [&_img]:size-full [&_img]:object-cover">
+          {image}
+        </div>
+      ) : null}
+
+      {/* Scrim: transparente arriba, 78% de tinta abajo. Va aparte de la
+          imagen para que el consumidor pueda pasar un <picture>, un <video> o
+          un slot de su CMS sin tener que replicarlo. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,15,16,0.15)_0%,rgba(11,15,16,0)_38%,rgba(11,15,16,0.78)_100%)]"
+      />
+
+      {/* Blanco FIJO, y es deliberado: aqui el fondo no es una superficie del
+          tema sino una fotografia oscurecida por el scrim, asi que se ve
+          igual de oscura en claro y en oscuro. Usar text-surface — que si
+          invierte — dejaria el titulo negro sobre la foto en tema oscuro. El
+          documento resuelve esto congelando el bloque con .tk-static; un
+          componente no puede congelar el tema de quien lo usa. */}
+      <div className="relative flex flex-1 flex-col p-5 text-white">
+        <div className="flex items-start gap-3">
+          {eyebrow ? (
+            // Mayusculas por CSS: el texto accesible y el copiado conservan su
+            // capitalizacion original.
+            <span className="rounded-pill border border-white/30 bg-white/15 px-3 py-1.5 font-mono text-[11px] tracking-[0.12em] uppercase backdrop-blur-[6px]">
+              {eyebrow}
+            </span>
+          ) : null}
+          {action ? (
+            <button
+              type="button"
+              aria-label={actionLabel}
+              onClick={onActionClick}
+              className="ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill border border-white/40 outline-none transition-colors duration-140 ease-out hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white [&_svg]:size-[18px]"
+            >
+              {action}
+            </button>
+          ) : null}
+        </div>
+        <div className="flex-1" />
+        <div className="flex flex-col gap-1.5">
+          <Title className="font-display text-[26px] leading-[1.05] font-semibold">{title}</Title>
+          {description ? (
+            <p className="text-sm leading-[1.45] text-white/85">{description}</p>
+          ) : null}
+          {children}
+        </div>
+      </div>
+    </Card>
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Rol STAT                                                            */
+/* ------------------------------------------------------------------ */
+
+/* El texto de la seccion dice "delta lima + tendencia", pero el prototipo usa
+ * --tk-tint-success / --tk-fg-success (verde de feedback, no lima de marca).
+ * Manda el prototipo: la lima es color de marca para acciones, y una metrica a
+ * la baja necesita su equivalente en rojo, que la paleta de marca no ofrece. */
+const statDelta = cva(
+  "ml-auto inline-flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 font-mono text-xs tracking-[0.02em] [&_svg]:size-[13px]",
+  {
+    variants: {
+      trend: {
+        up: "bg-tint-success text-fg-success",
+        down: "bg-tint-error text-fg-error",
+        flat: "bg-surface-2 text-ink-600",
+      },
+    },
+    defaultVariants: { trend: "up" },
+  },
+);
+
+export interface CardStatProps extends Omit<CardProps, "surface"> {
+  /** Label de seccion, mono y en mayusculas por CSS. */
+  label: React.ReactNode;
+  /** La cifra. Siempre DM Mono (font-num), 38. */
+  value: React.ReactNode;
+  /** Contenido de la pildora de delta: "12.4%". */
+  delta?: React.ReactNode;
+  /** Colorea la pildora. Solo eso: el signo lo escribe el consumidor. */
+  trend?: "up" | "down" | "flat";
+  /** Icono de tendencia dentro de la pildora, antes del delta. */
+  trendIcon?: React.ReactNode;
+  /** Linea de comparacion bajo la cifra. */
+  comparison?: React.ReactNode;
+  /** Sparkline. Se le reserva una banda de 64px al pie de la tarjeta. */
+  chart?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+/**
+ * Tarjeta de una sola metrica con su tendencia.
+ *
+ * Una cifra por tarjeta. Si hay dos metricas que comparar, son dos tarjetas:
+ * la comparacion es la linea de apoyo, no una segunda cifra.
+ */
+export const CardStat = React.forwardRef<HTMLDivElement, CardStatProps>(function CardStat(
+  { className, label, value, delta, trend = "up", trendIcon, comparison, chart, children, ...props },
+  ref,
+) {
+  return (
+    <Card ref={ref} className={cn("gap-4", className)} {...props}>
+      <div className="flex items-center gap-2.5">
+        <span className="font-mono text-xs tracking-[0.1em] text-ink-600 uppercase">{label}</span>
+        {delta ? (
+          <span className={statDelta({ trend })}>
+            {trendIcon}
+            {delta}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        {/* Sin color propio: hereda el de la superficie de la tarjeta. */}
+        <span className="font-num text-[38px] leading-none font-medium">{value}</span>
+        {comparison ? <span className="text-[13px] text-ink-600">{comparison}</span> : null}
+      </div>
+
+      {children}
+
+      {chart ? (
+        <>
+          {/* Empuja el sparkline al fondo para que varias stat cards de una
+              misma rejilla lo alineen aunque su comparacion ocupe distinto. */}
+          <div className="flex-1" />
+          <div className="[&>svg]:block [&>svg]:h-16 [&>svg]:w-full">{chart}</div>
+        </>
+      ) : null}
+    </Card>
+  );
+});
