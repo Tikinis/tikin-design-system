@@ -49,12 +49,12 @@ const radioItem = cva(
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed disabled:text-ink-500",
     // Valores por defecto = estado OFF.
-    "[--tk-radio-ring:var(--tk-400)] [--tk-radio-ring-w:1.5px]",
+    "[--tk-radio-ring-w:1.5px] [--tk-radio-ring:var(--tk-400)]",
     "[--tk-radio-bg:transparent] [--tk-radio-dot:var(--tk-ink)]",
     /* Disabled se escribe con `disabled:` a secas y TODO lo demas va prefijado
        con `not-disabled:`. De ese modo los conjuntos son disjuntos y ninguna
        regla depende del orden en que Tailwind las emita. */
-    "disabled:[--tk-radio-ring:var(--tk-border)] disabled:[--tk-radio-bg:var(--tk-surface-2)]",
+    "disabled:[--tk-radio-bg:var(--tk-surface-2)] disabled:[--tk-radio-ring:var(--tk-border)]",
     "disabled:[--tk-radio-dot:var(--tk-500)]",
   ],
   {
@@ -126,7 +126,8 @@ const radioGroup = cva("flex", {
 const RadioGroupContext = React.createContext<{ invalid: boolean }>({ invalid: false });
 
 export interface RadioGroupProps
-  extends Omit<React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Root>, "orientation">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Root>, "orientation">,
     VariantProps<typeof radioGroup> {
   /** Titulo del grupo. Se enlaza por aria-labelledby, no por un <legend> suelto. */
   label?: React.ReactNode;
@@ -179,7 +180,8 @@ export const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(func
 });
 
 export interface RadioProps
-  extends Omit<React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Item>, "children">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Item>, "children">,
     VariantProps<typeof radioItem> {
   /** Valor que toma el grupo al seleccionar esta opcion. */
   value: string;

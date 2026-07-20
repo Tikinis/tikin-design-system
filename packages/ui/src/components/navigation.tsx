@@ -98,10 +98,7 @@ function ArrowLeftIcon(props: React.SVGProps<SVGSVGElement>) {
    que el lector de pantalla anunciaria fuera de contexto. */
 function AlertDot({ className }: { className?: string }) {
   return (
-    <span
-      aria-hidden="true"
-      className={cn("absolute size-[7px] rounded-full bg-red", className)}
-    />
+    <span aria-hidden="true" className={cn("absolute size-[7px] rounded-full bg-red", className)} />
   );
 }
 
@@ -131,8 +128,7 @@ const topBar = cva("flex w-full bg-surface", {
 type TopBarVariants = VariantProps<typeof topBar>;
 
 export interface TopBarProps
-  extends Omit<React.ComponentPropsWithoutRef<"header">, "title">,
-    TopBarVariants {
+  extends Omit<React.ComponentPropsWithoutRef<"header">, "title">, TopBarVariants {
   /**
    * Titulo de la pantalla. Se renderiza como `<h1>`: en una app la barra
    * superior ES el encabezado de la vista, y dejarlo en un span deja la
@@ -267,8 +263,7 @@ const topBarAction = cva(
 );
 
 export interface TopBarActionProps
-  extends React.ComponentPropsWithoutRef<"button">,
-    VariantProps<typeof topBarAction> {
+  extends React.ComponentPropsWithoutRef<"button">, VariantProps<typeof topBarAction> {
   /**
    * Nombre accesible. Obligatorio: el boton solo tiene icono.
    * Si llevas `dot`, dilo aqui — "Notificaciones, 3 sin leer" —, porque el
@@ -281,7 +276,10 @@ export interface TopBarActionProps
 
 /** Boton de solo icono de la app bar. Volver, ayuda, buscar, campana. */
 export const TopBarAction = React.forwardRef<HTMLButtonElement, TopBarActionProps>(
-  function TopBarAction({ className, size = "m", label, dot = false, type, children, ...props }, ref) {
+  function TopBarAction(
+    { className, size = "m", label, dot = false, type, children, ...props },
+    ref,
+  ) {
     return (
       <button
         ref={ref}
@@ -332,26 +330,27 @@ export interface TopBarLinkProps extends React.ComponentPropsWithoutRef<"a"> {
 }
 
 /** Destino del menu de la barra web. */
-export const TopBarLink = React.forwardRef<HTMLAnchorElement, TopBarLinkProps>(
-  function TopBarLink({ className, label, active = false, asChild = false, children, ...props }, ref) {
-    const Comp = asChild ? Slot.Root : "a";
-    return (
-      <Comp
-        ref={ref}
-        // El estado activo se comunica por ARIA, no solo por color: el
-        // subrayado no existe para quien navega con lector de pantalla.
-        aria-current={active ? "page" : undefined}
-        className={cn(topBarLink({ active, className }))}
-        {...props}
-      >
-        {/* Slottable marca cual de los hijos es el elemento del consumidor.
+export const TopBarLink = React.forwardRef<HTMLAnchorElement, TopBarLinkProps>(function TopBarLink(
+  { className, label, active = false, asChild = false, children, ...props },
+  ref,
+) {
+  const Comp = asChild ? Slot.Root : "a";
+  return (
+    <Comp
+      ref={ref}
+      // El estado activo se comunica por ARIA, no solo por color: el
+      // subrayado no existe para quien navega con lector de pantalla.
+      aria-current={active ? "page" : undefined}
+      className={cn(topBarLink({ active, className }))}
+      {...props}
+    >
+      {/* Slottable marca cual de los hijos es el elemento del consumidor.
             Sin asChild `children` va vacio y solo se pinta el label. */}
-        <Slot.Slottable>{children}</Slot.Slottable>
-        {label}
-      </Comp>
-    );
-  },
-);
+      <Slot.Slottable>{children}</Slot.Slottable>
+      {label}
+    </Comp>
+  );
+});
 
 /* ------------------------------------------------------------------------- */
 /* TabBar                                                                     */
@@ -416,7 +415,7 @@ const tabBarItem = cva(
     "bg-transparent transition-colors duration-140 ease-out select-none",
     "disabled:cursor-not-allowed disabled:text-ink-400",
     focusRing,
-    "focus-visible:ring-offset-surface rounded-sm",
+    "rounded-sm focus-visible:ring-offset-surface",
     "[&_svg]:size-6 [&_svg]:shrink-0",
   ],
   {
@@ -445,31 +444,29 @@ export interface TabBarItemProps extends React.ComponentPropsWithoutRef<"button"
 }
 
 /** Destino de la barra inferior. */
-export const TabBarItem = React.forwardRef<HTMLButtonElement, TabBarItemProps>(
-  function TabBarItem(
-    { className, icon, activeIcon, label, active = false, asChild = false, type, children, ...props },
-    ref,
-  ) {
-    const Comp = asChild ? Slot.Root : "button";
-    return (
-      <Comp
-        ref={ref}
-        // Sin asChild renderizamos un <button>, cuyo type por defecto en HTML es
-        // "submit". Con asChild no lo ponemos: el hijo puede ser un <a>.
-        {...(asChild ? {} : { type: type ?? "button" })}
-        aria-current={active ? "page" : undefined}
-        className={cn(tabBarItem({ active, className }))}
-        {...props}
-      >
-        {active ? (activeIcon ?? icon) : icon}
-        <Slot.Slottable>{children}</Slot.Slottable>
-        {/* Ubuntu Mono 9 con tracking .04em. Sin uppercase: el documento lo
+export const TabBarItem = React.forwardRef<HTMLButtonElement, TabBarItemProps>(function TabBarItem(
+  { className, icon, activeIcon, label, active = false, asChild = false, type, children, ...props },
+  ref,
+) {
+  const Comp = asChild ? Slot.Root : "button";
+  return (
+    <Comp
+      ref={ref}
+      // Sin asChild renderizamos un <button>, cuyo type por defecto en HTML es
+      // "submit". Con asChild no lo ponemos: el hijo puede ser un <a>.
+      {...(asChild ? {} : { type: type ?? "button" })}
+      aria-current={active ? "page" : undefined}
+      className={cn(tabBarItem({ active, className }))}
+      {...props}
+    >
+      {active ? (activeIcon ?? icon) : icon}
+      <Slot.Slottable>{children}</Slot.Slottable>
+      {/* Ubuntu Mono 9 con tracking .04em. Sin uppercase: el documento lo
             dibuja con la capitalizacion normal del destino. */}
-        <span className="font-meta text-[9px] leading-none tracking-[0.04em]">{label}</span>
-      </Comp>
-    );
-  },
-);
+      <span className="font-meta text-[9px] leading-none tracking-[0.04em]">{label}</span>
+    </Comp>
+  );
+});
 
 export interface TabBarActionProps extends React.ComponentPropsWithoutRef<"button"> {
   /** Nombre accesible. Obligatorio: el boton solo tiene icono. */
@@ -651,31 +648,32 @@ export interface SidebarUserProps extends React.ComponentPropsWithoutRef<"div"> 
  * Es presentacional: si tiene que abrir un menu, envuelvela tu — asi el
  * disparador queda donde vive el menu y no hay dos fuentes de comportamiento.
  */
-export const SidebarUser = React.forwardRef<HTMLDivElement, SidebarUserProps>(
-  function SidebarUser({ className, initials, name, handle, ...props }, ref) {
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          "flex items-center gap-2.5 rounded-md border border-edge bg-surface p-2.5",
-          className,
-        )}
-        {...props}
+export const SidebarUser = React.forwardRef<HTMLDivElement, SidebarUserProps>(function SidebarUser(
+  { className, initials, name, handle, ...props },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex items-center gap-2.5 rounded-md border border-edge bg-surface p-2.5",
+        className,
+      )}
+      {...props}
+    >
+      <span
+        // Decorativo: las iniciales duplican el nombre que va justo al lado.
+        aria-hidden="true"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-lavender font-mono text-[10px] text-on-accent"
       >
-        <span
-          // Decorativo: las iniciales duplican el nombre que va justo al lado.
-          aria-hidden="true"
-          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-lavender font-mono text-[10px] text-on-accent"
-        >
-          {initials}
-        </span>
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate text-[12.5px] text-ink">{name}</span>
-          {handle != null && (
-            <span className="truncate font-mono text-[10px] text-ink-600">{handle}</span>
-          )}
-        </span>
-      </div>
-    );
-  },
-);
+        {initials}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-[12.5px] text-ink">{name}</span>
+        {handle != null && (
+          <span className="truncate font-mono text-[10px] text-ink-600">{handle}</span>
+        )}
+      </span>
+    </div>
+  );
+});

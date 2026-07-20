@@ -78,7 +78,8 @@ type EmptyStateVariants = VariantProps<typeof emptyState>;
 type TileVariants = VariantProps<typeof emptyStateTile>;
 
 export interface EmptyStateProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "title" | "color">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"div">, "title" | "color">,
     EmptyStateVariants,
     TileVariants {
   /**
@@ -199,7 +200,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(func
 const emptyStateAction = cva(
   [
     "inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-[18px]",
-    "font-mono text-[13px] font-normal uppercase tracking-[0.02em] whitespace-nowrap",
+    "font-mono text-[13px] font-normal tracking-[0.02em] whitespace-nowrap uppercase",
     "transition-colors duration-140 ease-out",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed",
@@ -237,8 +238,7 @@ const emptyStateAction = cva(
 );
 
 export interface EmptyStateActionProps
-  extends React.ComponentPropsWithoutRef<"button">,
-    VariantProps<typeof emptyStateAction> {
+  extends React.ComponentPropsWithoutRef<"button">, VariantProps<typeof emptyStateAction> {
   /** Icono antes del label, a 15px. */
   startIcon?: React.ReactNode;
 }

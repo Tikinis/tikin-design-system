@@ -112,8 +112,7 @@ const skeleton = cva(
 type SkeletonVariants = VariantProps<typeof skeleton>;
 
 export interface SkeletonProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "children">,
-    SkeletonVariants {
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "children">, SkeletonVariants {
   /**
    * Ancho del bloque. Numero = px; cadena = tal cual ("45%", "12ch").
    * El documento expresa casi todos los anchos en porcentaje.

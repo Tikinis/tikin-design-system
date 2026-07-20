@@ -23,7 +23,7 @@ import { cn } from "../lib/cn";
  *            default    texto --base-foreground, sin fondo
  *            hover      fondo --base-accent, texto --base-accent-foreground
  *            selected   fondo --base-primary, texto --base-primary-foreground
- *            focus      halo 0 0 0 3px rgba(163,163,163,.5)
+ *            focus      halo 0 0 0 3px rgba(163,163,163,.5)  -> ver desviacion 5
  *            current    fondo --base-accent, texto --base-accent-foreground
  *            outside    opacidad .5, texto --base-muted-foreground
  *            outside+hover     opacidad .5, fondo acento, texto foreground
@@ -33,8 +33,8 @@ import { cn } from "../lib/cn";
  *   header   ancho 32 · alto 21 · texto 12/16 · --base-muted-foreground
  *   flecha   32x32 · r8 · glifo 16
  *
- * CUATRO DESVIACIONES DELIBERADAS, Y POR QUE
- * ------------------------------------------
+ * CINCO DESVIACIONES DELIBERADAS, Y POR QUE
+ * -----------------------------------------
  * 1. EL FONDO DE LA FLECHA NO USA SUS TOKENS DE FIGMA. El nodo pinta
  *    --custom-background-dark-input-30 en reposo y --custom-accent-dark-input-50
  *    en hover. Esos dos tokens estan pensados solo para oscuro: en claro
@@ -58,6 +58,17 @@ import { cn } from "../lib/cn";
  *    ninguna de las cinco familias del sistema (seccion 02). La seccion 23 lo
  *    resuelve explicitamente: "Los numeros en Ubuntu Sans Mono" -> font-mono.
  *
+ * 5. EL HALO DE FOCO NO ES EL GRIS FIJO DEL ARCHIVO. Figma dibuja
+ *    0 0 0 3px rgba(163,163,163,.5). Un literal no se invierte con el tema, y
+ *    ese gris no vale en los dos modos: sobre la pagina clara (#FAFAFA) el
+ *    anillo apenas se despega del fondo, y sobre un dia seleccionado — relleno
+ *    de --base-primary, tinta llena en ambos temas — el gris al 50% se funde
+ *    con el relleno, justo en el estado donde mas falta hace ver el foco. Se
+ *    usa el anillo del sistema (ring-ink + offset), el mismo de Button, que
+ *    invierte con el tema y por tanto mantiene el contraste en los dos.
+ *    Ningun otro componente del repo copia ese literal: el gris de Figma es un
+ *    resto del prototipo en oscuro, no un token.
+ *
  * DIAS DESHABILITADOS: aria-disabled, NUNCA el atributo `disabled`
  * ---------------------------------------------------------------
  * Un dia fuera de rango sigue siendo enfocable. Lo pide el patron de rejilla de
@@ -72,8 +83,7 @@ import { cn } from "../lib/cn";
  * Los tokens --base-* de la seccion (accent, primary, foreground,
  * muted-foreground y sus foregrounds) SI se redefinen en el bloque .dark de
  * figma.css, asi que se usan tal cual. El resto sale de utilidades semanticas.
- * No hay ni un color fijo salvo el halo de foco, que Figma define en gris medio
- * al 50% precisamente para que lea igual sobre claro y sobre oscuro.
+ * NO queda ni un solo color fijo en el fichero: todo tiene que invertir.
  */
 
 /* Geometria de Phosphor — la libreria de iconos oficial del sistema — copiada a
@@ -104,10 +114,18 @@ const CaretRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-/* Halo de foco del archivo: 3px de gris medio al 50%. Es un valor literal a
-   proposito — no es un color de marca sino un anillo neutro que Figma elige
-   para que contraste tanto sobre la tarjeta clara como sobre la oscura. */
-const FOCUS_RING = "outline-none focus-visible:ring-[3px] focus-visible:ring-[rgba(163,163,163,0.5)]";
+/* Halo de foco del sistema, NO el del archivo — ver desviacion 5 en la cabecera.
+   `ring-ink` es lo unico que se invierte con el tema; el offset separa el anillo
+   del relleno para que tambien se lea sobre un dia seleccionado, que va pintado
+   en tinta llena.
+
+   El color del offset tiene que ser el del fondo REAL de detras, y el calendario
+   se monta tanto sobre la pagina como dentro de una tarjeta o un popover. Va por
+   variable heredada (mismo recurso que Banner) en vez de fijo: el offset vive en
+   los botones, asi que un `ring-offset-*` suelto en el className del contenedor
+   no llegaria hasta ellos. Sin declarar nada, cae en el fondo de pagina. */
+const FOCUS_RING =
+  "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tk-calendar-bg,var(--tk-bg))]";
 
 /* ------------------------------------------------------------------------ */
 /* Utilidades de fecha                                                       */
@@ -232,7 +250,11 @@ const calendarDay = cva(
       },
       /* Un dia de otro mes seleccionado NO se pinta en tinta llena: se queda en
          acento atenuado, para que el mes en curso siga siendo el protagonista. */
-      { variant: "outside", selected: true, class: "bg-[var(--base-accent)] text-[var(--base-muted-foreground)]" },
+      {
+        variant: "outside",
+        selected: true,
+        class: "bg-[var(--base-accent)] text-[var(--base-muted-foreground)]",
+      },
     ],
 
     defaultVariants: { variant: "default", selected: false, disabled: false },
@@ -240,7 +262,8 @@ const calendarDay = cva(
 );
 
 export interface CalendarDayProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "type" | "disabled">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"button">, "type" | "disabled">,
     Omit<VariantProps<typeof calendarDay>, "selected" | "disabled"> {
   /** Dia elegido. Relleno en tinta (`--base-primary`). */
   selected?: boolean;
@@ -258,7 +281,10 @@ export interface CalendarDayProps
  * rango de dos meses, un mini calendario) sin repetir los tokens.
  */
 export const CalendarDay = React.forwardRef<HTMLButtonElement, CalendarDayProps>(
-  function CalendarDay({ className, variant, selected = false, disabled = false, onClick, ...props }, ref) {
+  function CalendarDay(
+    { className, variant, selected = false, disabled = false, onClick, ...props },
+    ref,
+  ) {
     return (
       <button
         ref={ref}
@@ -310,7 +336,7 @@ export const CalendarWeekday = React.forwardRef<HTMLDivElement, CalendarWeekdayP
           "flex h-[21px] w-8 shrink-0 items-center justify-center",
           // Mayusculas iniciales POR CSS. Intl devuelve "lun" en minuscula y
           // pasarlo por JS romperia el texto que copia el usuario.
-          "font-mono text-xs leading-4 capitalize text-[var(--base-muted-foreground)] select-none",
+          "font-mono text-xs leading-4 text-[var(--base-muted-foreground)] capitalize select-none",
           className,
         )}
         {...props}
@@ -323,8 +349,10 @@ export const CalendarWeekday = React.forwardRef<HTMLDivElement, CalendarWeekdayP
 /* Flecha — Calendar / Arrow Button                                          */
 /* ------------------------------------------------------------------------ */
 
-export interface CalendarNavButtonProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "type" | "disabled"> {
+export interface CalendarNavButtonProps extends Omit<
+  React.ComponentPropsWithoutRef<"button">,
+  "type" | "disabled"
+> {
   /** Nombres de variante del archivo: `previous` y `next`. */
   direction: "previous" | "next";
   /** Tope alcanzado. aria-disabled, no el atributo: conserva el foco. */
@@ -441,7 +469,10 @@ function defaultWeekday(date: Date, locale: string): string {
      algunos entornos) y "narrow" da "L", que colisiona entre lunes y... nada,
      pero deja martes y miercoles indistinguibles del resto en varios idiomas.
      Se recorta "short" a dos caracteres, que es lo que dibuja el documento. */
-  return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(date).replace(/\./g, "").slice(0, 2);
+  return new Intl.DateTimeFormat(locale, { weekday: "short" })
+    .format(date)
+    .replace(/\./g, "")
+    .slice(0, 2);
 }
 
 function defaultDayLabel(date: Date, locale: string): string {
@@ -562,7 +593,9 @@ export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(function
   /* Las flechas se apagan cuando el mes de destino cae entero fuera de rango:
      el ultimo dia del mes anterior por debajo del minimo, o el primero del
      siguiente por encima del maximo. */
-  const previousDisabled = Boolean(minDate && addDays(startOfMonth(month), -1) < startOfDay(minDate));
+  const previousDisabled = Boolean(
+    minDate && addDays(startOfMonth(month), -1) < startOfDay(minDate),
+  );
   const nextDisabled = Boolean(maxDate && startOfMonth(addMonths(month, 1)) > startOfDay(maxDate));
 
   const pick = (date: Date) => {
@@ -577,7 +610,9 @@ export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(function
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    let next: Date | null = null;
+    // Sin inicializar a proposito: `default:` sale antes, asi que todo camino
+    // que llegue abajo ha asignado. TypeScript lo verifica.
+    let next: Date;
     switch (event.key) {
       case "ArrowLeft":
         next = addDays(focusedDate, -1);

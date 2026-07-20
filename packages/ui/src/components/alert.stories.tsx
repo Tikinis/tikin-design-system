@@ -18,7 +18,7 @@ const meta = {
           "- **Tint suave** — fondo en el tint del hue, icono en el color pleno, texto en tinta. Sin barra de acento lateral ni fondos saturados.",
           "- **Titulo + mensaje** — titulo en Funnel Display 500, cuerpo en Ubuntu Sans. Accion opcional a la derecha; la X de cerrar solo si el alert es descartable.",
           "",
-          "El rol ARIA sale del tono: `error` y `warning` usan `role=\"alert\"` (asertivo, interrumpe al lector de pantalla); `info` y `success` usan `role=\"status\"`. Se puede sobreescribir con la prop `role`.",
+          'El rol ARIA sale del tono: `error` y `warning` usan `role="alert"` (asertivo, interrumpe al lector de pantalla); `info` y `success` usan `role="status"`. Se puede sobreescribir con la prop `role`.',
         ].join("\n"),
       },
     },

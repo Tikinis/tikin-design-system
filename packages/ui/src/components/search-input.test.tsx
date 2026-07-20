@@ -23,7 +23,9 @@ describe("SearchInput", () => {
 
   it("acepta una etiqueta propia y la usa como nombre accesible", () => {
     render(<SearchInput label="Buscar contacto o movimiento" />);
-    expect(screen.getByRole("searchbox", { name: "Buscar contacto o movimiento" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("searchbox", { name: "Buscar contacto o movimiento" }),
+    ).toBeInTheDocument();
   });
 
   it("es un input[type=search], no un input de texto", () => {

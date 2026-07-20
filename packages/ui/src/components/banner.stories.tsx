@@ -17,7 +17,7 @@ const meta = {
           "- **Banner vs alert** — el banner es global y de ancho completo, anclado arriba de la app; el alert vive dentro de una tarjeta o de un formulario.",
           "- **Uno a la vez** — solo un banner activo. Promo en tinta con CTA en pill claro; info en lavanda; exito en verde; sistema en ambar; critico en rojo.",
           "- **Accion + cerrar** — una sola accion (pill en tinta, subrayada en los tonos claros; nunca texto verde) y la X para descartar.",
-          "- **Critico se fija** — los avisos criticos o bloqueantes no llevan X y permanecen hasta resolverse. La regla se aplica en codigo: con `tone=\"critical\"` la X no se pinta aunque se pase `onDismiss`.",
+          '- **Critico se fija** — los avisos criticos o bloqueantes no llevan X y permanecen hasta resolverse. La regla se aplica en codigo: con `tone="critical"` la X no se pinta aunque se pase `onDismiss`.',
           "",
           'El rol ARIA sale del tono: `critical` usa `role="alert"` (asertivo, interrumpe al lector de pantalla) y el resto `role="status"`. Un banner suele estar ya presente al cargar la pantalla, asi que interrumpir por una promo seria ruido. Se puede sobreescribir con la prop `role`.',
           "",

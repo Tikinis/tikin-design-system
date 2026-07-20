@@ -9,11 +9,7 @@ import { Alert, AlertAction } from "./alert";
 
 describe("Alert", () => {
   it("expone titulo y cuerpo dentro de una region viva", () => {
-    render(
-      <Alert title="Verificación en proceso">
-        Tu cuenta estará lista en pocos minutos.
-      </Alert>,
-    );
+    render(<Alert title="Verificación en proceso">Tu cuenta estará lista en pocos minutos.</Alert>);
     const region = screen.getByRole("status");
     expect(region).toHaveTextContent("Verificación en proceso");
     expect(region).toHaveTextContent("Tu cuenta estará lista en pocos minutos.");

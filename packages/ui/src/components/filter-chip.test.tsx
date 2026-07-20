@@ -1,8 +1,26 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { FilterChip } from "./filter-chip";
+import { FilterChip, type FilterOption } from "./filter-chip";
+
+beforeAll(() => {
+  // Radix Popper mide disparador y panel con ResizeObserver, que jsdom no trae.
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+});
+
+const OPCIONES: FilterOption[] = [
+  { value: "activo", label: "Activo" },
+  { value: "pendiente", label: "Pendiente" },
+  { value: "archivado", label: "Archivado" },
+];
 
 /* Estos tests cubren COMPORTAMIENTO, no apariencia. Los valores visuales
  * (40px, r999, borde de tinta al abrir) se verifican contra el navegador, no
@@ -124,5 +142,166 @@ describe("FilterChip", () => {
     const ref = React.createRef<HTMLButtonElement>();
     render(<FilterChip ref={ref}>Filter</FilterChip>);
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+  });
+});
+
+/* El documento no describe un pill suelto: describe un filtro entero — "boton
+ * que abre un popover con opciones marcables, badge con la cuenta activa y
+ * acciones Limpiar / Aplicar". Estos tests cubren esa mitad. */
+describe("FilterChip · panel de opciones", () => {
+  async function abrir() {
+    await userEvent.click(screen.getByRole("button", { name: /filter/i }));
+    return screen.findByRole("dialog");
+  }
+
+  it("abre un popover con la cabecera y las opciones marcables", async () => {
+    render(
+      <FilterChip options={OPCIONES} heading="Estado">
+        Filter
+      </FilterChip>,
+    );
+    // Antes de abrir no hay panel montado.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    const panel = await abrir();
+    expect(panel).toHaveAccessibleName(/estado/i);
+    const casillas = within(panel).getAllByRole("checkbox");
+    expect(casillas).toHaveLength(3);
+    expect(casillas[0]).toHaveAccessibleName("Activo");
+    expect(casillas.every((c) => c.getAttribute("aria-checked") === "false")).toBe(true);
+  });
+
+  it("Aplicar confirma la seleccion, cierra el panel y actualiza el badge", async () => {
+    const onValueChange = vi.fn();
+    render(
+      <FilterChip options={OPCIONES} onValueChange={onValueChange}>
+        Filter
+      </FilterChip>,
+    );
+    const panel = await abrir();
+
+    await userEvent.click(within(panel).getByRole("checkbox", { name: "Activo" }));
+    await userEvent.click(within(panel).getByRole("checkbox", { name: "Pendiente" }));
+    // Hasta confirmar, el badge no cuenta nada: la seleccion es un borrador.
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole("button", { name: /aplicar/i }));
+    expect(onValueChange).toHaveBeenCalledWith(["activo", "pendiente"]);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /2 filtros activos/i })).toBeInTheDocument();
+  });
+
+  it("Limpiar deja el grupo en cero sin cerrar el panel", async () => {
+    render(
+      <FilterChip options={OPCIONES} defaultValue={["activo", "pendiente"]}>
+        Filter
+      </FilterChip>,
+    );
+    // El badge arranca con los dos filtros ya puestos.
+    expect(screen.getByText("2")).toBeInTheDocument();
+
+    const panel = await abrir();
+    expect(within(panel).getByRole("checkbox", { name: "Activo" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+
+    await userEvent.click(within(panel).getByRole("button", { name: /limpiar/i }));
+    // Sigue abierto y todas las casillas quedan sueltas.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    for (const casilla of within(panel).getAllByRole("checkbox")) {
+      expect(casilla).toHaveAttribute("aria-checked", "false");
+    }
+
+    await userEvent.click(within(panel).getByRole("button", { name: /aplicar/i }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+  });
+
+  it("el click fuera cierra el panel y descarta lo que no se aplico", async () => {
+    const onValueChange = vi.fn();
+    render(
+      <div>
+        <FilterChip options={OPCIONES} onValueChange={onValueChange}>
+          Filter
+        </FilterChip>
+        <p data-testid="fuera">Fuera</p>
+      </div>,
+    );
+    const panel = await abrir();
+    await userEvent.click(within(panel).getByRole("checkbox", { name: "Activo" }));
+
+    await userEvent.click(screen.getByTestId("fuera"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.queryByText("1")).not.toBeInTheDocument();
+
+    // Al reabrir, el borrador descartado no reaparece marcado.
+    const dedos = await abrir();
+    expect(within(dedos).getByRole("checkbox", { name: "Activo" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("en listas cortas aplica al instante y omite Aplicar", async () => {
+    const onValueChange = vi.fn();
+    render(
+      <FilterChip options={OPCIONES} applyOnSelect onValueChange={onValueChange}>
+        Filter
+      </FilterChip>,
+    );
+    const panel = await abrir();
+    expect(within(panel).queryByRole("button", { name: /aplicar/i })).not.toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole("checkbox", { name: "Archivado" }));
+    expect(onValueChange).toHaveBeenCalledWith(["archivado"]);
+    // El badge se entera sin confirmar y el panel sigue abierto.
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("gobierna la seleccion desde fuera cuando se pasa value", async () => {
+    const onValueChange = vi.fn();
+    render(
+      <FilterChip options={OPCIONES} value={["archivado"]} onValueChange={onValueChange}>
+        Filter
+      </FilterChip>,
+    );
+    expect(screen.getByText("1")).toBeInTheDocument();
+
+    const panel = await abrir();
+    await userEvent.click(within(panel).getByRole("checkbox", { name: "Activo" }));
+    await userEvent.click(within(panel).getByRole("button", { name: /aplicar/i }));
+
+    // Controlado: avisa, pero no se mueve solo.
+    expect(onValueChange).toHaveBeenCalledWith(["activo", "archivado"]);
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("el chip abierto anuncia el popover y vuelve a cerrarlo al pulsarlo", async () => {
+    render(<FilterChip options={OPCIONES}>Filter</FilterChip>);
+    const chip = screen.getByRole("button", { name: /filter/i });
+    expect(chip).toHaveAttribute("aria-haspopup", "dialog");
+    expect(chip).toHaveAttribute("aria-expanded", "false");
+
+    await abrir();
+    expect(chip).toHaveAttribute("aria-expanded", "true");
+
+    await userEvent.click(chip);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("deshabilitado no abre el panel", async () => {
+    render(
+      <FilterChip options={OPCIONES} disabled>
+        Filter
+      </FilterChip>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /filter/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

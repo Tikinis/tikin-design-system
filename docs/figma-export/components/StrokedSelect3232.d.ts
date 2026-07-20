@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from "react";
 export interface StrokedSelect3232Props {
   className?: string;
   style?: React.CSSProperties;

@@ -260,6 +260,7 @@
       "title": "Filter",
       "description": "Seccion 22 del sistema de diseño. Extension construida con los tokens del sistema. Exporta: FilterChip.",
       "dependencies": [
+        "radix-ui",
         "class-variance-authority"
       ],
       "registryDependencies": [

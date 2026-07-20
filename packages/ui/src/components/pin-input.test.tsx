@@ -2,7 +2,7 @@ import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PinInput } from "./pin-input";
+import { PinInput, type PinFeedback } from "./pin-input";
 
 /* Tests de COMPORTAMIENTO, no de apariencia. La geometria (punto de 16, tecla
  * de 52, shake de 420ms) se verifica contra el navegador: jsdom no aplica CSS,
@@ -20,6 +20,37 @@ const estados = () =>
   Array.from(document.querySelectorAll("[data-slot='pin-dot']")).map((p) =>
     p.getAttribute("data-estado"),
   );
+
+/** La fila de puntos. Se remonta en cada fallo: por eso interesa su identidad. */
+const fila = () => document.querySelector("[data-slot='pin-dot']")?.parentElement ?? null;
+
+/**
+ * Consumidor bien educado: devuelve `feedback` a `default` en cuanto el usuario
+ * empieza a teclear de nuevo. Es el uso recomendado, y el unico con el que el
+ * shake y la limpieza se repiten en cada intento — porque ambos responden a la
+ * transicion a `error`, no a un contador de intentos.
+ */
+function ConsumidorCorrecto(props: { onIntento?: (valor: string) => void }) {
+  const [pin, setPin] = React.useState("");
+  const [feedback, setFeedback] = React.useState<PinFeedback>("default");
+  return (
+    <PinInput
+      keypad={false}
+      value={pin}
+      feedback={feedback}
+      errorClearDelay={10}
+      onChange={(valor) => {
+        setPin(valor);
+        // Intento nuevo: el veredicto anterior ya no aplica.
+        if (valor.length < 4) setFeedback("default");
+      }}
+      onComplete={(valor) => {
+        props.onIntento?.(valor);
+        setFeedback("error");
+      }}
+    />
+  );
+}
 
 describe("PinInput", () => {
   it("pinta un punto por digito de la longitud pedida", () => {
@@ -145,6 +176,44 @@ describe("PinInput", () => {
     expect(estados()).toEqual(["error", "error", "error", "error"]);
   });
 
+  it("con el PIN lleno, teclear empieza un intento nuevo en vez de no hacer nada", async () => {
+    /* Este es el fallo grave de verdad del caso "feedback pegajoso": no que la
+       animacion no se repita, sino que el usuario se quedaba encerrado con el
+       campo lleno e incorrecto. Da igual si el consumidor limpia o no. */
+    const onChange = vi.fn();
+    render(<PinInput feedback="error" clearOnError={false} onChange={onChange} />);
+
+    await userEvent.type(campo(), "1234");
+    expect(campo()).toHaveValue("1234");
+
+    await userEvent.type(campo(), "9");
+    expect(campo()).toHaveValue("9");
+  });
+
+  it("un intento correcto NO se agita ni se borra aunque el error anterior siga puesto", async () => {
+    /* El caso que rompia la version anterior, que contaba intentos: el contador
+       subia al llenar el ultimo punto, no al conocer el resultado. Con
+       validacion asincrona y `feedback` pegajoso, un PIN CORRECTO se borraba
+       antes de que la validacion contestara. Castigar un acierto es peor que no
+       repetir una animacion. */
+    const { rerender } = render(<PinInput feedback="error" errorClearDelay={20} />);
+    // Deja pasar la limpieza del PRIMER error antes de teclear, o su temporizador
+    // borraria el intento siguiente y el test culparia al componente sin razon.
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Segundo intento, correcto. El consumidor aun no ha contestado, asi que
+    // `feedback` sigue valiendo "error".
+    await userEvent.type(campo(), "1234");
+    expect(campo()).toHaveValue("1234");
+
+    await new Promise((r) => setTimeout(r, 60));
+    expect(campo()).toHaveValue("1234");
+
+    // Y cuando por fin contesta, el exito se pinta sin haber perdido el PIN.
+    rerender(<PinInput feedback="success" errorClearDelay={20} />);
+    expect(campo()).toHaveValue("1234");
+  });
+
   it("pinta los cuatro puntos en verde cuando la clave es correcta", () => {
     render(<PinInput value="1234" feedback="success" />);
     expect(estados()).toEqual(["exito", "exito", "exito", "exito"]);
@@ -217,5 +286,27 @@ describe("PinInput", () => {
     // tailwind-merge debe descartar el gap base, no acumularlo.
     expect(raiz.className).toContain("gap-0");
     expect(raiz.className).not.toContain("gap-[22px]");
+  });
+});
+
+describe("PinInput · consumidor que resetea el feedback", () => {
+  it("agita y limpia en CADA intento fallido", async () => {
+    const onIntento = vi.fn();
+    render(<ConsumidorCorrecto onIntento={onIntento} />);
+
+    await userEvent.type(campo(), "1234");
+    expect(onIntento).toHaveBeenCalledTimes(1);
+    const filaDelPrimerFallo = fila();
+    await waitFor(() => expect(campo()).toHaveValue(""));
+
+    // Al teclear otra vez, el consumidor devuelve `feedback` a "default", asi
+    // que el segundo fallo vuelve a ser una transicion y se vuelve a disparar.
+    await userEvent.type(campo(), "9999");
+    expect(onIntento).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(campo()).toHaveValue(""));
+
+    // El remontado de la fila es lo unico que reinicia la animacion CSS cuando
+    // la clase no cambia.
+    expect(fila()).not.toBe(filaDelPrimerFallo);
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Calendar, CalendarDay, getCalendarGrid } from "./calendar";
+import { Calendar, CalendarDay, CalendarNavButton, getCalendarGrid } from "./calendar";
 
 /* Estos tests cubren COMPORTAMIENTO, no apariencia. Los valores visuales
  * (32x32, r8, texto 14/20, halo de foco 3px) se verifican contra el navegador,
@@ -54,7 +54,9 @@ describe("getCalendarGrid", () => {
   it("no rompe en los cambios de hora", () => {
     // En Madrid el 29 de marzo de 2026 la noche dura 23 horas. Construyendo las
     // fechas por dia (y no sumando 24h) el dia ni se pierde ni se repite.
-    const marzo = getCalendarGrid(new Date(2026, 2, 1)).flat().map(iso);
+    const marzo = getCalendarGrid(new Date(2026, 2, 1))
+      .flat()
+      .map(iso);
     expect(marzo).toContain("2026-03-29");
     expect(new Set(marzo).size).toBe(marzo.length);
   });
@@ -72,7 +74,10 @@ describe("Calendar", () => {
 
     expect(day("2026-07-09")).toHaveAttribute("aria-current", "date");
     expect(day("2026-07-20").closest("[role='gridcell']")).toHaveAttribute("aria-selected", "true");
-    expect(day("2026-07-09").closest("[role='gridcell']")).toHaveAttribute("aria-selected", "false");
+    expect(day("2026-07-09").closest("[role='gridcell']")).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
   });
 
   it("solo un dia entra en el orden de tabulacion (roving tabindex)", async () => {
@@ -177,7 +182,10 @@ describe("Calendar", () => {
     // El estado vive fuera: hasta que el consumidor no reenvie `selected`, la
     // celda marcada sigue siendo la de antes.
     expect(day("2026-07-20").closest("[role='gridcell']")).toHaveAttribute("aria-selected", "true");
-    expect(day("2026-07-21").closest("[role='gridcell']")).toHaveAttribute("aria-selected", "false");
+    expect(day("2026-07-21").closest("[role='gridcell']")).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
   });
 
   it("un dia fuera de rango no se elige pero SIGUE siendo enfocable", async () => {
@@ -260,6 +268,25 @@ describe("Calendar", () => {
     // alguien metiera un toUpperCase() romperia el texto que copia el usuario.
     const nombres = screen.getAllByRole("columnheader").map((node) => node.textContent);
     expect(nombres.every((name) => name === name?.toLowerCase())).toBe(true);
+  });
+
+  it("no pinta ni un color fijo: el halo de foco sale de un token semantico", () => {
+    /* Unica excepcion a la nota de arriba sobre no comprobar clases. No mide
+       apariencia sino la regla de tema del sistema: un literal rgba()/#hex se
+       dibuja IGUAL en claro y en oscuro, asi que en uno de los dos modos el
+       halo no llega al contraste minimo. El foco debe venir de `ring-ink`, que
+       es lo unico que se invierte con el tema. */
+    render(
+      <>
+        <CalendarDay>1</CalendarDay>
+        <CalendarNavButton direction="previous" aria-label="Mes anterior" />
+      </>,
+    );
+
+    for (const node of screen.getAllByRole("button")) {
+      expect(node.className).not.toMatch(/rgba?\(|#[0-9a-fA-F]{3,8}\b/);
+      expect(node.className).toContain("focus-visible:ring-ink");
+    }
   });
 
   it("permite sobreescribir estilos por className", () => {

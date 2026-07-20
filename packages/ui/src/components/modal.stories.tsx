@@ -25,7 +25,13 @@ import {
  * para las stories, deliberadamente genericos, y no forman parte del sistema. */
 function Glifo({ children }: { children: React.ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      aria-hidden="true"
+    >
       {children}
     </svg>
   );
@@ -60,7 +66,10 @@ const IconoQR = () => (
 );
 const IconoBanco = () => (
   <Glifo>
-    <path d="M3.5 9.5 12 5l8.5 4.5M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3.5 19.5h17" strokeLinecap="round" />
+    <path
+      d="M3.5 9.5 12 5l8.5 4.5M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3.5 19.5h17"
+      strokeLinecap="round"
+    />
   </Glifo>
 );
 const IconoChevron = () => (
@@ -394,8 +403,13 @@ export const SheetConFormulario: Story = {
 /**
  * Las tres variantes del documento, acotadas dentro de su caja.
  *
- * `container` + `overlayClassName="absolute"` sacan el scrim del viewport y lo
- * meten en un contenedor concreto — es como el documento monta su demo en vivo.
+ * `container` + `overlayClassName="absolute"` sacan la superficie del viewport y
+ * la meten en un contenedor concreto — es como el documento monta su demo en
+ * vivo.
+ *
+ * Aquí NO hay velo: con `modal={false}` Radix no monta el scrim a propósito,
+ * porque la página de detrás sigue siendo usable. Es lo que toca en una matriz
+ * de especímenes, donde tres tarjetas conviven con el resto de la página.
  */
 export const MatrizDeVariantes: Story = {
   name: "Matriz de variantes",

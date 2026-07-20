@@ -107,7 +107,8 @@ type AvatarCircleVariants = VariantProps<typeof avatarCircle>;
 const AvatarGroupContext = React.createContext<{ size: AvatarSize } | null>(null);
 
 export interface AvatarProps
-  extends Omit<React.ComponentPropsWithoutRef<"span">, "color">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"span">, "color">,
     Pick<AvatarCircleVariants, "ring"> {
   /**
    * Nombre completo de la persona o del bolsillo. Hace tres cosas a la vez:
@@ -257,7 +258,8 @@ export interface AvatarGroupProps extends React.ComponentPropsWithoutRef<"div"> 
  * enlace.
  *
  * Los solapados se pintan en orden de documento, de modo que cada uno tapa al
- * anterior. No hace falta z-index.
+ * anterior. No hace falta z-index, pero si que el envoltorio este posicionado:
+ * ver la nota de AvatarStackItem.
  */
 export const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(function AvatarGroup(
   { className, size = "m", max = 3, total, children, ...props },
@@ -300,9 +302,20 @@ export const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(fu
   );
 });
 
-/** Envoltorio que aporta el solapado y el borde separador. */
+/**
+ * Envoltorio que aporta el solapado y el borde separador.
+ *
+ * `relative` NO es decorativo: sin el, el borde no se ve. La raiz de cada
+ * Avatar es `relative`, o sea que pinta en la capa de los elementos
+ * posicionados, y esa capa va por encima de TODO el contenido en linea sin
+ * posicionar (CSS 2.1, apendice E: paso 8 sobre paso 7). Con el envoltorio
+ * estatico su sombra caia en el paso 7 y el avatar anterior la tapaba entera,
+ * dejando los circulos fundidos. Posicionando el envoltorio, borde y avatares
+ * comparten capa y decide el orden del documento: cada envoltorio pinta sobre
+ * el avatar que le precede, que es justo lo que pide la seccion.
+ */
 const AvatarStackItem = ({ children }: { children: React.ReactNode }) => (
-  <span className="ml-[var(--tk-avatar-overlap)] inline-flex rounded-full shadow-[0_0_0_2.5px_var(--tk-avatar-edge,var(--tk-surface))] first:ml-0">
+  <span className="relative ml-[var(--tk-avatar-overlap)] inline-flex rounded-full shadow-[0_0_0_2.5px_var(--tk-avatar-edge,var(--tk-surface))] first:ml-0">
     {children}
   </span>
 );

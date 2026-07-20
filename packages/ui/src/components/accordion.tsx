@@ -101,7 +101,7 @@ const accordionContent = cva(
   [
     // La respuesta va en Sans (la familia por defecto), 14/1.55 y en ink-700:
     // un peldaño por debajo de la pregunta para que la jerarquia se lea sola.
-    "text-ink-700 text-sm leading-[1.55]",
+    "text-sm leading-[1.55] text-ink-700",
     "outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-ink",
   ],
   {
@@ -178,30 +178,34 @@ export type AccordionProps = AccordionRootProps & {
  * No escondas aqui informacion critica: lo que el usuario necesita para decidir
  * va visible, no detras de un click.
  */
-export const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(function Accordion(
-  props,
-  ref,
-) {
-  // Se destructura tras el cast porque el rest de una union discriminada pierde
-  // la relacion entre `type` y `value`; el cast de vuelta la restituye al
-  // reenviar las props a Radix, que es quien las valida de verdad.
-  const { className, variant = "boxed", ...rest } = props as AccordionRootProps & {
-    variant?: AccordionVariant;
-  };
+export const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(
+  function Accordion(props, ref) {
+    // Se destructura tras el cast porque el rest de una union discriminada pierde
+    // la relacion entre `type` y `value`; el cast de vuelta la restituye al
+    // reenviar las props a Radix, que es quien las valida de verdad.
+    const {
+      className,
+      variant = "boxed",
+      ...rest
+    } = props as AccordionRootProps & {
+      variant?: AccordionVariant;
+    };
 
-  return (
-    <AccordionVariantContext.Provider value={variant}>
-      <AccordionPrimitive.Root
-        ref={ref}
-        className={cn(accordionRoot({ variant }), className)}
-        {...(rest as AccordionRootProps)}
-      />
-    </AccordionVariantContext.Provider>
-  );
-});
+    return (
+      <AccordionVariantContext.Provider value={variant}>
+        <AccordionPrimitive.Root
+          ref={ref}
+          className={cn(accordionRoot({ variant }), className)}
+          {...(rest as AccordionRootProps)}
+        />
+      </AccordionVariantContext.Provider>
+    );
+  },
+);
 
 export interface AccordionItemProps
-  extends React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>,
+  extends
+    React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>,
     VariantProps<typeof accordionItem> {}
 
 /**
@@ -222,7 +226,8 @@ export const AccordionItem = React.forwardRef<HTMLDivElement, AccordionItemProps
 );
 
 export interface AccordionTriggerProps
-  extends React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>,
+  extends
+    React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>,
     VariantProps<typeof accordionTrigger> {
   /**
    * Nivel del encabezado que envuelve al disparador. Por defecto 3, el de
@@ -273,7 +278,8 @@ export const AccordionTrigger = React.forwardRef<HTMLButtonElement, AccordionTri
 );
 
 export interface AccordionContentProps
-  extends React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>,
+  extends
+    React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>,
     VariantProps<typeof accordionContent> {}
 
 /**

@@ -70,7 +70,15 @@ createRoot(document.getElementById("root")).render(
 );
 
 run("npm", ["install", "--no-audit", "--no-fund", ...tarballs, "react", "react-dom"]);
-run("npm", ["install", "--no-audit", "--no-fund", "-D", "vite", "@vitejs/plugin-react", "typescript"]);
+run("npm", [
+  "install",
+  "--no-audit",
+  "--no-fund",
+  "-D",
+  "vite",
+  "@vitejs/plugin-react",
+  "typescript",
+]);
 
 writeFileSync(
   join(dir, "vite.config.ts"),

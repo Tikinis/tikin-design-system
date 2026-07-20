@@ -131,10 +131,8 @@ type RangeVariants = VariantProps<typeof rangeSliderRange>;
  * interfaz SliderProps del paquete real. Solo afecta a los TIPOS: en tiempo de
  * ejecucion sigue siendo el Radix de siempre. */
 export interface RangeSliderProps
-  extends Omit<
-      React.ComponentPropsWithoutRef<"span">,
-      "defaultValue" | "dir" | "onChange"
-    >,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"span">, "defaultValue" | "dir" | "onChange">,
     RangeVariants {
   /** Nombre del campo, para que los dos valores viajen en un `<form>` nativo. */
   name?: string;

@@ -55,7 +55,9 @@ for (const nombre of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
   if (tocado) writeFileSync(ruta, JSON.stringify(datos, null, 2) + "\n");
 }
 
-console.log(`Imports reescritos al alias @/ en ${reescritos} de ${ficheros} ficheros del registry.`);
+console.log(
+  `Imports reescritos al alias @/ en ${reescritos} de ${ficheros} ficheros del registry.`,
+);
 
 // Red de seguridad: si queda algun relativo hacia fuera, el codigo copiado no
 // compilaria en casa del consumidor y es mejor enterarse aqui que alli.

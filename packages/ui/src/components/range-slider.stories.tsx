@@ -87,20 +87,7 @@ export const RangoDeFechas: Story = {
     step: 1,
     defaultValue: [2, 8],
     formatValue: (v: number) =>
-      [
-        "ENE",
-        "FEB",
-        "MAR",
-        "ABR",
-        "MAY",
-        "JUN",
-        "JUL",
-        "AGO",
-        "SEP",
-        "OCT",
-        "NOV",
-        "DIC",
-      ][v] ?? "",
+      ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"][v] ?? "",
     thumbLabels: ["Mes inicial", "Mes final"],
   },
 };
@@ -114,9 +101,7 @@ export const Controlado: Story = {
   render: () => {
     function Demo() {
       const [rango, setRango] = React.useState<RangeSliderValue>([200_000, 600_000]);
-      const [consultado, setConsultado] = React.useState<RangeSliderValue>([
-        200_000, 600_000,
-      ]);
+      const [consultado, setConsultado] = React.useState<RangeSliderValue>([200_000, 600_000]);
       return (
         <div className="flex w-[440px] max-w-full flex-col gap-6">
           <RangeSlider
@@ -150,7 +135,10 @@ export const MatrizDeEspecificacion: Story = {
     const filas = [
       { etiqueta: "LIMA · CANÓNICO", props: { tone: "lime" as const } },
       { etiqueta: "TINTA · EXTENSIÓN", props: { tone: "ink" as const } },
-      { etiqueta: "EXTREMOS JUNTOS", props: { defaultValue: [500_000, 500_000] as RangeSliderValue } },
+      {
+        etiqueta: "EXTREMOS JUNTOS",
+        props: { defaultValue: [500_000, 500_000] as RangeSliderValue },
+      },
       { etiqueta: "RANGO COMPLETO", props: { defaultValue: [0, 1_000_000] as RangeSliderValue } },
       { etiqueta: "DISABLED · .55", props: { disabled: true } },
     ];

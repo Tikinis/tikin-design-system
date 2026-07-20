@@ -42,12 +42,14 @@ const card = cva(
          blanco. Nunca dos blancos seguidos sin borde." */
       surface: {
         // La sombra NUNCA reemplaza al borde: van juntos.
-        default: "bg-surface text-ink border border-edge shadow-xs",
+        default: "border border-edge bg-surface text-ink shadow-xs",
         // Gris 100 ya se separa del blanco por si mismo, no lleva borde.
         muted: "bg-surface-2 text-ink",
-        // Tinta: reservada a la balance card (saldo, resumen). bg-ink +
-        // text-surface se invierten los dos con el tema, asi que el contraste
-        // se mantiene en oscuro sin congelar nada.
+        // Tinta: la balance card (saldo, resumen). bg-ink + text-surface se
+        // invierten los DOS con el tema, asi que el contraste se mantiene en
+        // oscuro sin congelar nada. Ese "los dos a la vez" es el requisito:
+        // la media card reusa este par pero congelando el tema alrededor,
+        // porque su fondo es una foto y una foto no se invierte.
         ink: "bg-ink text-surface",
       },
 
@@ -274,35 +276,68 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
       // scrim tenga sobre que caer si no hay imagen.
       surface="ink"
       padding="none"
-      className={cn("min-h-[300px] overflow-hidden", className)}
+      /* `tk-static` congela el tema DENTRO de la tarjeta, y es la pieza que
+       * sostiene todo lo demas.
+       *
+       * El fondo de esta tarjeta no es una superficie de la interfaz: es una
+       * fotografia, y una fotografia no se invierte cuando la pagina pasa a
+       * oscuro. Si la tarjeta reacciona al tema y su contenido no, los dos
+       * regimenes se cruzan: `bg-ink` sube a casi blanco en oscuro mientras el
+       * texto de encima sigue siendo claro, y el bloque queda ilegible cuando
+       * no hay imagen (o mientras carga).
+       *
+       * Congelando el tema en el contenedor, el par `bg-ink` / `text-surface`
+       * significa siempre lo mismo — fondo oscuro, tinta clara — sin escribir
+       * un solo color fijo. Es exactamente lo que hace el documento con este
+       * bloque, y de paso da a los hijos del consumidor un contexto coherente:
+       * dentro de la media card, `surface` es "encima de la foto" e `ink` es
+       * "la foto". */
+      className={cn(
+        "tk-static min-h-[300px] overflow-hidden",
+        /* El anillo de foco de `interactive` se dibuja HACIA DENTRO. El de la
+           Card normal usa `ring-ink` sobre `ring-offset-page`, que son tokens
+           del tema de la pagina; aqui `tk-static` tambien los congela, asi que
+           sobre una pagina oscura el anillo salia casi negro (invisible) y el
+           hueco hueso hacia de anillo: el indicador quedaba del reves.
+           Un anillo inset se apoya en la propia tarjeta, que siempre es
+           oscura, asi que no depende del tema de la pagina en absoluto. */
+        "focus-visible:ring-surface focus-visible:ring-offset-0 focus-visible:ring-inset",
+        className,
+      )}
       {...props}
     >
       {image ? (
-        <div className="absolute inset-0 [&>*]:size-full [&_img]:size-full [&_img]:object-cover">
+        <div className="absolute inset-0 [&_img]:size-full [&_img]:object-cover [&>*]:size-full">
           {image}
         </div>
       ) : null}
 
       {/* Scrim: transparente arriba, 78% de tinta abajo. Va aparte de la
           imagen para que el consumidor pueda pasar un <picture>, un <video> o
-          un slot de su CMS sin tener que replicarlo. */}
+          un slot de su CMS sin tener que replicarlo.
+
+          La tinta sale del token y no de un literal: dentro del contexto
+          congelado --tk-ink vale siempre rgb(11,15,16), asi que el scrim
+          oscurece igual en claro y en oscuro sin quedar desconectado de la
+          paleta. Se usa --tk-* y no --color-*: los colores del tema van en un
+          `@theme inline`, que no publica variables, solo las inlinea en las
+          utilidades. El paso intermedio tambien pasa por color-mix para no
+          depender de como interpole el navegador hacia `transparent`. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,15,16,0.15)_0%,rgba(11,15,16,0)_38%,rgba(11,15,16,0.78)_100%)]"
+        className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--tk-ink)_15%,transparent)_0%,color-mix(in_srgb,var(--tk-ink)_0%,transparent)_38%,color-mix(in_srgb,var(--tk-ink)_78%,transparent)_100%)]"
       />
 
-      {/* Blanco FIJO, y es deliberado: aqui el fondo no es una superficie del
-          tema sino una fotografia oscurecida por el scrim, asi que se ve
-          igual de oscura en claro y en oscuro. Usar text-surface — que si
-          invierte — dejaria el titulo negro sobre la foto en tema oscuro. El
-          documento resuelve esto congelando el bloque con .tk-static; un
-          componente no puede congelar el tema de quien lo usa. */}
-      <div className="relative flex flex-1 flex-col p-5 text-white">
+      {/* Todo el color de aqui es semantico y se resuelve contra el tema
+          congelado del contenedor: `surface` es la tinta clara que se lee
+          sobre la foto. Antes iba en blanco fijo, y ese blanco era justo lo
+          que se despegaba del fondo cuando la pagina pasaba a oscuro. */}
+      <div className="relative flex flex-1 flex-col p-5 text-surface">
         <div className="flex items-start gap-3">
           {eyebrow ? (
             // Mayusculas por CSS: el texto accesible y el copiado conservan su
             // capitalizacion original.
-            <span className="rounded-pill border border-white/30 bg-white/15 px-3 py-1.5 font-mono text-[11px] tracking-[0.12em] uppercase backdrop-blur-[6px]">
+            <span className="rounded-pill border border-surface/30 bg-surface/15 px-3 py-1.5 font-mono text-[11px] tracking-[0.12em] uppercase backdrop-blur-[6px]">
               {eyebrow}
             </span>
           ) : null}
@@ -311,7 +346,7 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
               type="button"
               aria-label={actionLabel}
               onClick={onActionClick}
-              className="ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill border border-white/40 outline-none transition-colors duration-140 ease-out hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white [&_svg]:size-[18px]"
+              className="ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill border border-surface/40 transition-colors duration-140 ease-out outline-none hover:bg-surface/15 focus-visible:ring-2 focus-visible:ring-surface [&_svg]:size-[18px]"
             >
               {action}
             </button>
@@ -321,7 +356,7 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
         <div className="flex flex-col gap-1.5">
           <Title className="font-display text-[26px] leading-[1.05] font-semibold">{title}</Title>
           {description ? (
-            <p className="text-sm leading-[1.45] text-white/85">{description}</p>
+            <p className="text-sm leading-[1.45] text-surface/85">{description}</p>
           ) : null}
           {children}
         </div>
@@ -377,7 +412,18 @@ export interface CardStatProps extends Omit<CardProps, "surface"> {
  * la comparacion es la linea de apoyo, no una segunda cifra.
  */
 export const CardStat = React.forwardRef<HTMLDivElement, CardStatProps>(function CardStat(
-  { className, label, value, delta, trend = "up", trendIcon, comparison, chart, children, ...props },
+  {
+    className,
+    label,
+    value,
+    delta,
+    trend = "up",
+    trendIcon,
+    comparison,
+    chart,
+    children,
+    ...props
+  },
   ref,
 ) {
   return (

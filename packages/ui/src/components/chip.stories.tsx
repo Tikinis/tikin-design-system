@@ -17,12 +17,12 @@ const meta = {
         component: [
           "**Seccion 09 · Chips & badges — MIXTO.**",
           "",
-          "- `variant=\"feedback\"` es **CANONICO**: es el componente Chip del archivo de Figma (16 variantes = 4 feedbacks x 4 tamaños). Pastel solido, pill, Ubuntu Mono en MAYUSCULAS con +5% de tracking, sin borde y sin icono. No es interactivo.",
-          "- `variant=\"action\" | \"filter\" | \"value\"` son **EXTENSION**: el propio documento las etiqueta como *\"extension construida con tokens del archivo (pill r999, borde de campo); el unico Chip nativo es el de feedback\"*. Van en Ubuntu Sans y caja normal, no en mono mayusculas.",
+          '- `variant="feedback"` es **CANONICO**: es el componente Chip del archivo de Figma (16 variantes = 4 feedbacks x 4 tamaños). Pastel solido, pill, Ubuntu Mono en MAYUSCULAS con +5% de tracking, sin borde y sin icono. No es interactivo.',
+          '- `variant="action" | "filter" | "value"` son **EXTENSION**: el propio documento las etiqueta como *"extension construida con tokens del archivo (pill r999, borde de campo); el unico Chip nativo es el de feedback"*. Van en Ubuntu Sans y caja normal, no en mono mayusculas.',
           "",
           "Suave vs solido: el pastel solido del Chip es para **feedback puntual**; para estados persistentes en listas se usa `Badge` (tint 50).",
           "",
-          "**Altura de `size=\"l\"`: 28, no 32.** La rejilla del documento rotula \"L · 32\" pero el export de Figma da 28 en las cuatro variantes L; el export manda en pixeles.",
+          '**Altura de `size="l"`: 28, no 32.** La rejilla del documento rotula "L · 32" pero el export de Figma da 28 en las cuatro variantes L; el export manda en pixeles.',
         ].join("\n"),
       },
     },
@@ -213,8 +213,20 @@ export const EnContexto: Story = {
   render: () => (
     <div className="flex max-w-[560px] flex-col gap-3">
       {[
-        { nombre: "Valentina Castro", detalle: "$valentinacastro", estado: "Completado", tono: "success", monto: "+ $500.000" },
-        { nombre: "Dispersión de bonos", detalle: "12 destinatarios", estado: "Pendiente", tono: "warning", monto: "– $3.100.300" },
+        {
+          nombre: "Valentina Castro",
+          detalle: "$valentinacastro",
+          estado: "Completado",
+          tono: "success",
+          monto: "+ $500.000",
+        },
+        {
+          nombre: "Dispersión de bonos",
+          detalle: "12 destinatarios",
+          estado: "Pendiente",
+          tono: "warning",
+          monto: "– $3.100.300",
+        },
       ].map((fila) => (
         <div
           key={fila.nombre}
@@ -238,7 +250,16 @@ export const EnContexto: Story = {
    iconos, asi que las stories dibujan los suyos en vez de arrastrar una. */
 function IconoMas() {
   return (
-    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 16 16"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
       <circle cx="8" cy="8" r="6.4" />
       <path d="M8 5.4v5.2M5.4 8h5.2" />
     </svg>
@@ -247,7 +268,17 @@ function IconoMas() {
 
 function IconoCheck() {
   return (
-    <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 16 16"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="m3.2 8.4 3.1 3.1 6.5-6.9" />
     </svg>
   );

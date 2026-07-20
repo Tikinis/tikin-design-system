@@ -77,8 +77,7 @@ const list = cva("flex flex-col", {
 });
 
 export interface ListProps
-  extends React.ComponentPropsWithoutRef<"div">,
-    VariantProps<typeof list> {
+  extends React.ComponentPropsWithoutRef<"div">, VariantProps<typeof list> {
   /**
    * Renderiza el hijo en vez de un <div>.
    *
@@ -138,7 +137,7 @@ const listItem = cva(
 
       interactive: {
         true: [
-          "cursor-pointer select-none outline-none",
+          "cursor-pointer outline-none select-none",
           "hover:bg-surface-2 active:bg-surface-3",
           // ring-inset porque la lista recorta con overflow-hidden: un anillo
           // por fuera quedaria cortado justo en la primera y la ultima fila.
@@ -165,7 +164,8 @@ const listItem = cva(
 type ListItemVariants = VariantProps<typeof listItem>;
 
 export interface ListItemProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "title" | "onClick">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"div">, "title" | "onClick">,
     Omit<ListItemVariants, "interactive"> {
   /**
    * Hace la fila tocable. Se tipa contra HTMLElement y no contra HTMLDivElement
@@ -336,8 +336,7 @@ const listItemIcon = cva(
 );
 
 export interface ListItemIconProps
-  extends React.ComponentPropsWithoutRef<"span">,
-    VariantProps<typeof listItemIcon> {}
+  extends React.ComponentPropsWithoutRef<"span">, VariantProps<typeof listItemIcon> {}
 
 /**
  * Leading de la fila: avatar circular (personas) o icono en caja (conceptos).
@@ -346,9 +345,7 @@ export interface ListItemIconProps
  */
 export const ListItemIcon = React.forwardRef<HTMLSpanElement, ListItemIconProps>(
   function ListItemIcon({ className, shape, tone, ...props }, ref) {
-    return (
-      <span ref={ref} className={cn(listItemIcon({ shape, tone, className }))} {...props} />
-    );
+    return <span ref={ref} className={cn(listItemIcon({ shape, tone, className }))} {...props} />;
   },
 );
 
@@ -374,15 +371,12 @@ const listItemAmount = cva(
 );
 
 export interface ListItemAmountProps
-  extends React.ComponentPropsWithoutRef<"span">,
-    VariantProps<typeof listItemAmount> {}
+  extends React.ComponentPropsWithoutRef<"span">, VariantProps<typeof listItemAmount> {}
 
 /** Monto en mono alineado a la derecha. Entradas en verde, salidas en tinta. */
 export const ListItemAmount = React.forwardRef<HTMLSpanElement, ListItemAmountProps>(
   function ListItemAmount({ className, direction, ...props }, ref) {
-    return (
-      <span ref={ref} className={cn(listItemAmount({ direction, className }))} {...props} />
-    );
+    return <span ref={ref} className={cn(listItemAmount({ direction, className }))} {...props} />;
   },
 );
 
@@ -419,14 +413,20 @@ export const ListItemValue = React.forwardRef<HTMLSpanElement, ListItemValueProp
     return (
       <span
         ref={ref}
-        className={cn("flex flex-none items-center gap-2 font-mono text-[13px] text-ink-600", className)}
+        className={cn(
+          "flex flex-none items-center gap-2 font-mono text-[13px] text-ink-600",
+          className,
+        )}
         {...props}
       >
         {children}
         {showChevron && (
           // aria-hidden: la navegacion ya la anuncia el rol de la fila; un
           // glifo suelto solo añadiria ruido al lector de pantalla.
-          <span className="flex size-[15px] flex-none items-center justify-center text-ink-500" aria-hidden="true">
+          <span
+            className="flex size-[15px] flex-none items-center justify-center text-ink-500"
+            aria-hidden="true"
+          >
             {chevron ?? CaretRight}
           </span>
         )}

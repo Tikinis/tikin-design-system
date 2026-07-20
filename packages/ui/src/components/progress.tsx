@@ -79,7 +79,8 @@ const progressTrack = cva("relative", {
     },
     shape: {
       // Al 100% la pista pasa a verde tenue. Ver decision (a) de la cabecera.
-      linear: "h-2 w-full overflow-hidden rounded-full bg-surface-2 data-[state=complete]:bg-tint-success",
+      linear:
+        "h-2 w-full overflow-hidden rounded-full bg-surface-2 data-[state=complete]:bg-tint-success",
       // En circular la pista la pinta el SVG; el Root solo es la caja.
       circular: "inline-flex shrink-0 items-center justify-center",
     },
@@ -88,16 +89,13 @@ const progressTrack = cva("relative", {
 });
 
 const progressIndicator = cva(
-  [
-    "h-full rounded-full bg-[var(--tk-progress-fill)]",
-    "data-[state=complete]:bg-lime",
-  ],
+  ["h-full rounded-full bg-[var(--tk-progress-fill)]", "data-[state=complete]:bg-lime"],
   {
     variants: {
       indeterminate: {
         // El segmento mide el 35% y recorre de -100% a 380%: entra por la
         // izquierda y sale del todo por la derecha antes de reaparecer.
-        true: "absolute inset-y-0 left-0 w-[35%] animate-[tk-progress-indeterminate_1.3s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:w-full motion-reduce:opacity-60",
+        true: "absolute inset-y-0 left-0 w-[35%] animate-[tk-progress-indeterminate_1.3s_ease-in-out_infinite] motion-reduce:w-full motion-reduce:animate-none motion-reduce:opacity-60",
         // La anchura va por style inline (es un dato, no un estilo), y se anima
         // para que un cambio de valor no salte.
         false: "transition-[width] duration-300 ease-out motion-reduce:transition-none",
@@ -123,7 +121,8 @@ const progressArc = cva(
 type ProgressVariants = VariantProps<typeof progressTrack>;
 
 export interface ProgressProps
-  extends Omit<React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>, "asChild">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>, "asChild">,
     Omit<ProgressVariants, "shape"> {
   /**
    * Porcentaje recorrido, entre 0 y `max`. `null` (o sin pasar) = indeterminado:
@@ -285,10 +284,7 @@ export const Progress = React.forwardRef<
         </svg>
       ) : (
         <ProgressPrimitive.Indicator
-          className={cn(
-            progressIndicator({ indeterminate: isIndeterminate }),
-            indicatorClassName,
-          )}
+          className={cn(progressIndicator({ indeterminate: isIndeterminate }), indicatorClassName)}
           style={isIndeterminate ? undefined : { width: `${percent}%` }}
         />
       )}

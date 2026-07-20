@@ -180,6 +180,58 @@ const snackbarViewport = cva(
 );
 
 /* -------------------------------------------------------------------------
+ * Pausa compartida
+ * ------------------------------------------------------------------------- */
+
+/* POR QUE LA PAUSA NO PUEDE SER UN ESTADO LOCAL DE CADA SNACKBAR
+ * --------------------------------------------------------------
+ * Radix decide si arranca el temporizador de un toast recien montado leyendo
+ * `isClosePausedRef`, un ref que vive en el PROVIDER y que NO se reinicia
+ * cuando la pieza anterior se desmonta (react-toast 1.2.20, ToastImpl:
+ * `if (open && !context.isClosePausedRef.current) startTimer(duration)`). O
+ * sea: si el puntero seguia sobre el viewport, el snackbar siguiente nace con
+ * el temporizador parado y no arranca hasta que el puntero salga.
+ *
+ * Un `useState(false)` por instancia no puede saber eso — solo se entera de las
+ * pausas que ocurren estando ya montado — y pintaria la barra vaciandose sobre
+ * un plazo que nadie esta contando. El caso corriente no es raro: pulsar
+ * DESHACER con el cursor encima y recibir otro aviso en el mismo sitio.
+ *
+ * Se replica ese ref con un store minimo colgado del provider. Cambia con los
+ * MISMOS eventos onPause/onResume que Radix usa para mover su ref, asi que los
+ * dos estados viajan juntos, y sobrevive al desmontaje de la pieza igual que el
+ * suyo. Es un store con suscripcion y no un useState en el provider porque el
+ * provider envuelve la aplicacion entera: guardar ahi la pausa re-renderizaria
+ * todo el arbol cada vez que el cursor roza el viewport. Con
+ * useSyncExternalStore solo se re-renderizan los snackbars montados. */
+interface PauseStore {
+  subscribe: (listener: () => void) => () => void;
+  get: () => boolean;
+  set: (paused: boolean) => void;
+}
+
+function createPauseStore(): PauseStore {
+  let paused = false;
+  const listeners = new Set<() => void>();
+  return {
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    get: () => paused,
+    set(next) {
+      if (paused === next) return;
+      paused = next;
+      for (const listener of listeners) listener();
+    },
+  };
+}
+
+const SnackbarPauseContext = React.createContext<PauseStore | null>(null);
+
+/* -------------------------------------------------------------------------
  * Provider
  * ------------------------------------------------------------------------- */
 
@@ -223,13 +275,20 @@ export function SnackbarProvider({
   label = "Notificación",
   ...props
 }: SnackbarProviderProps) {
+  /* Un store por provider, creado una sola vez: es el espejo de
+   * `isClosePausedRef` y tiene que durar lo mismo que el, no lo que dure el
+   * snackbar de turno. */
+  const [pauseStore] = React.useState(createPauseStore);
+
   return (
-    <Toast.Provider
-      duration={duration}
-      swipeDirection={swipeDirection}
-      label={label}
-      {...props}
-    />
+    <SnackbarPauseContext.Provider value={pauseStore}>
+      <Toast.Provider
+        duration={duration}
+        swipeDirection={swipeDirection}
+        label={label}
+        {...props}
+      />
+    </SnackbarPauseContext.Provider>
   );
 }
 
@@ -238,8 +297,7 @@ export function SnackbarProvider({
  * ------------------------------------------------------------------------- */
 
 export interface SnackbarViewportProps
-  extends React.ComponentPropsWithoutRef<"ol">,
-    VariantProps<typeof snackbarViewport> {
+  extends React.ComponentPropsWithoutRef<"ol">, VariantProps<typeof snackbarViewport> {
   /** Atajo que lleva el foco a la lista. Por defecto F8, el de Radix. */
   hotkey?: string[];
   /** Etiqueta de la region. `{hotkey}` se sustituye por el atajo. */
@@ -256,7 +314,10 @@ export interface SnackbarViewportProps
  * pueda saltar al snackbar sin recorrer la pagina; por eso `label` lleva texto.
  */
 export const SnackbarViewport = React.forwardRef<HTMLOListElement, SnackbarViewportProps>(
-  function SnackbarViewport({ className, placement, label = "Notificaciones ({hotkey})", ...props }, ref) {
+  function SnackbarViewport(
+    { className, placement, label = "Notificaciones ({hotkey})", ...props },
+    ref,
+  ) {
     return (
       <Toast.Viewport
         ref={ref}
@@ -272,8 +333,10 @@ export const SnackbarViewport = React.forwardRef<HTMLOListElement, SnackbarViewp
  * Snackbar
  * ------------------------------------------------------------------------- */
 
-export interface SnackbarProps
-  extends Omit<React.ComponentPropsWithoutRef<"li">, "title" | "type" | "children"> {
+export interface SnackbarProps extends Omit<
+  React.ComponentPropsWithoutRef<"li">,
+  "title" | "type" | "children"
+> {
   /** Visibilidad controlada. Sin ella el snackbar nace cerrado. */
   open?: boolean;
   defaultOpen?: boolean;
@@ -350,19 +413,30 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
   ref,
 ) {
   /* Radix avisa por eventos, no por atributo de datos, cuando congela el
-   * temporizador. Se refleja en estado para poder parar la animacion de la
-   * cuenta en el mismo instante. */
-  const [paused, setPaused] = React.useState(false);
+   * temporizador. Se refleja en el store del provider — no en estado local —
+   * para que una pieza que nazca con el viewport ya pausado lo sepa desde el
+   * primer pintado: ver "POR QUE LA PAUSA NO PUEDE SER UN ESTADO LOCAL". */
+  const localStore = React.useState(createPauseStore)[0];
+  /* Sin SnackbarProvider — alguien que monte Toast.Provider a mano — la pieza
+   * cae en un store propio: pierde la herencia entre snackbars, pero sigue
+   * congelando la cuenta con sus propias pausas. */
+  const pauseStore = React.useContext(SnackbarPauseContext) ?? localStore;
+  const paused = React.useSyncExternalStore(
+    pauseStore.subscribe,
+    pauseStore.get,
+    // En servidor no hay puntero ni foco: nada esta pausado todavia.
+    pauseStore.get,
+  );
 
   const handlePause = React.useCallback(() => {
-    setPaused(true);
+    pauseStore.set(true);
     onPause?.();
-  }, [onPause]);
+  }, [pauseStore, onPause]);
 
   const handleResume = React.useCallback(() => {
-    setPaused(false);
+    pauseStore.set(false);
     onResume?.();
-  }, [onResume]);
+  }, [pauseStore, onResume]);
 
   /* Mientras se procesa no hay nada que deshacer ni plazo que contar: quien
    * lanzo el proceso decide cuando cerrarlo. Infinity es el valor con el que
@@ -491,7 +565,8 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
           <div
             className={cn(
               "h-full origin-left bg-lime",
-              finite && "animate-[tk-snackbar-countdown_linear_forwards] motion-reduce:animate-none",
+              finite &&
+                "animate-[tk-snackbar-countdown_linear_forwards] motion-reduce:animate-none",
             )}
             style={finite ? countdownStyle : undefined}
           />
@@ -506,8 +581,7 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
  * ------------------------------------------------------------------------- */
 
 export interface SnackbarActionProps
-  extends React.ComponentPropsWithoutRef<"button">,
-    VariantProps<typeof snackbarAction> {
+  extends React.ComponentPropsWithoutRef<"button">, VariantProps<typeof snackbarAction> {
   /**
    * Frase alternativa para quien no puede llegar al boton antes de que el
    * snackbar se vaya: "Deshacer el borrado del movimiento". Radix la exige.
@@ -525,8 +599,7 @@ export const SnackbarAction = React.forwardRef<HTMLButtonElement, SnackbarAction
 );
 
 export interface SnackbarCloseProps
-  extends React.ComponentPropsWithoutRef<"button">,
-    VariantProps<typeof snackbarAction> {}
+  extends React.ComponentPropsWithoutRef<"button">, VariantProps<typeof snackbarAction> {}
 
 /** Cierre explicito. Sin `altText`, porque cerrar no es una accion recuperable. */
 export const SnackbarClose = React.forwardRef<HTMLButtonElement, SnackbarCloseProps>(

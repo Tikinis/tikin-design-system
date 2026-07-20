@@ -106,7 +106,9 @@ describe("TextField", () => {
     );
     expect(screen.getByText("3 / 20")).toBeInTheDocument();
 
-    rerender(<TextField label="TikinTAG" maxLength={20} counter value="anita" onChange={() => {}} />);
+    rerender(
+      <TextField label="TikinTAG" maxLength={20} counter value="anita" onChange={() => {}} />,
+    );
     expect(screen.getByText("5 / 20")).toBeInTheDocument();
   });
 

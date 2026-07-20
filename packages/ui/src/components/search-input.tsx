@@ -148,7 +148,8 @@ function setNativeValue(input: HTMLInputElement, next: string) {
 }
 
 export interface SearchInputProps
-  extends Omit<React.ComponentPropsWithoutRef<"input">, "type" | "size" | "children">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"input">, "type" | "size" | "children">,
     Omit<SearchBoxVariants, "disabled"> {
   /**
    * Nombre accesible del campo. Va oculto visualmente: el prototipo no dibuja
@@ -277,9 +278,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
       <div className={cn("flex w-full flex-col gap-2", wrapperClassName)}>
         <label
           htmlFor={id}
-          className={cn(
-            showLabel ? "font-sans text-sm font-semibold text-ink" : "sr-only",
-          )}
+          className={cn(showLabel ? "font-sans text-sm font-semibold text-ink" : "sr-only")}
         >
           {label}
         </label>

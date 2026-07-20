@@ -149,8 +149,7 @@ function GlifoCerrar() {
 }
 
 export interface AlertProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "title" | "color">,
-    AlertVariants {
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "title" | "color">, AlertVariants {
   /**
    * Titulo del aviso, en Funnel Display 500.
    *
@@ -280,7 +279,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert
 
 /* -------------------------------------------------------------------------- */
 
-export interface AlertActionProps extends React.ComponentPropsWithoutRef<"button"> {}
+export type AlertActionProps = React.ComponentPropsWithoutRef<"button">;
 
 /**
  * Boton de accion del Alert — EXTENSION, medidas del prototipo de la seccion 25.
@@ -304,8 +303,8 @@ export const AlertAction = React.forwardRef<HTMLButtonElement, AlertActionProps>
         type={type ?? "button"}
         className={cn(
           "inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md px-4",
-          "bg-ink text-surface whitespace-nowrap",
-          "font-mono text-xs font-normal uppercase tracking-[0.02em]",
+          "bg-ink whitespace-nowrap text-surface",
+          "font-mono text-xs font-normal tracking-[0.02em] uppercase",
           "transition-colors duration-140 ease-out hover:not-disabled:bg-ink-800",
           "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tk-alert-bg)]",
           "disabled:cursor-not-allowed disabled:bg-edge disabled:text-ink-400",

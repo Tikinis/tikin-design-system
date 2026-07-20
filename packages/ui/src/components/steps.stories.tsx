@@ -82,7 +82,7 @@ export const ConError: Story = {
     docs: {
       description: {
         story:
-          "El conector que sale de un paso con error sigue gris: el error no hace avanzar el flujo. `aria-current=\"step\"` se mantiene sobre el paso fallido.",
+          'El conector que sale de un paso con error sigue gris: el error no hace avanzar el flujo. `aria-current="step"` se mantiene sobre el paso fallido.',
       },
     },
   },
@@ -139,7 +139,11 @@ export const MatrizDeEstados: Story = {
         titulo: "Horizontal · con error",
         node: (
           <Steps
-            steps={[{ label: "Monto" }, { label: "Destino", status: "error" }, { label: "Confirmar" }]}
+            steps={[
+              { label: "Monto" },
+              { label: "Destino", status: "error" },
+              { label: "Confirmar" },
+            ]}
             value={1}
             aria-label="Con error"
             className="max-w-[480px]"

@@ -52,13 +52,13 @@ import { cn } from "../lib/cn";
  * token --radius-pill (999px). */
 const chip = cva(
   [
-    "box-border inline-flex items-center justify-center rounded-(--radius-pill) select-none whitespace-nowrap",
+    "box-border inline-flex items-center justify-center rounded-(--radius-pill) whitespace-nowrap select-none",
   ],
   {
     variants: {
       variant: {
         /* CANONICO. Mono en mayusculas por CSS, +5% de tracking, sin borde. */
-        feedback: "font-meta font-normal uppercase leading-none tracking-[0.05em]",
+        feedback: "font-meta leading-none font-normal tracking-[0.05em] uppercase",
         /* EXTENSION. Alto 40, texto sans 14, borde de campo. */
         action: [
           "h-10 gap-2 px-[18px] font-sans text-sm",
@@ -69,13 +69,13 @@ const chip = cva(
         ],
         /* EXTENSION. Alto 36. El color lo fija el par selected true/false. */
         filter: [
-          "h-9 gap-2 px-4 font-sans text-sm border",
+          "h-9 gap-2 border px-4 font-sans text-sm",
           "cursor-pointer transition-colors duration-140 ease-out",
           "disabled:cursor-not-allowed disabled:border-edge disabled:bg-surface disabled:text-ink-400",
         ],
         /* EXTENSION. Alto 36, sin borde, padding asimetrico: el lado derecho
            deja 8 para que el boton de quitar respire dentro del pill. */
-        value: "h-9 gap-2 bg-surface-2 pl-[14px] pr-2 font-sans text-sm text-ink",
+        value: "h-9 gap-2 bg-surface-2 pr-2 pl-[14px] font-sans text-sm text-ink",
       },
 
       /* Solo pinta en variant="feedback": son los 4 feedbacks del archivo. */
@@ -166,8 +166,7 @@ function XGlyph() {
 }
 
 export interface ChipProps
-  extends Omit<React.HTMLAttributes<HTMLElement>, "color">,
-    Omit<ChipVariants, "selected"> {
+  extends Omit<React.HTMLAttributes<HTMLElement>, "color">, Omit<ChipVariants, "selected"> {
   /** Estado del filtro. Se expone como `aria-pressed` en `variant="filter"`. */
   selected?: boolean;
   /** Deshabilita las variantes interactivas y el boton de quitar. */
@@ -244,7 +243,7 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
       {!esFeedback && startIcon}
       {children}
       {!esFeedback && count !== undefined && count !== null && (
-        <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-(--radius-pill) bg-ink px-[5px] font-meta text-[11px] tabular-nums text-surface">
+        <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-(--radius-pill) bg-ink px-[5px] font-meta text-[11px] text-surface tabular-nums">
           {count}
         </span>
       )}
@@ -299,9 +298,9 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
 
 const badge = cva(
   [
-    "box-border inline-flex items-center rounded-(--radius-pill) select-none whitespace-nowrap",
+    "box-border inline-flex items-center rounded-(--radius-pill) whitespace-nowrap select-none",
     // Ubuntu Mono (font-meta), MAYUSCULAS por CSS y +2% de tracking.
-    "font-meta font-normal uppercase tracking-[0.02em]",
+    "font-meta font-normal tracking-[0.02em] uppercase",
     // Los numeros del label (V2.1, +3) siempre tabulares.
     "tabular-nums",
   ],
@@ -364,8 +363,7 @@ const badge = cva(
 type BadgeVariants = VariantProps<typeof badge>;
 
 export interface BadgeProps
-  extends Omit<React.ComponentPropsWithoutRef<"span">, "color" | "onClick">,
-    BadgeVariants {}
+  extends Omit<React.ComponentPropsWithoutRef<"span">, "color" | "onClick">, BadgeVariants {}
 
 /**
  * Badge del sistema Tikin — EXTENSION construida con los tokens del archivo.

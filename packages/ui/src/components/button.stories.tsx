@@ -119,7 +119,7 @@ export const MatrizDeEstados: Story = {
           <tr>
             <th />
             {variants.map((v) => (
-              <th key={v} className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+              <th key={v} className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 {v}
               </th>
             ))}
@@ -128,7 +128,7 @@ export const MatrizDeEstados: Story = {
         <tbody>
           {(["default", "loading", "disabled"] as const).map((state) => (
             <tr key={state}>
-              <td className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 {state}
               </td>
               {variants.map((v) => (

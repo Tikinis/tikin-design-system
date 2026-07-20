@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { compile } from "tailwindcss";
 import { SwitchField, Toggle } from "./toggle";
 
 /* Radix mide el control con ResizeObserver para dimensionar el input espejo que
@@ -121,10 +122,7 @@ describe("Toggle", () => {
 describe("SwitchField", () => {
   it("toma su nombre accesible del titulo y su descripcion de la segunda linea", () => {
     render(
-      <SwitchField
-        title="Notificaciones push"
-        description="Avisos de movimientos y envios"
-      />,
+      <SwitchField title="Notificaciones push" description="Avisos de movimientos y envios" />,
     );
     const sw = screen.getByRole("switch", { name: "Notificaciones push" });
     expect(sw).toHaveAccessibleDescription("Avisos de movimientos y envios");
@@ -180,5 +178,185 @@ describe("SwitchField", () => {
     render(<SwitchField title="Notificaciones push" disabled onCheckedChange={onCheckedChange} />);
     await userEvent.click(screen.getByRole("switch"));
     expect(onCheckedChange).not.toHaveBeenCalled();
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* CASCADA DE COLOR
+ *
+ * Excepcion consciente a la regla de "solo comportamiento" de este fichero. El
+ * conflicto entre `data-[state=checked]` y `data-[disabled]` NO se ve mirando
+ * las clases del elemento (las dos estan presentes y las dos son correctas por
+ * separado): se decide en la cascada CSS, y jsdom no compila Tailwind. Por eso
+ * estos tests compilan de verdad las utilidades del componente y calculan que
+ * declaracion gana, igual que haria el navegador. Un test de clases seria
+ * tautologico y no habria detectado el fallo.
+ */
+
+/** Divide la hoja en reglas de primer nivel. Las anidadas dentro de @media /
+ *  @supports se ignoran a proposito: aqui solo interesan los colores, que
+ *  Tailwind emite siempre en el nivel raiz. */
+function reglasDePrimerNivel(css: string): { selector: string; cuerpo: string }[] {
+  const reglas: { selector: string; cuerpo: string }[] = [];
+  let profundidad = 0;
+  let inicioSelector = 0;
+  let inicioCuerpo = 0;
+  let selector = "";
+
+  for (let i = 0; i < css.length; i++) {
+    if (css[i] === "{") {
+      if (profundidad === 0) {
+        selector = css.slice(inicioSelector, i).trim();
+        inicioCuerpo = i + 1;
+      }
+      profundidad++;
+    } else if (css[i] === "}") {
+      profundidad--;
+      if (profundidad === 0) {
+        // Las at-rules (@media, @property, @layer) no son selectores.
+        if (!selector.startsWith("@")) {
+          reglas.push({ selector, cuerpo: css.slice(inicioCuerpo, i) });
+        }
+        inicioSelector = i + 1;
+      }
+    }
+  }
+  return reglas;
+}
+
+/** Especificidad (a,b,c) empaquetada en un solo numero comparable.
+ *
+ *  Las clases de Tailwind llegan escapadas — `.data-\[state\=checked\]\:bg-…` —
+ *  y sus `\[` fingirian ser selectores de atributo. Se neutraliza cada pareja
+ *  barra+caracter antes de contar. `:not()` no suma por si mismo pero si suma su
+ *  argumento, que ya se cuenta al recorrer el resto del selector. */
+function especificidad(selector: string): number {
+  const limpio = selector
+    .replace(/\\./g, "x") // escapes de Tailwind fuera
+    .replace(/::[\w-]+/g, "") // los pseudo-elementos cuentan como elemento
+    .replace(/:where\([^)]*\)/g, "") // :where() vale cero
+    .replace(/:(?:not|is|has)\(/g, "("); // el prefijo no suma; su argumento si
+
+  const ids = (limpio.match(/#[\w-]+/g) ?? []).length;
+  const clases =
+    (limpio.match(/\.[\w-]+/g) ?? []).length +
+    (limpio.match(/\[/g) ?? []).length +
+    (limpio.match(/:[\w-]+/g) ?? []).length;
+  return ids * 10_000 + clases * 100;
+}
+
+/** Valor que el navegador acabaria pintando para `propiedad` en `el`: entre las
+ *  reglas que casan, gana la mas especifica y, a igualdad, la ultima emitida. */
+function valorGanador(el: Element, css: string, propiedad: string): string | undefined {
+  const patron = new RegExp(`(?:^|;)\\s*${propiedad}\\s*:\\s*([^;]+)`);
+  let ganador: string | undefined;
+  let pesoGanador = -1;
+
+  reglasDePrimerNivel(css).forEach(({ selector, cuerpo }, orden) => {
+    const declaracion = patron.exec(cuerpo);
+    if (!declaracion || !el.matches(selector)) return;
+    // orden como desempate: crece siempre, y nunca alcanza un salto de
+    // especificidad (100) con las pocas decenas de reglas de un componente.
+    const peso = especificidad(selector) + orden;
+    if (peso >= pesoGanador) {
+      pesoGanador = peso;
+      ganador = declaracion[1]?.trim();
+    }
+  });
+  return ganador;
+}
+
+async function cssDe(...elementos: Element[]): Promise<string> {
+  const compilador = await compile("@tailwind utilities;", { base: process.cwd() });
+  return compilador.build(elementos.flatMap((el) => [...el.classList]));
+}
+
+describe("Toggle · cascada de color", () => {
+  it("deshabilitado Y encendido se pinta con los tokens de deshabilitado, no con los de ON", async () => {
+    // El caso que se colaba: ambas variantes casan con la misma especificidad y
+    // Tailwind ordena `data-[disabled]` antes que `data-[state=checked]`, asi
+    // que sin proteccion explicita ganaba el ON y el toggle parecia activo.
+    render(<Toggle aria-label="Notificaciones" disabled defaultChecked />);
+    const track = screen.getByRole("switch");
+    const thumb = track.firstElementChild as HTMLElement;
+    const css = await cssDe(track, thumb);
+
+    expect(valorGanador(track, css, "background-color")).toBe("var(--toggle-track-bg-disabled)");
+    // El borde viaja dentro de --tw-shadow; box-shadow solo compone las capas.
+    expect(valorGanador(track, css, "--tw-shadow")).toContain("--toggle-track-stroke-disabled");
+    expect(valorGanador(thumb, css, "background-color")).toBe("var(--toggle-thumb-bg-disabled)");
+  });
+
+  it("deshabilitado y encendido se pinta igual que deshabilitado y apagado", async () => {
+    render(
+      <>
+        <Toggle aria-label="Apagado" disabled />
+        <Toggle aria-label="Encendido" disabled defaultChecked />
+      </>,
+    );
+    const apagado = screen.getByRole("switch", { name: "Apagado" });
+    const encendido = screen.getByRole("switch", { name: "Encendido" });
+    const css = await cssDe(apagado, encendido);
+
+    expect(valorGanador(encendido, css, "background-color")).toBe(
+      valorGanador(apagado, css, "background-color"),
+    );
+  });
+
+  it("aun deshabilitado, el thumb sigue desplazado a la derecha cuando esta encendido", async () => {
+    // La posicion es lo unico que distingue ON de OFF cuando el color ya no lo
+    // hace: apagar tambien el recorrido dejaria el estado ilegible.
+    render(<Toggle aria-label="Notificaciones" disabled defaultChecked />);
+    const thumb = screen.getByRole("switch").firstElementChild as HTMLElement;
+    const css = await cssDe(thumb);
+    expect(valorGanador(thumb, css, "--tw-translate-x")).toBe("var(--tk-toggle-travel)");
+  });
+
+  it("habilitado y encendido conserva los tokens de ON", async () => {
+    render(<Toggle aria-label="Notificaciones" defaultChecked />);
+    const track = screen.getByRole("switch");
+    const thumb = track.firstElementChild as HTMLElement;
+    const css = await cssDe(track, thumb);
+
+    expect(valorGanador(track, css, "background-color")).toBe("var(--toggle-track-bg-on)");
+    expect(valorGanador(track, css, "--tw-shadow")).toContain("--toggle-track-stroke-on");
+    expect(valorGanador(thumb, css, "background-color")).toBe("var(--toggle-thumb-bg-on)");
+  });
+});
+
+describe("Toggle · sobreescritura por className", () => {
+  it("el consumidor puede repintar el estado encendido", async () => {
+    /* El desempate entre encendido y deshabilitado se resuelve subiendo el peso
+       de DESHABILITADO, no bajando el de encendido. Si se hiciera al reves —con
+       un `not-data-[disabled]` sobre el encendido— este test fallaria: el
+       interno pasaria a (0,3,0), el del consumidor se quedaria en (0,2,0) y
+       tailwind-merge tampoco veria el conflicto, porque el juego de
+       modificadores ya no coincidiria. */
+    render(
+      <Toggle
+        aria-label="Notificaciones"
+        defaultChecked
+        className="data-[state=checked]:bg-[rgb(255,0,0)]"
+      />,
+    );
+    const track = screen.getByRole("switch");
+    const css = await cssDe(track);
+    expect(valorGanador(track, css, "background-color")).toBe("rgb(255,0,0)");
+  });
+
+  it("repintar el encendido no reabre el bug del deshabilitado", async () => {
+    // La sobreescritura del consumidor sigue pesando (0,2,0), asi que el
+    // deshabilitado duplicado (0,3,0) la sigue ganando.
+    render(
+      <Toggle
+        aria-label="Notificaciones"
+        defaultChecked
+        disabled
+        className="data-[state=checked]:bg-[rgb(255,0,0)]"
+      />,
+    );
+    const track = screen.getByRole("switch");
+    const css = await cssDe(track);
+    expect(valorGanador(track, css, "background-color")).toBe("var(--toggle-track-bg-disabled)");
   });
 });

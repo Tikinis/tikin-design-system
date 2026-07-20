@@ -16,9 +16,11 @@ const Glifo = ({ d }: { d: string }) => (
 const iconos = {
   // qr-code, funnel, plus, arrow-up, trash — trazados simplificados.
   qr: "M104 40H48a8 8 0 00-8 8v56a8 8 0 008 8h56a8 8 0 008-8V48a8 8 0 00-8-8zm-8 56H56V56h40zm112-56h-56a8 8 0 00-8 8v56a8 8 0 008 8h56a8 8 0 008-8V48a8 8 0 00-8-8zm-8 56h-40V56h40zM104 144H48a8 8 0 00-8 8v56a8 8 0 008 8h56a8 8 0 008-8v-56a8 8 0 00-8-8zm-8 56H56v-40h40zm56-56a8 8 0 008-8v-16h32v16a8 8 0 0016 0v-16h8a8 8 0 000-16h-64a8 8 0 00-8 8v24a8 8 0 008 8zm64 24a8 8 0 00-8 8v40h-40v-40a8 8 0 00-16 0v48a8 8 0 008 8h56a8 8 0 008-8v-48a8 8 0 00-8-8z",
-  filtro: "M228 56a12 12 0 01-12 12H40a12 12 0 010-24h176a12 12 0 0112 12zm-40 60H68a12 12 0 000 24h120a12 12 0 000-24zm-40 60h-40a12 12 0 000 24h40a12 12 0 000-24z",
+  filtro:
+    "M228 56a12 12 0 01-12 12H40a12 12 0 010-24h176a12 12 0 0112 12zm-40 60H68a12 12 0 000 24h120a12 12 0 000-24zm-40 60h-40a12 12 0 000 24h40a12 12 0 000-24z",
   mas: "M228 128a12 12 0 01-12 12h-76v76a12 12 0 01-24 0v-76H40a12 12 0 010-24h76V40a12 12 0 0124 0v76h76a12 12 0 0112 12z",
-  arriba: "M208.5 120.5a12 12 0 01-17 0L140 69v147a12 12 0 01-24 0V69l-51.5 51.5a12 12 0 01-17-17l72-72a12 12 0 0117 0l72 72a12 12 0 010 17z",
+  arriba:
+    "M208.5 120.5a12 12 0 01-17 0L140 69v147a12 12 0 01-24 0V69l-51.5 51.5a12 12 0 01-17-17l72-72a12 12 0 0117 0l72 72a12 12 0 010 17z",
   papelera:
     "M216 48h-40v-8a24 24 0 00-24-24h-48a24 24 0 00-24 24v8H40a12 12 0 000 24h4v136a20 20 0 0020 20h128a20 20 0 0020-20V72h4a12 12 0 000-24zM104 40a1 1 0 011-1h46a1 1 0 011 1v8h-48zm84 168H68V72h120zm-72-96v64a12 12 0 01-24 0v-64a12 12 0 0124 0zm48 0v64a12 12 0 01-24 0v-64a12 12 0 0124 0z",
 } as const;
@@ -69,7 +71,7 @@ type Story = StoryObj<typeof meta>;
 export const Inline: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
-    <p className="text-ink max-w-[420px] text-sm leading-relaxed">
+    <p className="max-w-[420px] text-sm leading-relaxed text-ink">
       Al continuar aceptas los <Link href="#links">términos y condiciones</Link> y la{" "}
       <Link href="#links">política de datos</Link>.
     </p>
@@ -89,7 +91,7 @@ export const Externo: Story = {
     docs: {
       description: {
         story:
-          "Con `target=\"_blank\"` el componente añade `rel=\"noopener noreferrer\"` y un aviso solo para lector de pantalla.",
+          'Con `target="_blank"` el componente añade `rel="noopener noreferrer"` y un aviso solo para lector de pantalla.',
       },
     },
   },
@@ -113,13 +115,13 @@ export const MatrizDeEstadosDelLink: Story = {
   name: "Matriz de estados",
   parameters: { controls: { disable: true } },
   render: () => (
-    <table className="tk-static bg-surface rounded-lg border-separate border-spacing-4 p-4">
+    <table className="tk-static border-separate border-spacing-4 rounded-lg bg-surface p-4">
       <thead>
         <tr>
           {["", "default", "hover", "pressed", "disabled"].map((h) => (
             <th
               key={h}
-              className="font-meta text-ink-600 text-left text-[11px] tracking-[0.1em] uppercase"
+              className="text-left font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase"
             >
               {h}
             </th>
@@ -128,7 +130,7 @@ export const MatrizDeEstadosDelLink: Story = {
       </thead>
       <tbody>
         <tr>
-          <td className="font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase">acción</td>
+          <td className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">acción</td>
           <td>
             <Link variant="action" href="#links">
               Ver todo
@@ -142,11 +144,7 @@ export const MatrizDeEstadosDelLink: Story = {
             </Link>
           </td>
           <td>
-            <Link
-              variant="action"
-              href="#links"
-              className="text-ink-strong [&>span]:decoration-2"
-            >
+            <Link variant="action" href="#links" className="text-ink-strong [&>span]:decoration-2">
               Ver todo
             </Link>
           </td>
@@ -166,15 +164,15 @@ export const EnContexto: Story = {
   name: "En contexto · pie y filas",
   parameters: { controls: { disable: true } },
   render: () => (
-    <div className="bg-page border-edge flex w-[340px] flex-col gap-3 rounded-xl border p-4">
+    <div className="flex w-[340px] flex-col gap-3 rounded-xl border border-edge bg-page p-4">
       <div className="flex items-center justify-between">
-        <span className="font-display text-ink text-[15px] font-medium">Últimos movimientos</span>
+        <span className="font-display text-[15px] font-medium text-ink">Últimos movimientos</span>
         <Link variant="action" href="#links" className="text-xs">
           Ver todos
         </Link>
       </div>
-      <div className="bg-edge h-px" />
-      <p className="text-ink-700 text-[12.5px] leading-relaxed">
+      <div className="h-px bg-edge" />
+      <p className="text-[12.5px] leading-relaxed text-ink-700">
         Al enviar aceptas los <Link href="#links">términos</Link>.
       </p>
     </div>
@@ -250,7 +248,7 @@ export const IconButtonTamanos: IconButtonStory = {
           <IconButton label="Notificaciones" variant="outline" size={size}>
             <Glifo d={iconos.filtro} />
           </IconButton>
-          <span className="font-meta text-ink-500 text-[10px]">
+          <span className="font-meta text-[10px] text-ink-500">
             {["44 · glifo 20 · r12", "40 · glifo 18 · r10", "32 · glifo 16 · r8"][i]}
           </span>
         </div>
@@ -306,13 +304,13 @@ export const IconButtonMatriz: IconButtonStory = {
     ] as const;
 
     return (
-      <table className="tk-static bg-surface rounded-lg border-separate border-spacing-4 p-4">
+      <table className="tk-static border-separate border-spacing-4 rounded-lg bg-surface p-4">
         <thead>
           <tr>
             {["", "default", "disabled"].map((h) => (
               <th
                 key={h}
-                className="font-meta text-ink-600 text-left text-[11px] tracking-[0.1em] uppercase"
+                className="text-left font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase"
               >
                 {h}
               </th>
@@ -322,7 +320,7 @@ export const IconButtonMatriz: IconButtonStory = {
         <tbody>
           {filas.map((fila) => (
             <tr key={`${fila.variant}-${fila.shape}`}>
-              <td className="font-meta text-ink-600 text-[11px] tracking-[0.1em]">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-600">
                 {fila.variant} · {fila.nota}
               </td>
               {[false, true].map((disabled) => (
@@ -350,11 +348,11 @@ export const IconButtonEnAppBar: IconButtonStory = {
   name: "IconButton · app bar",
   parameters: { controls: { disable: true } },
   render: () => (
-    <div className="bg-page border-edge flex w-[340px] items-center gap-2.5 rounded-xl border px-3 py-3.5">
+    <div className="flex w-[340px] items-center gap-2.5 rounded-xl border border-edge bg-page px-3 py-3.5">
       <IconButton label="Volver" size="m">
         <Glifo d={iconos.arriba} />
       </IconButton>
-      <span className="font-display text-ink text-base font-medium">Movimientos</span>
+      <span className="font-display text-base font-medium text-ink">Movimientos</span>
       <div className="ml-auto flex gap-1">
         <IconButton label="Buscar" size="m">
           <Glifo d={iconos.qr} />

@@ -57,18 +57,18 @@ const link = cva(
            Sans 500) para no romper la linea base del texto que lo rodea. */
         inline: "inline font-sans font-medium",
         /* Fuera de un parrafo: mono, MAYUSCULAS por CSS, +2% de tracking. */
-        action: "inline font-mono font-normal uppercase tracking-[0.02em] text-sm",
+        action: "inline font-mono text-sm font-normal tracking-[0.02em] uppercase",
         /* Igual que accion pero con flecha. Va en inline-flex para alinear la
            flecha con la linea base del label sin trucos de vertical-align. */
         external:
-          "inline-flex items-center gap-1.5 font-mono font-normal uppercase tracking-[0.02em] text-sm",
+          "inline-flex items-center gap-1.5 font-mono text-sm font-normal tracking-[0.02em] uppercase",
       },
 
       disabled: {
         /* Baja a neutral-500 y pierde el pointer, nunca el subrayado. */
-        true: "text-ink-500 cursor-default",
+        true: "cursor-default text-ink-500",
         false: [
-          "text-ink cursor-pointer",
+          "cursor-pointer text-ink",
           "hover:text-ink-700",
           // Pressed sube a tinta fuerte; el grosor del subrayado lo pone el
           // label con group-active (ver `linkLabel`).
@@ -122,8 +122,7 @@ function ArrowUpRight(props: React.SVGProps<SVGSVGElement>) {
 type LinkVariants = VariantProps<typeof link>;
 
 export interface LinkProps
-  extends Omit<React.ComponentPropsWithoutRef<"a">, "type">,
-    Omit<LinkVariants, "disabled"> {
+  extends Omit<React.ComponentPropsWithoutRef<"a">, "type">, Omit<LinkVariants, "disabled"> {
   /**
    * Deshabilita la navegacion. Como `<a>` no admite el atributo `disabled`, se
    * retira el href: eso lo saca del orden de tabulacion igual que haria un
@@ -181,7 +180,9 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
   // window.opener. Se añade siempre, sin pisar el rel que ya venga ni repetir
   // los tokens que el consumidor ya haya escrito.
   const safeRel = opensNewTab
-    ? [...new Set([...(rel ?? "").split(/\s+/).filter(Boolean), "noopener", "noreferrer"])].join(" ")
+    ? [...new Set([...(rel ?? "").split(/\s+/).filter(Boolean), "noopener", "noreferrer"])].join(
+        " ",
+      )
     : rel;
 
   return (
@@ -223,14 +224,14 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
 
 const iconButton = cva(
   [
-    "relative inline-flex items-center justify-center shrink-0",
+    "relative inline-flex shrink-0 items-center justify-center",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed",
     // El glifo manda su tamaño por variable. Se fija por partida doble para
     // cubrir los dos formatos del sistema: SVG (Phosphor React) e icono de
     // fuente, que se escala con font-size.
-    "[&_svg]:shrink-0 [&_svg]:size-[var(--tk-ib-glyph)] text-[length:var(--tk-ib-glyph)]",
+    "text-[length:var(--tk-ib-glyph)] [&_svg]:size-[var(--tk-ib-glyph)] [&_svg]:shrink-0",
   ],
   {
     variants: {
@@ -266,9 +267,9 @@ const iconButton = cva(
 
       /* 44 · glifo 20 · r12 | 40 · glifo 18 · r10 | 32 · glifo 16 · r8 */
       size: {
-        l: "size-11 rounded-lg [--tk-ib-glyph:20px] [--tk-ib-badge:8px]",
-        m: "size-10 rounded-md [--tk-ib-glyph:18px] [--tk-ib-badge:8px]",
-        s: "size-8 rounded-sm [--tk-ib-glyph:16px] [--tk-ib-badge:6px]",
+        l: "size-11 rounded-lg [--tk-ib-badge:8px] [--tk-ib-glyph:20px]",
+        m: "size-10 rounded-md [--tk-ib-badge:8px] [--tk-ib-glyph:18px]",
+        s: "size-8 rounded-sm [--tk-ib-badge:6px] [--tk-ib-glyph:16px]",
       },
 
       shape: {
@@ -297,8 +298,7 @@ const iconButton = cva(
 type IconButtonVariants = VariantProps<typeof iconButton>;
 
 export interface IconButtonProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "color">,
-    IconButtonVariants {
+  extends Omit<React.ComponentPropsWithoutRef<"button">, "color">, IconButtonVariants {
   /**
    * Verbo de la accion: "Escanear QR", "Filtrar". Obligatorio — un boton de
    * solo glifo sin nombre accesible no existe para un lector de pantalla.

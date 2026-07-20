@@ -20,7 +20,7 @@ const meta = {
           "",
           "Geometria: tecla 52 de alto · r12 · sin borde · DM Mono 500 · 22 (icono 22, biometria 24) · rejilla de 3 columnas con hueco 8 y tope de ancho 300.",
           "",
-          "El valor viaja siempre en **crudo** (`\"1250\"`, `\"1250,5\"`); `formatAmount` lo presenta y `parseAmount` lo compara contra el saldo.",
+          'El valor viaja siempre en **crudo** (`"1250"`, `"1250,5"`); `formatAmount` lo presenta y `parseAmount` lo compara contra el saldo.',
         ].join("\n"),
       },
     },
@@ -89,7 +89,7 @@ function PantallaDeMonto({ action }: { action?: "none" | "decimal" | "biometric"
             key={n}
             type="button"
             onClick={() => setMonto(String(n))}
-            className="text-ink font-mono h-9 cursor-pointer rounded-(--radius-pill) px-3.5 text-[13px] tracking-[0.02em] shadow-[inset_0_0_0_1px_var(--tk-border-2)] transition-colors hover:bg-surface-2"
+            className="h-9 cursor-pointer rounded-(--radius-pill) px-3.5 font-mono text-[13px] tracking-[0.02em] text-ink shadow-[inset_0_0_0_1px_var(--tk-border-2)] transition-colors hover:bg-surface-2"
           >
             $ {formatAmount(n)}
           </button>
@@ -102,7 +102,7 @@ function PantallaDeMonto({ action }: { action?: "none" | "decimal" | "biometric"
       <button
         type="button"
         disabled={excede || monto === ""}
-        className="bg-ink text-surface font-mono h-12 w-full cursor-pointer rounded-lg uppercase tracking-[0.02em] disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-500"
+        className="h-12 w-full cursor-pointer rounded-lg bg-ink font-mono tracking-[0.02em] text-surface uppercase disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-500"
       >
         Continuar
       </button>
@@ -146,7 +146,7 @@ export const VariantesDeTecla: Story = {
     docs: {
       description: {
         story:
-          'La tira del documento dibuja las teclas en cajas de 64 de ancho, pero eso es el especimen aislado: en la rejilla real son columnas iguales. Y solo dibuja dos estados, DEFAULT y PRESSED, porque una tira estatica no puede enseñar hover — la rampa completa es hover `--tk-surface-2`, pressed `--tk-border`.',
+          "La tira del documento dibuja las teclas en cajas de 64 de ancho, pero eso es el especimen aislado: en la rejilla real son columnas iguales. Y solo dibuja dos estados, DEFAULT y PRESSED, porque una tira estatica no puede enseñar hover — la rampa completa es hover `--tk-surface-2`, pressed `--tk-border`.",
       },
     },
   },

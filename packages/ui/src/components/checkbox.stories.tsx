@@ -18,7 +18,7 @@ const meta = {
           "- **Marca en tinta** — seleccionado en tinta con la marca en el color de la superficie; sin marcar, borde gris de 1.5px. El lima no se usa aqui.",
           "- **Area tactil** — la casilla mide 22, pero la fila entera (label incluido) es clicable, con alto minimo de 44.",
           "",
-          "El estado intermedio se pide con `checked=\"indeterminate\"`, para el *seleccionar todo* de una lista parcial.",
+          'El estado intermedio se pide con `checked="indeterminate"`, para el *seleccionar todo* de una lista parcial.',
         ].join("\n"),
       },
     },
@@ -129,9 +129,7 @@ export const SeleccionarTodo: Story = {
                 checked={elegidas.includes(cuenta)}
                 onCheckedChange={(valor) =>
                   setElegidas((previas) =>
-                    valor === true
-                      ? [...previas, cuenta]
-                      : previas.filter((c) => c !== cuenta),
+                    valor === true ? [...previas, cuenta] : previas.filter((c) => c !== cuenta),
                   )
                 }
                 rowClassName="flex"

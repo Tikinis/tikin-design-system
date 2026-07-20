@@ -56,7 +56,7 @@ const checkboxBox = cva(
     // 22 no cae en la escala de 4: literal y comentado, en vez de un size-5.5
     // que nadie sabria leer.
     "size-[22px] rounded-xs",
-    "cursor-pointer outline-none transition-[background-color,box-shadow] duration-140 ease-out",
+    "cursor-pointer transition-[background-color,box-shadow] duration-140 ease-out outline-none",
     "focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     // El relleno de checked es tinta y la marca su inverso: en oscuro se
     // invierten los dos a la vez, asi que el contraste se conserva.
@@ -96,7 +96,8 @@ const checkboxBox = cva(
 type CheckboxBoxVariants = VariantProps<typeof checkboxBox>;
 
 export interface CheckboxProps
-  extends Omit<React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>, "asChild">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>, "asChild">,
     Omit<CheckboxBoxVariants, "invalid"> {
   /**
    * Texto de la fila. Se conecta por `htmlFor`, asi que clicar el label
@@ -112,7 +113,12 @@ export interface CheckboxProps
 
 /* Geometria de Phosphor: viewBox 256 y trazo 24, que es su peso `bold`. */
 const CheckMark = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 256 256" fill="none" aria-hidden="true" className={cn("size-[14px]", className)}>
+  <svg
+    viewBox="0 0 256 256"
+    fill="none"
+    aria-hidden="true"
+    className={cn("size-[14px]", className)}
+  >
     <path
       d="M216 72 104 184l-56-56"
       stroke="currentColor"
@@ -124,7 +130,12 @@ const CheckMark = ({ className }: { className?: string }) => (
 );
 
 const MinusMark = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 256 256" fill="none" aria-hidden="true" className={cn("size-[14px]", className)}>
+  <svg
+    viewBox="0 0 256 256"
+    fill="none"
+    aria-hidden="true"
+    className={cn("size-[14px]", className)}
+  >
     <path
       d="M40 128h176"
       stroke="currentColor"

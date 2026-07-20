@@ -5,7 +5,7 @@
 // "figma layer" comment above each interface maps them back.
 // After the bundle <script> loads, every component is a window global
 // (e.g. window.ActionArrow) and usable directly in JSX.
-import * as React from 'react';
+import type * as React from "react";
 
 // figma layer: "Action arrow" (node 2:165)
 export interface ActionArrowProps {
@@ -224,7 +224,21 @@ export interface IPhoneX11ProWhiteProps {
 export interface IconProps {
   className?: string;
   style?: React.CSSProperties;
-  icon?: "delete" | "arrow up" | "at @" | "slash" | "emoji" | "enter" | "dot" | "tel" | "emoji filled" | "arrow up filled" | "language" | "dictation" | "dictation filled" | "siri";
+  icon?:
+    | "delete"
+    | "arrow up"
+    | "at @"
+    | "slash"
+    | "emoji"
+    | "enter"
+    | "dot"
+    | "tel"
+    | "emoji filled"
+    | "arrow up filled"
+    | "language"
+    | "dictation"
+    | "dictation filled"
+    | "siri";
 }
 
 // figma layer: "Icon / ChevronDown" (node 2:156622)
@@ -589,14 +603,64 @@ export interface ToggleProps {
 export interface ValueProps {
   className?: string;
   style?: React.CSSProperties;
-  value?: "arrowdown" | "arrowleft" | "arrowright" | "arrowup" | "arrowupleft" | "arrowupright" | "bell" | "briefcase" | "close" | "downloadsimple" | "eye" | "eyeclosed" | "headset" | "house" | "mathoperations" | "qrcode" | "questionmark" | "copy" | "heart" | "chevronleft" | "chevrondown" | "chevronup" | "chevronright" | "spinner" | "warning" | "warningcircle";
+  value?:
+    | "arrowdown"
+    | "arrowleft"
+    | "arrowright"
+    | "arrowup"
+    | "arrowupleft"
+    | "arrowupright"
+    | "bell"
+    | "briefcase"
+    | "close"
+    | "downloadsimple"
+    | "eye"
+    | "eyeclosed"
+    | "headset"
+    | "house"
+    | "mathoperations"
+    | "qrcode"
+    | "questionmark"
+    | "copy"
+    | "heart"
+    | "chevronleft"
+    | "chevrondown"
+    | "chevronup"
+    | "chevronright"
+    | "spinner"
+    | "warning"
+    | "warningcircle";
 }
 
 // figma layer: "Value" (node 2:296)
 export interface Value2Props {
   className?: string;
   style?: React.CSSProperties;
-  value?: "arrowdown" | "arrowleft" | "arrowright" | "arrowup" | "arrowupleft" | "arrowupright" | "bell" | "briefcase" | "close" | "downloadsimple" | "eye" | "eyeclosed" | "headset" | "house" | "mathoperations" | "qrcode" | "questionmark" | "copy" | "heart" | "chevronleft" | "chevrondown" | "chevronup" | "chevronright" | "spinner";
+  value?:
+    | "arrowdown"
+    | "arrowleft"
+    | "arrowright"
+    | "arrowup"
+    | "arrowupleft"
+    | "arrowupright"
+    | "bell"
+    | "briefcase"
+    | "close"
+    | "downloadsimple"
+    | "eye"
+    | "eyeclosed"
+    | "headset"
+    | "house"
+    | "mathoperations"
+    | "qrcode"
+    | "questionmark"
+    | "copy"
+    | "heart"
+    | "chevronleft"
+    | "chevrondown"
+    | "chevronup"
+    | "chevronright"
+    | "spinner";
 }
 
 declare const ActionArrow: React.FC<ActionArrowProps>;

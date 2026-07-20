@@ -7,11 +7,7 @@ import { Steps, StepsDots, type StepItem } from "./steps";
  * conector 2px, columna 100, pildora 24x8) se verifica contra el navegador, no
  * aqui: jsdom no aplica CSS, asi que comprobar clases seria tautologico. */
 
-const STEPS: StepItem[] = [
-  { label: "Monto" },
-  { label: "Destino" },
-  { label: "Confirmar" },
-];
+const STEPS: StepItem[] = [{ label: "Monto" }, { label: "Destino" }, { label: "Confirmar" }];
 
 describe("Steps", () => {
   it("es una lista ordenada de verdad, con un item por paso", () => {
@@ -20,6 +16,16 @@ describe("Steps", () => {
     // inventado: por eso el lector de pantalla los anuncia solo.
     const list = screen.getByRole("list", { name: "Progreso" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+  });
+
+  it("lleva role=list explicito para sobrevivir al reset de Tailwind", () => {
+    // El preflight de Tailwind pinta `ol, ul, menu { list-style: none }`, y
+    // WebKit retira la semantica de lista de cualquier lista sin viñeta: sin
+    // este role, VoiceOver deja de anunciar "lista, 3 elementos" y el usuario
+    // pierde el numero de paso y el total, que es TODO lo que da este
+    // componente. El rol implicito de jsdom no basta: hay que pintarlo.
+    render(<Steps steps={STEPS} aria-label="Progreso" />);
+    expect(screen.getByRole("list")).toHaveAttribute("role", "list");
   });
 
   it("deriva los estados de value y marca el actual con aria-current", () => {

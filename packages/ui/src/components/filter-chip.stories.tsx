@@ -15,14 +15,17 @@ const meta = {
           "No viene del archivo de Figma: no hay ningun componente Filter en el export.",
           "El propio documento la etiqueta como extension, asi que no es especificacion aprobada.",
           "",
-          "`FilterChip` es **solo el disparador** — el pill que abre el popover de opciones.",
-          "El panel (cabecera, lista marcable y el par LIMPIAR / APLICAR) no forma parte del componente.",
+          "Pasa `options` y el componente monta el filtro entero: el pill disparador y el popover",
+          "con su cabecera, la lista marcable y el par LIMPIAR / APLICAR.",
+          "Sin `options` es solo el disparador y el panel lo pone el consumidor.",
           "",
-          "- **Badge = activos.** El pill en tinta dice cuantos filtros hay puestos; sin filtros, no aparece.",
-          "- **Limpiar / Aplicar.** Limpiar deja el grupo en cero sin cerrar; Aplicar confirma y cierra. En listas cortas los cambios pueden aplicar al instante y omitir Aplicar: en ese caso no pases `open` y el chip no anunciara ningun popover.",
+          "- **Badge = activos.** El pill en tinta dice cuantos filtros hay puestos; sin filtros, no aparece. Con `options` la cuenta sale sola de los filtros aplicados.",
+          "- **Limpiar / Aplicar.** Limpiar deja el grupo en cero sin cerrar; Aplicar confirma y cierra. Lo marcado es un borrador: si el panel se cierra con Escape o con un click fuera, se descarta y el badge no se mueve.",
+          "- **Listas cortas.** Con `applyOnSelect` cada marca aplica al instante y el boton APLICAR desaparece.",
           "- **Filter vs tabs.** Filter combina varios criterios a la vez; para una sola dimension con pocas opciones, usa un segmented control.",
           "",
           "Medidas del bloque ESTADOS DEL BOTON: alto 40 · px 16 · gap 8 · radio 999 · icono 16 · label mono 14 con +2% de tracking.",
+          "Medidas del panel del bloque EN VIVO: min-width 230 · radio 16 · padding 8 · filas r8 con casilla 20 · acciones de 36 con radio 10.",
         ].join("\n"),
       },
     },
@@ -32,7 +35,10 @@ const meta = {
     count: { control: { type: "number", min: 0, max: 99 } },
     disabled: { control: "boolean" },
     countLabel: { control: "text" },
+    applyOnSelect: { control: "boolean" },
+    heading: { control: "text" },
     icon: { control: false },
+    options: { control: false },
   },
   args: { children: "Filter" },
 } satisfies Meta<typeof FilterChip>;
@@ -40,7 +46,66 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/* Las mismas cuatro opciones que dibuja el bloque EN VIVO del documento. */
+const ESTADOS = [
+  { value: "pagado", label: "Pagado" },
+  { value: "pendiente", label: "Pendiente" },
+  { value: "vencido", label: "Vencido" },
+  { value: "anulado", label: "Anulado", disabled: true },
+];
+
 export const Default: Story = {};
+
+/** El filtro completo: chip, panel marcable y el par LIMPIAR / APLICAR. */
+export const ConPanel: Story = {
+  name: "Con panel (completo)",
+  args: { options: ESTADOS, heading: "Estado", defaultValue: ["pendiente"] },
+  parameters: {
+    docs: {
+      description: {
+        story: [
+          "Con `options` el componente monta el popover entero.",
+          "Marcar no aplica nada: hasta pulsar APLICAR es un borrador, asi que el badge no se mueve",
+          "y un cierre por Escape o por click fuera lo descarta.",
+          "LIMPIAR deja el grupo en cero **sin cerrar**.",
+        ].join(" "),
+      },
+    },
+  },
+};
+
+/** Listas cortas: cada marca aplica al instante y APLICAR no se dibuja. */
+export const AplicaAlInstante: Story = {
+  name: "Aplica al instante",
+  args: { options: ESTADOS, applyOnSelect: true },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Regla del documento: en listas cortas los cambios pueden aplicar al instante y omitir Aplicar. El badge se entera en cuanto se marca y el panel sigue abierto.",
+      },
+    },
+  },
+};
+
+/** La seleccion gobernada desde fuera, con el valor aplicado a la vista. */
+export const PanelControlado: Story = {
+  name: "Panel controlado",
+  parameters: { controls: { disable: true } },
+  render: () => {
+    const [aplicados, setAplicados] = React.useState<string[]>([]);
+    return (
+      <div className="flex items-center gap-4">
+        <FilterChip options={ESTADOS} value={aplicados} onValueChange={setAplicados}>
+          Filter
+        </FilterChip>
+        <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+          {aplicados.length ? aplicados.join(" · ") : "sin filtros"}
+        </span>
+      </div>
+    );
+  },
+};
 
 /** Con el popover desplegado: fondo surface-2 y borde de tinta. */
 export const Abierto: Story = {

@@ -49,7 +49,14 @@ export const Apagado: Story = {};
 
 export const Encendido: Story = { args: { defaultChecked: true } };
 
-/** Ni raton ni teclado. El track baja a gris y el thumb pierde contraste. */
+/**
+ * Ni raton ni teclado. El track baja a gris y el thumb pierde contraste.
+ *
+ * Deshabilitado manda sobre encendido: los dos de abajo se pintan con los MISMOS
+ * tokens (`--toggle-*-disabled`). Lo unico que sigue distinguiendo ON de OFF es
+ * la posicion del thumb — si el color tambien mintiera, un ajuste bloqueado
+ * pareceria activo.
+ */
 export const Deshabilitado: Story = {
   render: (args) => (
     <div className="flex items-center gap-4">
@@ -68,7 +75,7 @@ export const Tamanos: Story = {
       {(["l", "m", "s"] as const).map((size) => (
         <div key={size} className="flex flex-col items-center gap-2">
           <Toggle size={size} defaultChecked aria-label={`Tamaño ${size}`} />
-          <span className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
             {size}
           </span>
         </div>
@@ -149,9 +156,7 @@ export const EnFormulario: Story = {
         >
           Guardar
         </button>
-        {enviado ? (
-          <span className="font-meta text-ink-600 text-xs">push = {enviado}</span>
-        ) : null}
+        {enviado ? <span className="font-meta text-xs text-ink-600">push = {enviado}</span> : null}
       </form>
     );
   },
@@ -180,10 +185,7 @@ export const FilaDeAjuste: Story = {
         description="Avisos de movimientos y envios"
         defaultChecked
       />
-      <SwitchField
-        title="Resumen semanal"
-        description="Cada lunes por la mañana"
-      />
+      <SwitchField title="Resumen semanal" description="Cada lunes por la mañana" />
       <SwitchField title="Modo silencio" />
     </div>
   ),
@@ -219,7 +221,12 @@ export const FilaDeAjusteDeshabilitada: Story = {
         description="Requiere permiso del sistema"
         disabled
       />
-      <SwitchField title="Resumen semanal" description="Solo en cuentas pro" disabled defaultChecked />
+      <SwitchField
+        title="Resumen semanal"
+        description="Solo en cuentas pro"
+        disabled
+        defaultChecked
+      />
     </div>
   ),
 };

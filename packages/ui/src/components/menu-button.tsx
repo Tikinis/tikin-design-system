@@ -83,8 +83,8 @@ const menuContent = [
 const menuItem = cva(
   [
     "flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2.5",
-    "font-mono text-[13px] uppercase tracking-[0.02em] whitespace-nowrap",
-    "outline-none transition-colors duration-140 ease-out select-none",
+    "font-mono text-[13px] tracking-[0.02em] whitespace-nowrap uppercase",
+    "transition-colors duration-140 ease-out outline-none select-none",
     "data-[disabled]:pointer-events-none data-[disabled]:text-ink-500",
     "[&_svg]:size-4 [&_svg]:shrink-0",
   ],
@@ -101,8 +101,7 @@ const menuItem = cva(
 );
 
 export interface MenuItemProps
-  extends React.ComponentPropsWithoutRef<typeof DropdownMenu.Item>,
-    VariantProps<typeof menuItem> {}
+  extends React.ComponentPropsWithoutRef<typeof DropdownMenu.Item>, VariantProps<typeof menuItem> {}
 
 /**
  * Opcion dentro del panel de `MenuButton` o `SplitButton`.
@@ -115,17 +114,11 @@ export const MenuItem = React.forwardRef<
   MenuItemProps
 >(function MenuItem({ className, destructive, ...props }, ref) {
   return (
-    <DropdownMenu.Item
-      ref={ref}
-      className={cn(menuItem({ destructive, className }))}
-      {...props}
-    />
+    <DropdownMenu.Item ref={ref} className={cn(menuItem({ destructive, className }))} {...props} />
   );
 });
 
-export type MenuSeparatorProps = React.ComponentPropsWithoutRef<
-  typeof DropdownMenu.Separator
->;
+export type MenuSeparatorProps = React.ComponentPropsWithoutRef<typeof DropdownMenu.Separator>;
 
 /** Divisor de 1px. Separa el bloque destructivo del resto de acciones. */
 export const MenuSeparator = React.forwardRef<
@@ -173,11 +166,24 @@ const menuTrigger = cva(
   [
     "group relative inline-flex items-center justify-center",
     "border bg-surface text-ink",
-    "font-mono font-normal uppercase tracking-[0.02em] whitespace-nowrap",
+    "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
-    "border-ink hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
+    "border-ink",
+    /* El hover y el pressed claros van condicionados a que el panel este
+       cerrado. Sin ese guardia le ganan por especificidad al estado abierto
+       —clase + dos modificadores (0,3,0) contra clase + uno (0,2,0)— y
+       devuelven el fondo a superficie mientras el texto sigue en `text-surface`,
+       que nadie revierte: texto casi blanco sobre fondo casi blanco. El fondo y
+       el color de texto del estado invertido tienen que moverse juntos. */
+    "not-data-[state=open]:hover:not-disabled:bg-surface-2",
+    "not-data-[state=open]:active:not-disabled:bg-edge",
+    /* Abierto = tinta invertida. El feedback de puntero se queda dentro de esa
+       misma piel oscura, como el segmento del split que el documento pinta en
+       800 al pasar por encima. */
     "data-[state=open]:bg-ink data-[state=open]:text-surface",
+    "data-[state=open]:hover:not-disabled:bg-ink-800",
+    "data-[state=open]:active:not-disabled:bg-ink-strong",
     // Deshabilitado: relleno y borde en 200, texto en 500. Nunca opacidad.
     "disabled:cursor-not-allowed disabled:border-edge disabled:bg-edge disabled:text-ink-500",
   ],
@@ -196,7 +202,8 @@ const menuTrigger = cva(
 type MenuTriggerVariants = VariantProps<typeof menuTrigger>;
 
 export interface MenuButtonProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "children" | "onSelect">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"button">, "children" | "onSelect">,
     MenuTriggerVariants,
     MenuBehaviourProps {
   /** Texto del trigger. Sube a mayusculas por CSS, no en JS. */
@@ -213,64 +220,62 @@ export interface MenuButtonProps
  * abierto. Todo ese comportamiento — foco, roles ARIA, navegacion con flechas,
  * typeahead — lo pone Radix DropdownMenu, no lo reimplementamos.
  */
-export const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(
-  function MenuButton(
-    {
-      className,
-      contentClassName,
-      size,
-      fullWidth,
-      label,
-      children,
-      open,
-      defaultOpen,
-      onOpenChange,
-      align = "start",
-      sideOffset = 6,
-      modal = false,
-      type,
-      disabled,
-      ...props
-    },
-    ref,
-  ) {
-    return (
-      <DropdownMenu.Root
-        open={open}
-        defaultOpen={defaultOpen}
-        onOpenChange={onOpenChange}
-        modal={modal}
-      >
-        {/* `disabled` va tambien en el Trigger, no solo en el <button>: Radix
+export const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(function MenuButton(
+  {
+    className,
+    contentClassName,
+    size,
+    fullWidth,
+    label,
+    children,
+    open,
+    defaultOpen,
+    onOpenChange,
+    align = "start",
+    sideOffset = 6,
+    modal = false,
+    type,
+    disabled,
+    ...props
+  },
+  ref,
+) {
+  return (
+    <DropdownMenu.Root
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={onOpenChange}
+      modal={modal}
+    >
+      {/* `disabled` va tambien en el Trigger, no solo en el <button>: Radix
             corta ahi su propio onPointerDown. Poniendolo unicamente en el
             elemento, el menu llegaba a abrirse en entornos que si despachan
             eventos de puntero sobre controles deshabilitados. */}
-        <DropdownMenu.Trigger asChild disabled={disabled}>
-          <button
-            ref={ref}
-            // Dentro de un <form> un <button> sin type envia el formulario.
-            type={type ?? "button"}
-            disabled={disabled}
-            className={cn(menuTrigger({ size, fullWidth, className }))}
-            {...props}
-          >
-            {label}
-            <Chevron />
-          </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            align={align}
-            sideOffset={sideOffset}
-            className={cn(menuContent, contentClassName)}
-          >
-            {children}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
-    );
-  },
-);
+      <DropdownMenu.Trigger asChild disabled={disabled}>
+        <button
+          ref={ref}
+          // Dentro de un <form> un <button> sin type envia el formulario.
+          type={type ?? "button"}
+          disabled={disabled}
+          className={cn(menuTrigger({ size, fullWidth, className }))}
+          {...props}
+        >
+          {label}
+          <Chevron />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align={align}
+          sideOffset={sideOffset}
+          className={cn(menuContent, contentClassName)}
+        >
+          {children}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+});
 
 /* ------------------------------------------------------------------------- */
 /* SplitButton                                                                */
@@ -283,7 +288,7 @@ const splitSegment = cva(
   [
     "group relative inline-flex items-center justify-center",
     "bg-ink text-surface",
-    "font-mono font-normal uppercase tracking-[0.02em] whitespace-nowrap",
+    "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "hover:not-disabled:bg-ink-800 active:not-disabled:bg-ink-strong",
@@ -313,8 +318,7 @@ const splitSegment = cva(
 );
 
 export interface SplitButtonProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onSelect">,
-    MenuBehaviourProps {
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onSelect">, MenuBehaviourProps {
   /** Texto de la accion por defecto. Sube a mayusculas por CSS. */
   label: React.ReactNode;
   /** Variantes de la MISMA accion: `MenuItem` y `MenuSeparator`. */
@@ -344,77 +348,75 @@ export interface SplitButtonProps
  * La `ref` va al contenedor, no a un segmento: el componente renderiza dos
  * botones y ninguno de los dos es "el" elemento del componente.
  */
-export const SplitButton = React.forwardRef<HTMLDivElement, SplitButtonProps>(
-  function SplitButton(
-    {
-      className,
-      actionClassName,
-      menuClassName,
-      contentClassName,
-      label,
-      children,
-      onAction,
-      size = "m",
-      disabled,
-      menuLabel = "Más opciones",
-      open,
-      defaultOpen,
-      onOpenChange,
-      align = "start",
-      sideOffset = 6,
-      modal = false,
-      ...props
-    },
-    ref,
-  ) {
-    return (
-      <div ref={ref} className={cn("inline-flex w-fit items-stretch", className)} {...props}>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={onAction}
-          className={cn(splitSegment({ segment: "action", size, className: actionClassName }))}
-        >
-          {label}
-        </button>
-        {/* Divisor de 1px sobre el relleno de tinta. Es decorativo, asi que no
-            entra en el arbol de accesibilidad ni recibe eventos. */}
-        <span
-          aria-hidden="true"
-          className={cn("w-px shrink-0 self-stretch", disabled ? "bg-edge-2" : "bg-ink-700")}
-        />
-        <DropdownMenu.Root
-          open={open}
-          defaultOpen={defaultOpen}
-          onOpenChange={onOpenChange}
-          modal={modal}
-        >
-          {/* Ver la nota de MenuButton: Radix necesita saber que esta
-              deshabilitado para no abrir en su propio onPointerDown. */}
-          <DropdownMenu.Trigger asChild disabled={disabled}>
-            <button
-              type="button"
-              disabled={disabled}
-              aria-label={menuLabel}
-              className={cn(splitSegment({ segment: "menu", size, className: menuClassName }))}
-            >
-              <Chevron />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              align={align}
-              sideOffset={sideOffset}
-              className={cn(menuContent, contentClassName)}
-            >
-              {children}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
-      </div>
-    );
+export const SplitButton = React.forwardRef<HTMLDivElement, SplitButtonProps>(function SplitButton(
+  {
+    className,
+    actionClassName,
+    menuClassName,
+    contentClassName,
+    label,
+    children,
+    onAction,
+    size = "m",
+    disabled,
+    menuLabel = "Más opciones",
+    open,
+    defaultOpen,
+    onOpenChange,
+    align = "start",
+    sideOffset = 6,
+    modal = false,
+    ...props
   },
-);
+  ref,
+) {
+  return (
+    <div ref={ref} className={cn("inline-flex w-fit items-stretch", className)} {...props}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onAction}
+        className={cn(splitSegment({ segment: "action", size, className: actionClassName }))}
+      >
+        {label}
+      </button>
+      {/* Divisor de 1px sobre el relleno de tinta. Es decorativo, asi que no
+            entra en el arbol de accesibilidad ni recibe eventos. */}
+      <span
+        aria-hidden="true"
+        className={cn("w-px shrink-0 self-stretch", disabled ? "bg-edge-2" : "bg-ink-700")}
+      />
+      <DropdownMenu.Root
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={onOpenChange}
+        modal={modal}
+      >
+        {/* Ver la nota de MenuButton: Radix necesita saber que esta
+              deshabilitado para no abrir en su propio onPointerDown. */}
+        <DropdownMenu.Trigger asChild disabled={disabled}>
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={menuLabel}
+            className={cn(splitSegment({ segment: "menu", size, className: menuClassName }))}
+          >
+            <Chevron />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            align={align}
+            sideOffset={sideOffset}
+            className={cn(menuContent, contentClassName)}
+          >
+            {children}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    </div>
+  );
+});
 
 /* ------------------------------------------------------------------------- */
 /* ButtonGroup                                                                */
@@ -427,28 +429,34 @@ const ButtonGroupSizeContext = React.createContext<"m" | "s">("m");
 /* El borde exterior lo lleva el contenedor y los segmentos se estiran dentro:
    con box-border, 40 de alto menos 1+1 de borde deja los 38 de segmento que
    dibuja el documento. */
-const buttonGroupRoot = cva(
-  ["inline-flex w-fit items-stretch overflow-hidden border"],
-  {
-    variants: {
-      size: { m: "h-10 rounded-md", s: "h-8 rounded-sm" },
-      disabled: { true: "border-edge-2", false: "border-ink" },
-    },
-    defaultVariants: { size: "m", disabled: false },
+const buttonGroupRoot = cva(["inline-flex w-fit items-stretch overflow-hidden border"], {
+  variants: {
+    size: { m: "h-10 rounded-md", s: "h-8 rounded-sm" },
+    disabled: { true: "border-edge-2", false: "border-ink" },
   },
-);
+  defaultVariants: { size: "m", disabled: false },
+});
 
 const buttonGroupItem = cva(
   [
     "inline-flex h-full items-center justify-center",
-    "font-mono font-normal uppercase tracking-[0.02em] whitespace-nowrap",
+    "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
     // El anillo va por dentro: el contenedor recorta con overflow-hidden y un
     // anillo exterior quedaria cortado justo en los segmentos de los extremos.
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset",
-    "bg-transparent text-ink hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
+    "bg-transparent text-ink",
+    /* Mismo guardia que en el trigger: el hover y el pressed claros solo valen
+       en el segmento inactivo. Sin `not-data-[state=on]` ganarian por
+       especificidad al estado activo y dejarian el label en `text-surface`
+       sobre un fondo claro. */
+    "not-data-[state=on]:hover:not-disabled:bg-surface-2",
+    "not-data-[state=on]:active:not-disabled:bg-edge",
     // Activa = tinta invertida. El anillo pasa a superficie para verse encima.
     "data-[state=on]:bg-ink data-[state=on]:text-surface data-[state=on]:focus-visible:ring-surface",
+    // El puntero sobre la activa oscurece sin salirse de la piel invertida.
+    "data-[state=on]:hover:not-disabled:bg-ink-800",
+    "data-[state=on]:active:not-disabled:bg-ink-strong",
     // Divisor entre segmentos, no en el primero.
     "border-l border-edge-2 first:border-l-0",
     "disabled:cursor-not-allowed disabled:text-ink-500",
@@ -462,11 +470,10 @@ const buttonGroupItem = cva(
   },
 );
 
-export interface ButtonGroupProps
-  extends Omit<
-    React.ComponentPropsWithoutRef<typeof ToggleGroup.Root>,
-    "type" | "value" | "defaultValue" | "onValueChange"
-  > {
+export interface ButtonGroupProps extends Omit<
+  React.ComponentPropsWithoutRef<typeof ToggleGroup.Root>,
+  "type" | "value" | "defaultValue" | "onValueChange"
+> {
   /** Valor activo. Controlado. */
   value?: string;
   /** Valor activo inicial. No controlado. */

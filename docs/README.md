@@ -3,7 +3,7 @@
 ## `Sistema de Diseño.dc.html` (722 KB)
 
 La documentación viva completa: **45 secciones** con anatomía, estados, valores
-literales de token y reglas de uso. Es la autoridad sobre *intención de diseño*.
+literales de token y reglas de uso. Es la autoridad sobre _intención de diseño_.
 
 Procede del handoff de Claude Design (`claude.ai/design`). Para actualizarlo:
 exportar el proyecto de nuevo y reemplazar este archivo.
@@ -16,7 +16,7 @@ exportar el proyecto de nuevo y reemplazar este archivo.
 
 Export automático de Figma. **No es código publicable**: posicionamiento
 absoluto y un cuerpo de función por cada combinación de variantes. Sirve como
-autoridad sobre *medidas exactas* cuando el documento no las escribe.
+autoridad sobre _medidas exactas_ cuando el documento no las escribe.
 
 - `fig-tokens.css` — variables de Figma. Es el original del que sale
   `packages/tokens/src/figma.css` (verificado byte a byte).
@@ -35,4 +35,4 @@ que no aporta nada sobre los `.jsx` individuales.
 3. `figma-export/components/*.jsx` — medidas en píxeles
 
 Si el documento y Figma discrepan en un valor, gana Figma y se anota en el
-componente. Si discrepan en *comportamiento*, gana el documento.
+componente. Si discrepan en _comportamiento_, gana el documento.

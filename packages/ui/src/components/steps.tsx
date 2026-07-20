@@ -97,8 +97,7 @@ const stepCircle = cva(
            cambiar de estado. */
         current: "bg-surface text-ink shadow-[inset_0_0_0_2px_var(--tk-ink)]",
         pending: "bg-surface text-ink-500 shadow-[inset_0_0_0_1.5px_var(--tk-border-2)]",
-        error:
-          "bg-red-tint text-fg-error shadow-[inset_0_0_0_2px_var(--colours-purered-600)]",
+        error: "bg-red-tint text-fg-error shadow-[inset_0_0_0_2px_var(--colours-purered-600)]",
       },
     },
     defaultVariants: { status: "pending" },
@@ -198,8 +197,9 @@ const DEFAULT_STATUS_LABELS: Record<StepStatus, string> = {
  * Indicador de progreso por pasos del sistema Tikin.
  *
  * Es una lista ordenada de verdad (`<ol>` / `<li>`): el numero de paso y el
- * total salen de la semantica del propio elemento, no de texto inventado. El
- * paso en curso lleva `aria-current="step"`.
+ * total salen de la semantica del propio elemento, no de texto inventado — con
+ * `role="list"` explicito, porque el reset de Tailwind quita la viñeta y WebKit
+ * se lleva la semantica con ella. El paso en curso lleva `aria-current="step"`.
  *
  * NO es enfocable por defecto: es salida, no control. Solo cuando el consumidor
  * pasa `onStepSelect` los pasos ya hechos se convierten en botones — y entonces
@@ -226,10 +226,12 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
   /* Un value fuera de rango dejaria la lista sin ningun paso actual (o con el
      ultimo conector a medias). Se satura aqui una vez y todo lo de abajo
      trabaja con un indice valido. */
-  const current = steps.length === 0 ? 0 : Math.min(Math.max(Math.trunc(value), 0), steps.length - 1);
+  const current =
+    steps.length === 0 ? 0 : Math.min(Math.max(Math.trunc(value), 0), steps.length - 1);
 
   const resolved = steps.map<StepStatus>(
-    (step, index) => step.status ?? (index < current ? "done" : index === current ? "current" : "pending"),
+    (step, index) =>
+      step.status ?? (index < current ? "done" : index === current ? "current" : "pending"),
   );
 
   const isVertical = orientation === "vertical";
@@ -237,6 +239,13 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
   return (
     <ol
       ref={ref}
+      /* role="list" redundante A PROPOSITO. El preflight de Tailwind pinta
+         `ol, ul, menu { list-style: none }`, y WebKit retira la semantica de
+         lista de toda lista sin viñeta: VoiceOver dejaria de anunciar "lista,
+         N elementos" y con ello el numero de paso y el total, que es lo unico
+         que este componente comunica. Va antes del spread para que el
+         consumidor pueda sustituirlo si envuelve la lista en otro patron. */
+      role="list"
       className={cn(isVertical ? "flex flex-col" : "flex w-full items-start", className)}
       {...props}
     >
@@ -285,11 +294,7 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
           );
 
           return (
-            <li
-              key={index}
-              className="flex gap-[14px]"
-              aria-current={ariaCurrent}
-            >
+            <li key={index} className="flex gap-[14px]" aria-current={ariaCurrent}>
               <div className="flex flex-col items-center">
                 {circle}
                 {/* El conector cuelga del paso y se llena cuando ESTE esta
@@ -340,7 +345,9 @@ export const Steps = React.forwardRef<HTMLOListElement, StepsProps>(function Ste
             aria-current={ariaCurrent}
           >
             {index > 0 && (
-              <span className={stepConnector({ orientation: "horizontal", filled: previousDone })} />
+              <span
+                className={stepConnector({ orientation: "horizontal", filled: previousDone })}
+              />
             )}
             {tappable ? (
               <button

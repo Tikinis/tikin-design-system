@@ -39,6 +39,11 @@ function setup(props: Partial<SnackbarProps> = {}) {
 /** La pieza es el <li> del viewport: Radix no le pone un rol propio. */
 const snack = () => screen.queryByRole("listitem");
 
+/* La cuenta regresiva es decorativa (aria-hidden) y no tiene rol: se localiza
+ * por el unico estilo en linea de la pieza, que es justo el que la sincroniza
+ * con el temporizador (duracion y play-state). */
+const cuenta = () => snack()?.querySelector<HTMLElement>('[style*="animation-duration"]') ?? null;
+
 describe("Snackbar", () => {
   it("muestra el mensaje y la accion", () => {
     setup({ actionLabel: "Deshacer" });
@@ -198,7 +203,13 @@ describe("Snackbar · temporizador", () => {
     const onOpenChange = vi.fn();
     const { rerender } = render(
       <SnackbarProvider>
-        <Snackbar key="a" defaultOpen message="Movimiento eliminado" onOpenChange={onOpenChange} duration={5000} />
+        <Snackbar
+          key="a"
+          defaultOpen
+          message="Movimiento eliminado"
+          onOpenChange={onOpenChange}
+          duration={5000}
+        />
         <SnackbarViewport />
       </SnackbarProvider>,
     );
@@ -207,7 +218,13 @@ describe("Snackbar · temporizador", () => {
     // Llega otro aviso: el anterior se va y el nuevo entra con el plazo entero.
     rerender(
       <SnackbarProvider>
-        <Snackbar key="b" defaultOpen message="Bolsillo archivado" onOpenChange={onOpenChange} duration={5000} />
+        <Snackbar
+          key="b"
+          defaultOpen
+          message="Bolsillo archivado"
+          onOpenChange={onOpenChange}
+          duration={5000}
+        />
         <SnackbarViewport />
       </SnackbarProvider>,
     );
@@ -249,5 +266,58 @@ describe("Snackbar · temporizador", () => {
     expect(onOpenChange).not.toHaveBeenCalled();
     avanzar(200);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("la cuenta se congela mientras el temporizador esta pausado", () => {
+    vi.useFakeTimers();
+    setup({ duration: 5000 });
+
+    expect(cuenta()?.style.animationPlayState).toBe("running");
+    act(() => {
+      fireEvent.pointerMove(screen.getByRole("region"));
+    });
+    expect(cuenta()?.style.animationPlayState).toBe("paused");
+  });
+
+  it("un snackbar que nace con el viewport ya pausado no arranca su cuenta", () => {
+    vi.useFakeTimers();
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <SnackbarProvider>
+        <Snackbar key="a" defaultOpen message="Movimiento eliminado" duration={5000} />
+        <SnackbarViewport />
+      </SnackbarProvider>,
+    );
+
+    // El puntero entra en el viewport: Radix congela el temporizador y lo
+    // recuerda en un ref del PROVIDER que sobrevive al cierre de la pieza.
+    act(() => {
+      fireEvent.pointerMove(screen.getByRole("region"));
+    });
+
+    // Llega otro aviso sin que el puntero se haya movido — el caso corriente:
+    // se pulsa DESHACER con el cursor encima y el sistema responde con otro.
+    rerender(
+      <SnackbarProvider>
+        <Snackbar
+          key="b"
+          defaultOpen
+          message="Bolsillo archivado"
+          onOpenChange={onOpenChange}
+          duration={5000}
+        />
+        <SnackbarViewport />
+      </SnackbarProvider>,
+    );
+
+    // Radix NO arranca el temporizador del recien llegado, asi que pasado el
+    // plazo entero sigue en pantalla...
+    avanzar(6000);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(snack()).toBeInTheDocument();
+
+    // ...y por tanto su cuenta tiene que nacer congelada, no vaciandose sobre
+    // un plazo que nadie esta contando.
+    expect(cuenta()?.style.animationPlayState).toBe("paused");
   });
 });

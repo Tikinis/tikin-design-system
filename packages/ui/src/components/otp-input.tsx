@@ -83,7 +83,9 @@ const otpCell = cva(
 
       /* Va despues de `feedback` a proposito: CVA concatena en orden de
          declaracion y tailwind-merge se queda con la ultima, asi que el gris
-         apagado gana al rojo o al verde. Un campo inerte no da feedback. */
+         apagado gana al rojo o al verde. Un campo inerte no da feedback.
+         OJO: ese "gana" solo es cierto si la salida de cva pasa por cn(); ver
+         la nota del punto de uso mas abajo. */
       disabled: {
         true: "cursor-not-allowed border-edge bg-surface-2 text-ink-500",
         false: "",
@@ -91,11 +93,26 @@ const otpCell = cva(
     },
 
     compoundVariants: [
-      { active: true, disabled: false, feedback: "default", class: "border-ink shadow-[inset_0_0_0_1px_var(--tk-ink)]" },
+      {
+        active: true,
+        disabled: false,
+        feedback: "default",
+        class: "border-ink shadow-[inset_0_0_0_1px_var(--tk-ink)]",
+      },
       /* En error y en exito el foco NO vuelve a tinta: el usuario perderia la
          señal justo cuando esta corrigiendo. Solo engorda el mismo color. */
-      { active: true, disabled: false, feedback: "error", class: "shadow-[inset_0_0_0_1px_var(--colours-purered-600)]" },
-      { active: true, disabled: false, feedback: "success", class: "shadow-[inset_0_0_0_1px_var(--tk-fg-success)]" },
+      {
+        active: true,
+        disabled: false,
+        feedback: "error",
+        class: "shadow-[inset_0_0_0_1px_var(--colours-purered-600)]",
+      },
+      {
+        active: true,
+        disabled: false,
+        feedback: "success",
+        class: "shadow-[inset_0_0_0_1px_var(--tk-fg-success)]",
+      },
     ],
 
     defaultVariants: { feedback: "default", active: false, disabled: false },
@@ -123,7 +140,8 @@ function ids(...parts: Array<string | false | null | undefined>): string | undef
 }
 
 export interface OtpInputProps
-  extends Omit<
+  extends
+    Omit<
       React.ComponentPropsWithoutRef<"input">,
       "value" | "defaultValue" | "type" | "maxLength" | "children" | "size"
     >,
@@ -247,11 +265,7 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
   return (
     <div className={cn("flex w-fit flex-col gap-2", wrapperClassName)}>
       <div
-        className={cn(
-          "relative w-fit",
-          inert ? "cursor-not-allowed" : "cursor-text",
-          className,
-        )}
+        className={cn("relative w-fit", inert ? "cursor-not-allowed" : "cursor-text", className)}
       >
         {/* Cubre toda la fila: pulsar en cualquier casilla enfoca el campo sin
             necesidad de un onClick que reenvie el foco a mano. Va absoluto, asi
@@ -316,7 +330,13 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
                 data-index={index}
                 data-filled={digit !== undefined || undefined}
                 data-active={isActive || undefined}
-                className={otpCell({ feedback, active: isActive, disabled: inert })}
+                /* cva SOLO concatena: no resuelve conflictos. Sin cn() la
+                   casilla salia con `bg-[var(--textfield-bg-default)]` Y
+                   `bg-red-tint`, o con `border-red` Y `border-edge`, y cual
+                   ganaba lo decidia el orden de la hoja de estilos generada,
+                   no el orden de las variantes. tailwind-merge es quien hace
+                   valer la ultima. */
+                className={cn(otpCell({ feedback, active: isActive, disabled: inert }))}
               >
                 {showCaret ? (
                   <span

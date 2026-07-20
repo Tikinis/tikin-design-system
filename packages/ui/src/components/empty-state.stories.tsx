@@ -154,7 +154,7 @@ export const SinResultados: Story = {
     docs: {
       description: {
         story:
-          "`announce` lo convierte en region viva (`role=\"status\"`). Se usa cuando el vacio aparece despues de una accion del usuario y el cambio ocurre lejos del foco.",
+          '`announce` lo convierte en region viva (`role="status"`). Se usa cuando el vacio aparece despues de una accion del usuario y el cambio ocurre lejos del foco.',
       },
     },
   },
@@ -248,7 +248,7 @@ export const AccionesDeEspecificacion: Story = {
           <tr>
             <th />
             {variantes.map((v) => (
-              <th key={v} className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+              <th key={v} className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 {v}
               </th>
             ))}
@@ -257,7 +257,7 @@ export const AccionesDeEspecificacion: Story = {
         <tbody>
           {(["default", "con icono", "disabled"] as const).map((estado) => (
             <tr key={estado}>
-              <td className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 {estado}
               </td>
               {variantes.map((v) => (

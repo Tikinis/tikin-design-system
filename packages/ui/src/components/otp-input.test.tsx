@@ -198,9 +198,7 @@ describe("OtpInput", () => {
         <OtpInput message="Verificado" aria-describedby="ayuda-externa" />
       </>,
     );
-    expect(screen.getByRole("textbox").getAttribute("aria-describedby")).toContain(
-      "ayuda-externa",
-    );
+    expect(screen.getByRole("textbox").getAttribute("aria-describedby")).toContain("ayuda-externa");
   });
 
   it("expone un unico campo accesible con el codigo entero", async () => {
@@ -228,6 +226,31 @@ describe("OtpInput", () => {
     const ref = React.createRef<HTMLInputElement>();
     render(<OtpInput ref={ref} />);
     expect(ref.current).toBe(screen.getByRole("textbox"));
+  });
+
+  /* Excepcion deliberada al "no comprobamos apariencia": aqui no se mide COMO
+   * se ve, sino que las clases en conflicto quedan resueltas. Si se acumulan,
+   * cual gana lo decide el orden de la hoja de estilos generada, no el
+   * componente — y eso es exactamente el fallo que estos dos tests cierran. */
+  it("en una casilla inerte el gris apagado sustituye al feedback, no se suma", () => {
+    render(<OtpInput disabled feedback="error" value="314279" />);
+    const cell = cells()[0]!;
+
+    expect(cell.className).toContain("border-edge");
+    expect(cell.className).toContain("bg-surface-2");
+    // Si el rojo sigue ahi, las dos reglas compiten en la cascada.
+    expect(cell.className).not.toContain("border-red");
+    expect(cell.className).not.toContain("bg-red-tint");
+  });
+
+  it("el fondo del feedback sustituye al fondo base de la casilla", () => {
+    render(<OtpInput feedback="error" value="314279" />);
+    const cell = cells()[0]!;
+
+    expect(cell.className).toContain("bg-red-tint");
+    expect(cell.className).not.toContain("bg-[var(--textfield-bg-default)]");
+    // El grosor del borde no es un conflicto: vive en otro grupo que el color.
+    expect(cell.className).toContain("border-[0.5px]");
   });
 
   it("permite sobreescribir estilos del control por className", () => {

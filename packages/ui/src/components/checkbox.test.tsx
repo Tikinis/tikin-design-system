@@ -97,7 +97,11 @@ describe("Checkbox", () => {
   it("el estado intermedio se anuncia como mixed y pasa a marcado al clicar", async () => {
     const onCheckedChange = vi.fn();
     render(
-      <Checkbox label="Seleccionar todo" checked="indeterminate" onCheckedChange={onCheckedChange} />,
+      <Checkbox
+        label="Seleccionar todo"
+        checked="indeterminate"
+        onCheckedChange={onCheckedChange}
+      />,
     );
 
     const box = screen.getByRole("checkbox");

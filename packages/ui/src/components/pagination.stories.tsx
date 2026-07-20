@@ -310,7 +310,10 @@ export const MatrizDeFormatos: Story = {
         titulo: "Numérica · rango colapsado por los dos lados",
         node: <Pagination page={24} totalPages={48} />,
       },
-      { titulo: "Prev / next con label", node: <Pagination page={3} totalPages={12} format="labels" /> },
+      {
+        titulo: "Prev / next con label",
+        node: <Pagination page={3} totalPages={12} format="labels" />,
+      },
       { titulo: "Compacto", node: <Pagination page={3} totalPages={12} format="compact" /> },
       { titulo: "Saltar a página", node: <PaginationJump page={3} totalPages={12} /> },
       {

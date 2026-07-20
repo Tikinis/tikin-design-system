@@ -20,7 +20,7 @@ const meta = {
           "Reglas del documento:",
           "",
           "- **Chevron gira** — el caret rota 180° al abrir, en 150ms. Toda la fila es el disparador, no solo el icono.",
-          "- **Una o varias** — en FAQ, una abierta a la vez (`type=\"single\"` + `collapsible`). En ajustes, varias a la vez (`type=\"multiple\"`).",
+          '- **Una o varias** — en FAQ, una abierta a la vez (`type="single"` + `collapsible`). En ajustes, varias a la vez (`type="multiple"`).',
           "- **Titulo claro** — la pregunta en Funnel 500; la respuesta en Sans. No escondas informacion critica dentro del acordeon.",
           "",
           "Medidas del prototipo: fila r12 con borde de 1px, separadas 10 · trigger padding 16, gap 12 · pregunta 15 · respuesta 14/1.55.",
@@ -62,7 +62,7 @@ export const Faq: Story = {
     docs: {
       description: {
         story:
-          "`type=\"single\"` cierra las demás al abrir una. `collapsible` permite dejarlas todas cerradas.",
+          '`type="single"` cierra las demás al abrir una. `collapsible` permite dejarlas todas cerradas.',
       },
     },
   },
@@ -87,7 +87,8 @@ export const VariasAbiertas: Story = {
   parameters: {
     docs: {
       description: {
-        story: "`type=\"multiple\"` — el caso de una pantalla de ajustes, donde cada bloque es independiente.",
+        story:
+          '`type="multiple"` — el caso de una pantalla de ajustes, donde cada bloque es independiente.',
       },
     },
   },
@@ -171,13 +172,13 @@ export const MatrizDeEspecificacion: Story = {
       <div className="flex flex-col gap-8">
         {variantes.map((variant) => (
           <div key={variant} className="flex flex-col gap-3">
-            <div className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+            <div className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
               {variant}
             </div>
             <div className="grid grid-cols-3 gap-6">
               {estados.map((estado) => (
                 <div key={estado.label} className="flex flex-col gap-2">
-                  <div className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+                  <div className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                     {estado.label}
                   </div>
                   <Accordion
@@ -217,7 +218,7 @@ export const NivelDeEncabezado: Story = {
   },
   render: (args) => (
     <div className="flex w-[560px] max-w-full flex-col gap-3">
-      <h3 className="font-display text-ink text-lg font-semibold">Envíos</h3>
+      <h3 className="font-display text-lg font-semibold text-ink">Envíos</h3>
       <Accordion {...args}>
         {preguntas.map((p) => (
           <AccordionItem key={p.id} value={p.id}>

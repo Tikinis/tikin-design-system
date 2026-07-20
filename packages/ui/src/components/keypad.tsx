@@ -151,7 +151,7 @@ function HuellaGlifo() {
  * AmountDisplay
  * ------------------------------------------------------------------ */
 
-const amountValue = cva("font-num font-medium tabular-nums leading-none", {
+const amountValue = cva("font-num leading-none font-medium tabular-nums", {
   variants: {
     /* El documento da un rango, "DM Mono 40–56". s y l son los extremos; m es
        el 44 que dibuja el prototipo y por eso es el valor por defecto. */
@@ -175,7 +175,8 @@ const amountValue = cva("font-num font-medium tabular-nums leading-none", {
 type AmountValueVariants = VariantProps<typeof amountValue>;
 
 export interface AmountDisplayProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "children">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"div">, "children">,
     Pick<AmountValueVariants, "size"> {
   /**
    * Monto en crudo — el mismo formato que emite `Keypad`: solo cifras y como
@@ -232,7 +233,7 @@ export const AmountDisplay = React.forwardRef<HTMLDivElement, AmountDisplayProps
         {...props}
       >
         {label !== undefined && (
-          <span className="font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase">
+          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-600 uppercase">
             {label}
           </span>
         )}
@@ -267,26 +268,14 @@ export const AmountDisplay = React.forwardRef<HTMLDivElement, AmountDisplayProps
 
 /** Lo que emite una tecla: una cifra, la coma decimal, borrar o biometria. */
 export type KeypadKey =
-  | "0"
-  | "1"
-  | "2"
-  | "3"
-  | "4"
-  | "5"
-  | "6"
-  | "7"
-  | "8"
-  | "9"
-  | ","
-  | "backspace"
-  | "biometric";
+  "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "," | "backspace" | "biometric";
 
 /** Que ocupa la esquina inferior izquierda del numpad. */
 export type KeypadAction = "none" | "decimal" | "biometric";
 
 const keypadKey = cva(
   [
-    "inline-flex h-[52px] w-full select-none items-center justify-center rounded-lg",
+    "inline-flex h-[52px] w-full items-center justify-center rounded-lg select-none",
     "border-none bg-transparent text-ink",
     "font-num text-[22px] leading-none font-medium",
     "cursor-pointer transition-colors duration-140 ease-out",
@@ -295,7 +284,7 @@ const keypadKey = cva(
     // llega a dibujar uno de los dos; ver cabecera.
     "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
     "disabled:cursor-not-allowed disabled:text-ink-500",
-    "[&_svg]:shrink-0 [&_svg]:size-[var(--tk-key-icon)]",
+    "[&_svg]:size-[var(--tk-key-icon)] [&_svg]:shrink-0",
   ],
   {
     variants: {
@@ -326,8 +315,10 @@ export interface KeypadLabels {
  *   onKeyPress  el handler del DOM con ese nombre esta obsoleto desde React 17
  *               y aqui el nombre se reutiliza para la tecla PULSADA del numpad,
  *               que es lo que un consumidor espera de "keypress" en un teclado. */
-export interface KeypadProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "onKeyDown" | "children" | "onKeyPress"> {
+export interface KeypadProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "onKeyDown" | "children" | "onKeyPress"
+> {
   /** Monto en crudo, gobernado por el padre. */
   value?: string;
   /** Monto en crudo inicial cuando el componente se gobierna solo. */
@@ -361,10 +352,20 @@ const ETIQUETAS: Required<KeypadLabels> = {
 function construyeTeclas(action: KeypadAction): (KeypadKey | null)[] {
   const esquina: KeypadKey | null =
     action === "decimal" ? "," : action === "biometric" ? "biometric" : null;
-  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", esquina, "0", "backspace"] as (
-    | KeypadKey
-    | null
-  )[];
+  return [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    esquina,
+    "0",
+    "backspace",
+  ] as (KeypadKey | null)[];
 }
 
 /**
@@ -395,9 +396,16 @@ function aplicaTecla(
   if (tieneComa) {
     return (partes[1] ?? "").length >= maxDecimals ? actual : actual + key;
   }
-  // Nada de ceros a la izquierda: mientras no haya cifra, un 0 no escribe nada.
-  if (actual === "" && key === "0") return actual;
-  return entero.length >= maxIntegerDigits ? actual : actual + key;
+  // Nada de ceros a la izquierda. Se mira el VALOR de la parte entera, no que el
+  // monto este vacio: a un "0" solo tambien se llega por otro camino — anclar la
+  // coma sobre el vacio da "0," y borrar esa coma deja el cero suelto —, y
+  // comprobando unicamente el vacio la siguiente cifra escribiria "05".
+  //
+  // Ese cero es un ancla de lectura, no una cifra escrita: cuenta como parte
+  // entera vacia, asi que la cifra lo sustituye y otro cero no añade nada.
+  const base = entero === "0" ? "" : entero;
+  if (base === "" && key === "0") return actual;
+  return base.length >= maxIntegerDigits ? actual : base + key;
 }
 
 /**

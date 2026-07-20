@@ -107,7 +107,11 @@ export const Lista: Story = {
     },
   },
   render: () => (
-    <div className="flex w-[240px] flex-col gap-[14px]" role="status" aria-label="Cargando contactos">
+    <div
+      className="flex w-[240px] flex-col gap-[14px]"
+      role="status"
+      aria-label="Cargando contactos"
+    >
       <span className={rotulo}>lista</span>
       {[
         ["60%", "40%"],
@@ -225,7 +229,7 @@ function CrossFade() {
               <span className="text-xs text-ink-600">$mariarojas</span>
             </div>
           </div>
-          <span className="font-meta text-[10px] tracking-[0.1em] uppercase text-ink-600">
+          <span className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase">
             Saldo disponible
           </span>
           <span className="font-num text-[26px] font-medium text-ink">$ 4.250.000</span>

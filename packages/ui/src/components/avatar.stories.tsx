@@ -25,7 +25,7 @@ const meta = {
           "Dos desviaciones respecto al prototipo, ambas por tema oscuro: el anillo usa `--tk-ink`",
           "(el prototipo usa `--tk-on-accent`, fijo en los dos temas y por tanto invisible en oscuro), y el",
           "«borde blanco» de los solapados se expone como `--tk-avatar-edge`, con `--tk-surface` por defecto.",
-          "Sobre el fondo de pagina se corrige con `className=\"[--tk-avatar-edge:var(--tk-bg)]\"`.",
+          'Sobre el fondo de pagina se corrige con `className="[--tk-avatar-edge:var(--tk-bg)]"`.',
         ].join("\n"),
       },
     },
@@ -54,7 +54,7 @@ export const Foto: Story = {
     docs: {
       description: {
         story:
-          "La foto va con `alt=\"\"`: el nombre accesible lo pone el circulo entero, para que el lector de pantalla anuncie lo mismo cargue o no la imagen.",
+          'La foto va con `alt=""`: el nombre accesible lo pone el circulo entero, para que el lector de pantalla anuncie lo mismo cargue o no la imagen.',
       },
     },
   },
@@ -102,7 +102,7 @@ export const Tamanos: Story = {
       ).map(([size, px]) => (
         <div key={size} className="flex flex-col items-center gap-2">
           <Avatar name="Valentina Cruz" size={size} />
-          <span className="font-meta text-ink-500 text-[10px] uppercase">
+          <span className="font-meta text-[10px] text-ink-500 uppercase">
             {size} · {px}
           </span>
         </div>
@@ -131,7 +131,7 @@ export const MatrizDeEspecificacion: Story = {
           <tr>
             <th />
             {sizes.map((s) => (
-              <th key={s} className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+              <th key={s} className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 {s}
               </th>
             ))}
@@ -140,7 +140,7 @@ export const MatrizDeEspecificacion: Story = {
         <tbody>
           {filas.map((fila) => (
             <tr key={fila.label}>
-              <td className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+              <td className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 {fila.label}
               </td>
               {sizes.map((s) => (
@@ -192,7 +192,7 @@ export const GrupoPorTamano: Story = {
     <div className="flex flex-col gap-5">
       {(["xs", "s", "m", "l", "xl"] as const).map((size) => (
         <div key={size} className="flex items-center gap-4">
-          <span className="font-meta text-ink-500 w-8 text-[11px] uppercase">{size}</span>
+          <span className="w-8 font-meta text-[11px] text-ink-500 uppercase">{size}</span>
           <AvatarGroup size={size} max={3} total={9} aria-label={`Equipo ${size}`}>
             <Avatar name="Marta Ruiz" />
             <Avatar name="Carlos Diaz" />
@@ -212,7 +212,7 @@ export const GrupoSobreFondoDePagina: Story = {
   name: "Grupo sobre fondo de página",
   parameters: { controls: { disable: true } },
   render: () => (
-    <div className="bg-page flex gap-10 p-6">
+    <div className="flex gap-10 bg-page p-6">
       <AvatarGroup max={3} total={7} aria-label="Sin corregir">
         <Avatar name="Marta Ruiz" />
         <Avatar name="Carlos Diaz" />

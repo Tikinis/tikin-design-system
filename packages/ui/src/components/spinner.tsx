@@ -94,8 +94,7 @@ const spinner = cva(
 type SpinnerVariants = VariantProps<typeof spinner>;
 
 export interface SpinnerProps
-  extends Omit<React.ComponentPropsWithoutRef<"span">, "children">,
-    SpinnerVariants {
+  extends Omit<React.ComponentPropsWithoutRef<"span">, "children">, SpinnerVariants {
   /**
    * Texto que anuncia el lector de pantalla. Va oculto visualmente.
    *
@@ -169,8 +168,7 @@ const overlay = cva(
 type OverlayVariants = VariantProps<typeof overlay>;
 
 export interface LoadingOverlayProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "children">,
-    OverlayVariants {
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "children">, OverlayVariants {
   /** Si es `false` no renderiza nada. Por defecto `true`. */
   open?: boolean;
   /** Texto anunciado. Visible solo si `showLabel`; si no, queda oculto. */
@@ -249,7 +247,9 @@ export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayPro
         {/* El spinner va decorativo: el texto de abajo ya es el anuncio, y dos
             live regions anidadas para una sola espera se leen dos veces. */}
         <Spinner size={spinnerSize ?? (scope === "screen" ? "m" : "s")} label={null} />
-        <span className={showLabel ? "font-mono text-[13px] text-ink-600" : "sr-only"}>{label}</span>
+        <span className={showLabel ? "font-mono text-[13px] text-ink-600" : "sr-only"}>
+          {label}
+        </span>
       </div>
     );
 

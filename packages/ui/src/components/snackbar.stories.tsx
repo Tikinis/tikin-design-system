@@ -1,11 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  Snackbar,
-  SnackbarProvider,
-  SnackbarViewport,
-  type SnackbarProps,
-} from "./snackbar";
+import { Snackbar, SnackbarProvider, SnackbarViewport, type SnackbarProps } from "./snackbar";
 
 /* No hay decorador con el provider a nivel de meta: las matrices de
  * especificacion necesitan su propio viewport (estatico, en linea) y Radix se
@@ -57,7 +52,10 @@ type Story = StoryObj<typeof meta>;
  * forma de sostener la regla "uno a la vez": remonta la pieza — el anterior se
  * cierra, el nuevo entra — y de paso reinicia el temporizador, que es justo lo
  * que se espera al reemplazar un aviso por otro. */
-function Demo({ etiqueta = "Eliminar movimiento", ...props }: SnackbarProps & { etiqueta?: string }) {
+function Demo({
+  etiqueta = "Eliminar movimiento",
+  ...props
+}: SnackbarProps & { etiqueta?: string }) {
   const [n, setN] = React.useState(0);
   return (
     <SnackbarProvider>
@@ -81,7 +79,7 @@ export const Deshacer: Story = {
     docs: {
       description: {
         story:
-          "Pulsa el boton varias veces seguidas: el snackbar anterior se cierra y el nuevo entra con el plazo entero. Pasa el cursor por encima y la barra se congela — la pausa la manda el temporizador de Radix, no un `:hover` propio, para que la barra y el cierre real nunca se desincronicen.",
+          "Pulsa el boton varias veces seguidas: el snackbar anterior se cierra y el nuevo entra con el plazo entero. Pasa el cursor por encima y la barra se congela — la pausa la manda el temporizador de Radix, no un `:hover` propio, para que la barra y el cierre real nunca se desincronicen.\n\nEsa sincronia incluye el relevo: si el aviso siguiente aparece con el cursor **todavia sobre el viewport**, nace con la barra ya congelada, porque su temporizador tampoco ha arrancado. Empieza a contar cuando el cursor sale, que es cuando Radix lo pone en marcha.",
       },
     },
   },
@@ -93,7 +91,14 @@ export const ConIcono: Story = {
   args: {
     message: "Cambios guardados",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <circle cx="12" cy="12" r="9" />
         <path d="m8.2 12.3 2.6 2.6 5-5.8" />
       </svg>
@@ -188,7 +193,14 @@ export const MatrizDeVariantes: Story = {
         actionLabel="Deshacer"
         countdown="none"
         icon={
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <circle cx="12" cy="12" r="9" />
             <path d="m8.2 12.3 2.6 2.6 5-5.8" />
           </svg>

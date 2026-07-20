@@ -5,7 +5,9 @@
   "license": "UNLICENSED",
   "type": "module",
   "sideEffects": true,
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "exports": {
     ".": "./src/index.css",
     "./index.css": "./src/index.css",

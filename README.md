@@ -82,13 +82,13 @@ pedirle nada al CDN de Google:
 import "@tikin/tokens/fonts.css";
 ```
 
-| Familia | Rol |
-|---|---|
-| Funnel Display | Titulares |
-| Ubuntu Sans | Voz de lectura |
+| Familia          | Rol                        |
+| ---------------- | -------------------------- |
+| Funnel Display   | Titulares                  |
+| Ubuntu Sans      | Voz de lectura             |
 | Ubuntu Sans Mono | Cifras, botones, etiquetas |
-| DM Mono | Montos héroe |
-| Ubuntu Mono | Metadatos y chips |
+| DM Mono          | Montos héroe               |
+| Ubuntu Mono      | Metadatos y chips          |
 
 Si tu app ya las carga, no importes `fonts.css`.
 

@@ -188,7 +188,8 @@ const paginationItem = cva(
 );
 
 export interface PaginationItemProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "type">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"button">, "type">,
     Omit<VariantProps<typeof paginationItem>, "active"> {
   /** La pagina que se esta viendo. Marca `aria-current="page"`. */
   active?: boolean;
@@ -235,7 +236,7 @@ export const PaginationItem = React.forwardRef<HTMLButtonElement, PaginationItem
 const paginationArrow = cva(
   [
     "inline-flex shrink-0 items-center justify-center",
-    "text-ink transition-colors duration-140 ease-out cursor-pointer select-none",
+    "cursor-pointer text-ink transition-colors duration-140 ease-out select-none",
     FOCUS_RING,
     "hover:not-aria-disabled:bg-surface-2",
     "aria-disabled:cursor-not-allowed aria-disabled:text-ink-400",
@@ -254,7 +255,8 @@ const paginationArrow = cva(
 );
 
 export interface PaginationArrowProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "type">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"button">, "type">,
     VariantProps<typeof paginationArrow> {
   /** Hacia donde apunta. Solo cambia el glifo; el salto lo decide el consumidor. */
   direction: "prev" | "next";
@@ -489,7 +491,14 @@ interface LabelButtonProps extends Omit<React.ComponentPropsWithoutRef<"button">
 /* Prev/next con texto. No reutiliza Button porque su escala de alturas (48/40/
    32/28) no tiene el 36 que pide esta seccion, y forzarlo desde fuera con
    className seria mas fragil que estas seis clases. */
-function LabelButton({ className, direction, disabled, onClick, children, ...props }: LabelButtonProps) {
+function LabelButton({
+  className,
+  direction,
+  disabled,
+  onClick,
+  children,
+  ...props
+}: LabelButtonProps) {
   const Caret = direction === "prev" ? CaretLeftIcon : CaretRightIcon;
   return (
     <button
@@ -497,7 +506,7 @@ function LabelButton({ className, direction, disabled, onClick, children, ...pro
       className={cn(
         "inline-flex h-9 items-center gap-1.5 rounded-md border border-edge px-3.5",
         // Mayusculas POR CSS: en JS romperia el texto accesible y el copiado.
-        "font-mono text-[13px] tracking-[0.02em] uppercase text-ink",
+        "font-mono text-[13px] tracking-[0.02em] text-ink uppercase",
         "cursor-pointer transition-colors duration-140 ease-out select-none",
         FOCUS_RING,
         "hover:not-aria-disabled:bg-surface-2",
@@ -593,7 +602,10 @@ export const PaginationJump = React.forwardRef<HTMLDivElement, PaginationJumpPro
     return (
       <div
         ref={ref}
-        className={cn("inline-flex items-center gap-2 font-mono text-[13px] text-ink-700", className)}
+        className={cn(
+          "inline-flex items-center gap-2 font-mono text-[13px] text-ink-700",
+          className,
+        )}
         {...props}
       >
         {prefix}
@@ -629,8 +641,10 @@ export const PaginationJump = React.forwardRef<HTMLDivElement, PaginationJumpPro
 /* Barra de rango + tamaño de pagina                                         */
 /* ------------------------------------------------------------------------ */
 
-export interface PaginationBarProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "onChange"> {
+export interface PaginationBarProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "onChange"
+> {
   /** Pagina actual, base 1. */
   page: number;
   /** Filas por pagina. */
@@ -816,7 +830,7 @@ export const LoadMore = React.forwardRef<HTMLDivElement, LoadMoreProps>(function
           className={cn(
             "relative flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-ink bg-transparent",
             // Mayusculas POR CSS — ver decision 3 de la cabecera.
-            "font-mono text-sm tracking-[0.02em] uppercase text-ink",
+            "font-mono text-sm tracking-[0.02em] text-ink uppercase",
             "cursor-pointer transition-colors duration-140 ease-out select-none",
             FOCUS_RING,
             "hover:not-aria-busy:bg-surface-2",

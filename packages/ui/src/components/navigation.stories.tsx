@@ -321,7 +321,12 @@ export const MatrizDeEstados: Story = {
     <div className="flex flex-col gap-8">
       <Fila titulo="TabBar · item">
         <div className="flex w-fit items-end gap-4 rounded-md bg-surface p-3">
-          <TabBarItem icon={<Ph d={HOUSE} />} activeIcon={<Ph d={HOUSE_FILL} />} label="Activo" active />
+          <TabBarItem
+            icon={<Ph d={HOUSE} />}
+            activeIcon={<Ph d={HOUSE_FILL} />}
+            label="Activo"
+            active
+          />
           <TabBarItem icon={<Ph d={HOUSE} />} label="Inactivo" />
           <TabBarItem icon={<Ph d={HOUSE} />} label="Bloqueado" disabled />
         </div>

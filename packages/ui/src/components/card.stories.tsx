@@ -170,7 +170,7 @@ export const Tocable: Story = {
     docs: {
       description: {
         story:
-          "Pasa el raton y luego mantén pulsado para ver los tres estados. Sin `asChild` la tarjeta recibe `role=\"button\"`, foco y Enter/Espacio; con `asChild` la semantica la pone el elemento del consumidor, que es lo preferible.",
+          'Pasa el raton y luego mantén pulsado para ver los tres estados. Sin `asChild` la tarjeta recibe `role="button"`, foco y Enter/Espacio; con `asChild` la semantica la pone el elemento del consumidor, que es lo preferible.',
       },
     },
   },
@@ -208,14 +208,17 @@ export const Feature: Story = {
   ),
 };
 
-/** Imagen a sangre + scrim inferior · eyebrow glass · accion ↗ · titulo blanco. */
+/** Imagen a sangre + scrim inferior · eyebrow glass · accion ↗ · titulo claro. */
 export const Media: Story = {
   parameters: {
     controls: { disable: true },
     docs: {
       description: {
-        story:
-          "El texto va en blanco fijo, no en `text-surface`: el fondo es una fotografia oscurecida por el scrim, igual de oscura en tema claro y en oscuro.",
+        story: [
+          "La media card congela el tema dentro de si misma (`.tk-static`, igual que el documento en este bloque) porque su fondo no es una superficie de la interfaz sino una fotografia, y una fotografia no se invierte cuando la pagina pasa a oscuro.",
+          "",
+          "Gracias a eso el color sigue siendo semantico: `bg-ink` es siempre el fondo oscuro y `text-surface` la tinta clara que se lee encima. Para los hijos que pase quien la usa, dentro de esta tarjeta `surface` significa _encima de la foto_ e `ink` significa _la foto_.",
+        ].join("\n"),
       },
     },
   },
@@ -229,6 +232,44 @@ export const Media: Story = {
         action={<IconoAbrir />}
         actionLabel="Ver detalle de la tarjeta"
       />
+    </div>
+  ),
+};
+
+/** El caso que rompia: sin imagen el fondo es el unico soporte del texto. */
+export const MediaSinImagen: Story = {
+  name: "Media sin imagen",
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "Sin imagen —o mientras carga— el fondo de tinta es lo unico que sostiene el contraste del overlay. Las dos muestras deben verse identicas: la de la izquierda hereda el tema de la pagina, la de la derecha esta forzada a oscuro.",
+      },
+    },
+  },
+  render: () => (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="w-[300px]">
+        <CardMedia
+          eyebrow="Tarjeta · Tikin"
+          title="Tu tarjeta física"
+          description="Pídela sin costo y paga en cualquier datáfono del país."
+          action={<IconoAbrir />}
+          actionLabel="Ver detalle de la tarjeta"
+        />
+      </div>
+      {/* Fuerza el tema oscuro solo en esta rama para poder comparar las dos
+          lado a lado sin depender del selector global de Storybook. */}
+      <div className="dark w-[300px] bg-page">
+        <CardMedia
+          eyebrow="Tarjeta · Tikin"
+          title="Tu tarjeta física"
+          description="Pídela sin costo y paga en cualquier datáfono del país."
+          action={<IconoAbrir />}
+          actionLabel="Ver detalle de la tarjeta"
+        />
+      </div>
     </div>
   ),
 };
@@ -272,7 +313,13 @@ export const Tendencias: Story = {
         trend="down"
         comparison="vs $ 289.000"
       />
-      <CardStat label="Cuotas" value="$ 90.000" delta="0.0%" trend="flat" comparison="sin cambios" />
+      <CardStat
+        label="Cuotas"
+        value="$ 90.000"
+        delta="0.0%"
+        trend="flat"
+        comparison="sin cambios"
+      />
     </div>
   ),
 };

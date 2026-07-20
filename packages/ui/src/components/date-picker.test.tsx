@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DatePicker, type DateRange } from "./date-picker";
 
@@ -245,6 +245,55 @@ describe("DatePicker", () => {
     await waitFor(() => expect(screen.queryByRole("grid")).not.toBeInTheDocument());
   });
 
+  it("con confirm, el disparador muestra el valor confirmado y no el borrador", async () => {
+    /* El borrador es efimero: mientras el panel esta abierto puede tener una
+       fecha que el usuario todavia no ha aceptado, y el disparador — que es lo
+       que el resto de la pagina lee — no debe adelantarla. */
+    const onValueChange = vi.fn();
+    render(
+      <DatePicker
+        today={HOY}
+        confirm
+        defaultValue={new Date(2026, 6, 4)}
+        onValueChange={onValueChange}
+      />,
+    );
+    const disparador = screen.getByRole("button");
+    const rejilla = await abrir();
+
+    await userEvent.click(dia(rejilla, "2026-07-12"));
+    expect(onValueChange).not.toHaveBeenCalled();
+    // El panel si pinta el borrador: la accion inferior lo anuncia.
+    expect(screen.getByRole("button", { name: /confirmar/i })).toHaveTextContent("12 jul");
+    // El disparador sigue en el valor confirmado.
+    expect(disparador).toHaveTextContent("4 jul");
+
+    // Y al aceptar, el borrador pasa a ser el valor y el disparador lo refleja.
+    await userEvent.click(screen.getByRole("button", { name: /confirmar/i }));
+    expect((onValueChange.mock.calls[0]![0] as Date).getDate()).toBe(12);
+    await waitFor(() => expect(disparador).toHaveTextContent("12 jul"));
+  });
+
+  it("con confirm, Escape descarta el borrador y no lo deja vivo al reabrir", async () => {
+    const onValueChange = vi.fn();
+    render(<DatePicker today={HOY} confirm onValueChange={onValueChange} />);
+    const disparador = screen.getByRole("button");
+    const rejilla = await abrir();
+
+    await userEvent.click(dia(rejilla, "2026-07-12"));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("grid")).not.toBeInTheDocument());
+
+    // Cerrar sin confirmar no emite nada, asi que el disparador tampoco cambia.
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(disparador).toHaveTextContent(/elegir fecha/i);
+
+    // Y al reabrir el borrador descartado no puede seguir seleccionado.
+    const reabierta = await abrir();
+    expect(dia(reabierta, "2026-07-12").closest("td")).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("button", { name: /confirmar/i })).toBeDisabled();
+  });
+
   it("la accion de confirmar esta apagada mientras no hay seleccion completa", async () => {
     render(<DatePicker mode="range" today={HOY} confirm />);
     const rejilla = await abrir();
@@ -303,7 +352,9 @@ describe("DatePicker", () => {
   });
 
   it("apaga la flecha de mes cuando el mes vecino queda entero fuera de limites", async () => {
-    render(<DatePicker today={HOY} minDate={new Date(2026, 6, 1)} maxDate={new Date(2026, 6, 31)} />);
+    render(
+      <DatePicker today={HOY} minDate={new Date(2026, 6, 1)} maxDate={new Date(2026, 6, 31)} />,
+    );
     await abrir();
 
     expect(screen.getByRole("button", { name: "Mes anterior" })).toBeDisabled();

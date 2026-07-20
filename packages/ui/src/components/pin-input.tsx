@@ -89,7 +89,10 @@ const pinFila = cva(
 );
 
 const pinPunto = cva(
-  ["size-4 shrink-0 rounded-full", "transition-[background-color,box-shadow] duration-150 ease-out"],
+  [
+    "size-4 shrink-0 rounded-full",
+    "transition-[background-color,box-shadow] duration-150 ease-out",
+  ],
   {
     variants: {
       estado: {
@@ -237,7 +240,21 @@ export interface PinInputProps extends Omit<React.ComponentPropsWithoutRef<"div"
    * comprueba sola, sin boton de confirmar.
    */
   onComplete?: (value: string) => void;
-  /** Estado tras validar. `error` tiñe de rojo, agita la fila y limpia. */
+  /**
+   * Estado tras validar. `error` tiñe de rojo, agita la fila y limpia.
+   *
+   * El shake y la limpieza responden a la TRANSICION a `error`, no a cada
+   * intento. Devuélvelo a `default` al empezar uno nuevo si quieres que se
+   * repitan; es además lo correcto, porque mientras diga `error` el componente
+   * entiende que lo que hay en pantalla ya fue rechazado.
+   *
+   * No se cuentan los intentos a propósito: el contador subiría al llenar el
+   * último punto, no al conocer el resultado, y con validación asíncrona eso
+   * borraría un PIN correcto antes de validarlo.
+   *
+   * Mientras vale `error`, teclear con la clave llena empieza un intento nuevo
+   * en vez de ignorarse, para que el campo no quede sin salida.
+   */
   feedback?: PinFeedback;
   /** Titulo sobre los puntos. Etiqueta al campo real. */
   label?: React.ReactNode;
@@ -317,14 +334,39 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
     onChangeRef.current = onChange;
   });
 
+  /* No hay contador de intentos, y es deliberado. Tenerlo parece la forma
+   * natural de detectar "otro fallo" cuando el consumidor deja `feedback` fijo
+   * en "error", pero el contador sube al LLENAR el ultimo punto, no al conocer
+   * el resultado. Con validacion asincrona eso invierte el fallo: si el primer
+   * intento fue mal y el consumidor no devuelve `feedback` a "default", un
+   * segundo intento CORRECTO se agita y se borra a los pocos milisegundos de
+   * teclearlo, antes de que la validacion conteste. Castigar un PIN correcto es
+   * peor que no repetir una animacion.
+   *
+   * Asi que la reaccion cuelga solo de la TRANSICION a "error". El precio es
+   * que dos fallos identicos seguidos con feedback pegajoso no vuelven a
+   * agitar; lo que si se arregla es la consecuencia grave de aquello — que el
+   * campo se quedaba lleno y sin salida — permitiendo teclear encima. Ver
+   * `escribirDigito`. */
+
   const aplicarValor = (siguiente: string) => {
     const limpio = soloDigitos(siguiente).slice(0, length);
     if (limpio === pin) return;
     if (!esControlado) setValorInterno(limpio);
     onChange?.(limpio);
     // La validacion se dispara sola al llenar el ultimo punto.
-    if (limpio.length === length) onComplete?.(limpio);
+    if (limpio.length === length) {
+      onComplete?.(limpio);
+    }
   };
+
+  /* Con el PIN lleno se ignoran las cifras de mas: teclear una quinta por
+   * descuido no debe borrar lo escrito. La excepcion es el estado de error, que
+   * es justo cuando el usuario quiere volver a intentarlo: ahi la siguiente
+   * cifra empieza un intento nuevo. Sin esta salida, un consumidor que deje
+   * `feedback="error"` fijo y desactive `clearOnError` deja el campo lleno,
+   * incorrecto y solo recuperable a base de borrar digito a digito. */
+  const reintentando = feedback === "error";
 
   const limpiar = React.useCallback(() => {
     if (!esControlado) setValorInterno("");
@@ -337,17 +379,29 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
    * se moveria. Son cuatro <span>, el remontado no cuesta nada. */
   const [secuenciaError, setSecuenciaError] = React.useState(0);
 
+  /* Ajuste durante el render en vez de dentro de un efecto. Es el patron que
+   * documenta React para "reaccionar al cambio de una prop": React descarta el
+   * render en curso y vuelve a empezar con el estado nuevo, sin pintar el
+   * intermedio ni encadenar un commit extra. Dentro de un efecto habria un
+   * fotograma con la fila vieja antes de remontarla. */
+  const [feedbackPrevio, setFeedbackPrevio] = React.useState(feedback);
+  if (feedbackPrevio !== feedback) {
+    setFeedbackPrevio(feedback);
+    if (feedback === "error") setSecuenciaError((n) => n + 1);
+  }
+
+  // La limpieza diferida si es un efecto de verdad: programa un temporizador,
+  // que es un sistema externo, y hay que cancelarlo al desmontar.
   React.useEffect(() => {
-    if (feedback !== "error") return;
-    setSecuenciaError((n) => n + 1);
-    if (!clearOnError) return;
+    if (feedback !== "error" || !clearOnError) return;
     const t = window.setTimeout(limpiar, errorClearDelay);
     return () => window.clearTimeout(t);
   }, [feedback, clearOnError, errorClearDelay, limpiar]);
 
   const escribirDigito = (digito: string) => {
-    if (disabled || pin.length >= length) return;
-    aplicarValor(pin + digito);
+    if (disabled) return;
+    if (pin.length >= length && !reintentando) return;
+    aplicarValor(reintentando && pin.length >= length ? digito : pin + digito);
     // Devolver el foco al campo mantiene vivo el teclado fisico despues de
     // haber usado el teclado en pantalla.
     campoRef.current?.focus();
@@ -396,7 +450,11 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
       </style>
 
       {label !== undefined && (
-        <label id={idEtiqueta} htmlFor={idCampo} className="font-display text-[17px] font-medium text-ink">
+        <label
+          id={idEtiqueta}
+          htmlFor={idCampo}
+          className="font-display text-[17px] font-medium text-ink"
+        >
           {label}
         </label>
       )}
@@ -419,9 +477,19 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
           autoComplete="one-time-code"
           autoFocus={autoFocus}
           disabled={disabled}
-          maxLength={length}
+          /* `maxLength` solo mientras NO se esta reintentando. Con el limite
+             puesto el navegador se come la pulsacion cuando el campo esta
+             lleno y `onChange` ni se dispara, asi que no habria forma de
+             detectar que el usuario quiere empezar de nuevo. */
+          maxLength={reintentando ? undefined : length}
           value={pin}
-          onChange={(evento) => aplicarValor(evento.target.value)}
+          onChange={(evento) => {
+            const crudo = soloDigitos(evento.target.value);
+            // Lleno, en error y llegan cifras nuevas: es un intento nuevo, no un
+            // desbordamiento que haya que ignorar.
+            const empiezaDeNuevo = reintentando && pin.length >= length && crudo.length > length;
+            aplicarValor(empiezaDeNuevo ? crudo.slice(length) : crudo);
+          }}
           aria-label={label === undefined ? (ariaLabel ?? "Clave de acceso") : undefined}
           aria-labelledby={label !== undefined ? idEtiqueta : undefined}
           aria-describedby={idMensaje}

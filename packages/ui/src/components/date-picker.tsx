@@ -197,9 +197,9 @@ const celdaDia = cva("h-[38px] p-0 align-middle", {
   variants: {
     band: {
       none: "",
-      start: "bg-lime rounded-l-(--radius-pill)",
+      start: "rounded-l-(--radius-pill) bg-lime",
       middle: "bg-lime",
-      end: "bg-lime rounded-r-(--radius-pill)",
+      end: "rounded-r-(--radius-pill) bg-lime",
     },
   },
   defaultVariants: { band: "none" },
@@ -258,7 +258,7 @@ const chipPreset =
 
 const disparador = cva([
   "box-border inline-flex h-control-m items-center gap-2 rounded-md border border-edge-2 bg-surface px-4",
-  "font-mono text-sm font-normal tracking-[0.02em] whitespace-nowrap uppercase text-ink",
+  "font-mono text-sm font-normal tracking-[0.02em] whitespace-nowrap text-ink uppercase",
   "cursor-pointer transition-colors duration-140 ease-out select-none",
   "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
   "hover:not-disabled:bg-surface-2",
@@ -538,13 +538,20 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     /* `borrador` es SIEMPRE lo que se pinta. Con confirm=false va en sincronia
      * con el valor; con confirm=true diverge hasta que el usuario aplica. */
     const [borrador, setBorrador] = React.useState<Seleccion>(valorExterno);
+    /* Ajuste durante el render, no en un efecto. Es el patron que documenta
+     * React para reaccionar al cambio de una prop: descarta el render en curso
+     * y reempieza con el estado nuevo, sin pintar el intermedio ni encadenar un
+     * commit extra.
+     *
+     * Se compara por CLAVE y no por identidad porque un consumidor controlado
+     * puede escribir `value={new Date(...)}` en linea y entregar una referencia
+     * distinta en cada render: con la identidad esto no pararia nunca. */
     const claveExterna = claveSeleccion(valorExterno);
-    React.useEffect(() => {
+    const [clavePrevia, setClavePrevia] = React.useState(claveExterna);
+    if (clavePrevia !== claveExterna) {
+      setClavePrevia(claveExterna);
       setBorrador(valorExterno);
-      // Se compara por clave y no por identidad: cada render puede traer un Date
-      // nuevo con la misma fecha, y con la identidad el efecto no pararia nunca.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [claveExterna]);
+    }
 
     const rango = esRango ? (borrador as DateRange | null) : null;
     const fecha = esRango ? null : (borrador as Date | null);
@@ -556,15 +563,26 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       () => anclaDe(valorExterno) ?? defaultMonth ?? hoy,
     );
 
-    /* Al abrir, el calendario vuelve al mes de la seleccion. Sin esto, quien
-     * dejo el panel navegando por 2029 se lo encuentra ahi la vez siguiente. */
-    React.useEffect(() => {
-      if (!abierto) return;
-      const ancla = anclaDe(valorExterno) ?? defaultMonth ?? hoy;
-      setMesVisible(inicioDeMes(ancla));
-      setDiaFoco(ancla);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [abierto]);
+    /* Cada apertura y cada cierre parten del valor confirmado. El borrador de
+     * confirm=true solo vive mientras el panel esta abierto: si sobreviviera al
+     * cierre, cerrar con Escape — que no emite nada — dejaria el componente
+     * pintando una fecha que el consumidor nunca acepto, y la apertura
+     * siguiente arrancaria sobre ese descarte. Con confirm=false el borrador ya
+     * va en sincronia con el valor, asi que aqui es un no-op.
+     *
+     * Al abrir, ademas, el calendario vuelve al mes de la seleccion. Sin esto,
+     * quien dejo el panel navegando por 2029 se lo encuentra ahi la vez
+     * siguiente. */
+    const [abiertoPrevio, setAbiertoPrevio] = React.useState(abierto);
+    if (abiertoPrevio !== abierto) {
+      setAbiertoPrevio(abierto);
+      setBorrador(valorExterno);
+      if (abierto) {
+        const ancla = anclaDe(valorExterno) ?? defaultMonth ?? hoy;
+        setMesVisible(inicioDeMes(ancla));
+        setDiaFoco(ancla);
+      }
+    }
 
     const rejillaRef = React.useRef<HTMLTableElement>(null);
     const pendienteDeFoco = React.useRef(false);
@@ -604,7 +622,9 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     /* El año se omite cuando coincide con el actual: "8 jul" es lo que muestra
      * el prototipo, y arrastrar el año en cada badge lo llenaria de ruido. */
     const corto = (d: Date) =>
-      d.getFullYear() === hoy.getFullYear() ? formatos.corto.format(d) : formatos.cortoConAno.format(d);
+      d.getFullYear() === hoy.getFullYear()
+        ? formatos.corto.format(d)
+        : formatos.cortoConAno.format(d);
 
     const estaDeshabilitado = (d: Date): boolean => {
       if (minDate && comparar(d, minDate) < 0) return true;
@@ -706,11 +726,21 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
 
     const seleccionCompleta = esRango ? Boolean(rango?.from && rango?.to) : Boolean(fecha);
 
+    /* El disparador lee el VALOR, nunca el borrador. Es la unica parte del
+     * componente que sigue visible con el panel cerrado y la que resume el
+     * estado para el resto de la pagina: con confirm=true el borrador todavia
+     * no esta aceptado, y anticiparlo ahi haria que un descarte por Escape
+     * dejase el disparador mintiendo. Dentro del panel si manda el borrador,
+     * que es lo que el usuario esta manipulando. */
     const etiquetaDisparador = (() => {
-      if (esRango && rango?.from) {
-        return rango.to ? `${corto(rango.from)} → ${corto(rango.to)}` : corto(rango.from);
+      const rangoValor = esRango ? (valorExterno as DateRange | null) : null;
+      const fechaValor = esRango ? null : (valorExterno as Date | null);
+      if (esRango && rangoValor?.from) {
+        return rangoValor.to
+          ? `${corto(rangoValor.from)} → ${corto(rangoValor.to)}`
+          : corto(rangoValor.from);
       }
-      if (!esRango && fecha) return corto(fecha);
+      if (!esRango && fechaValor) return corto(fechaValor);
       return placeholder ?? (esRango ? "Elegir rango" : "Elegir fecha");
     })();
 
@@ -924,7 +954,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                 type="button"
                 disabled={!seleccionCompleta}
                 onClick={() => aplicar(borrador, true)}
-                className="mt-3 flex h-control-l w-full cursor-pointer items-center justify-center rounded-lg bg-ink font-mono text-sm tracking-[0.02em] text-surface uppercase transition-colors duration-140 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface hover:not-disabled:bg-ink-800 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-400"
+                className="mt-3 flex h-control-l w-full cursor-pointer items-center justify-center rounded-lg bg-ink font-mono text-sm tracking-[0.02em] text-surface uppercase transition-colors duration-140 ease-out outline-none hover:not-disabled:bg-ink-800 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-400"
               >
                 {etiquetaConfirmar}
               </button>

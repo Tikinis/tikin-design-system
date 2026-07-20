@@ -46,7 +46,17 @@ describe("getPaginationRange", () => {
   });
 
   it("respeta siblingCount", () => {
-    expect(getPaginationRange(10, 20, 2)).toEqual([1, "ellipsis", 8, 9, 10, 11, 12, "ellipsis", 20]);
+    expect(getPaginationRange(10, 20, 2)).toEqual([
+      1,
+      "ellipsis",
+      8,
+      9,
+      10,
+      11,
+      12,
+      "ellipsis",
+      20,
+    ]);
   });
 });
 
@@ -60,7 +70,10 @@ describe("Pagination", () => {
 
   it("marca la pagina en curso con aria-current y la anuncia en texto", () => {
     render(<Pagination page={3} totalPages={12} />);
-    expect(screen.getByRole("button", { name: "Página 3" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Página 3" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     // El color no llega al lector de pantalla: hace falta decirlo con palabras.
     expect(screen.getByRole("navigation")).toHaveTextContent("Página 3 de 12");
   });
@@ -134,10 +147,16 @@ describe("Pagination", () => {
 
   it("satura una pagina fuera de rango en vez de quedarse sin celda activa", () => {
     const { rerender } = render(<Pagination page={99} totalPages={5} />);
-    expect(screen.getByRole("button", { name: "Página 5" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Página 5" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
     rerender(<Pagination page={-2} totalPages={5} />);
-    expect(screen.getByRole("button", { name: "Página 1" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Página 1" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("dentro de un formulario ninguna celda lo envia", async () => {
@@ -363,9 +382,7 @@ describe("LoadMore", () => {
   });
 
   it("acepta un formato de contador propio", () => {
-    render(
-      <LoadMore loaded={40} total={128} formatCount={(l, t) => `${l}/${t} movimientos`} />,
-    );
+    render(<LoadMore loaded={40} total={128} formatCount={(l, t) => `${l}/${t} movimientos`} />);
     expect(screen.getByRole("status")).toHaveTextContent("40/128 movimientos");
   });
 

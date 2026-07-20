@@ -1,7 +1,7 @@
-import { KeyNum } from './KeyNum.jsx';
-import { KeyNumber } from './KeyNumber.jsx';
-import { KeyRemove } from './KeyRemove.jsx';
-import { KeyboardHomeBar } from './KeyboardHomeBar.jsx';
+import { KeyNum } from "./KeyNum.jsx";
+import { KeyNumber } from "./KeyNumber.jsx";
+import { KeyRemove } from "./KeyRemove.jsx";
+import { KeyboardHomeBar } from "./KeyboardHomeBar.jsx";
 
 // figma node: 2:124 Keyboard/Numpad (2 variants)
 const __venc = (v) => String(v).replace(/[%|=]/g, encodeURIComponent);
@@ -10,40 +10,47 @@ const __vkey = (p) => "dark=" + __venc(p.dark);
 export function KeyboardNumpad(_p = {}) {
   const props = { ..._p, dark: _p.dark ?? "off" };
   const __body0 = () => (
-    <div className={props.className} style={{
-      width: 393,
-      height: 289,
-      backgroundColor: "rgb(212,214,220)",
-      display: "flex",
-      flexDirection: "column",
-      padding: "6px 6px 6px 6px",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "relative",
+    <div
+      className={props.className}
+      style={{
+        width: 393,
+        height: 289,
+        backgroundColor: "rgb(212,214,220)",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        padding: "6px 6px 6px 6px",
         alignItems: "center",
         flexWrap: "nowrap",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>
-        <div style={{
+        boxSizing: "border-box",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
           position: "relative",
           display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          justifyContent: "center",
+          flexDirection: "column",
+          gap: 8,
           alignItems: "center",
           flexWrap: "nowrap",
           flexShrink: 0,
           alignSelf: "stretch",
-        }}>
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNum
             style={{
               position: "relative",
@@ -78,17 +85,19 @@ export function KeyboardNumpad(_p = {}) {
             dark={"off"}
           />
         </div>
-        <div style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          justifyContent: "center",
-          alignItems: "center",
-          flexWrap: "nowrap",
-          flexShrink: 0,
-          alignSelf: "stretch",
-        }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNum
             style={{
               position: "relative",
@@ -123,17 +132,19 @@ export function KeyboardNumpad(_p = {}) {
             dark={"off"}
           />
         </div>
-        <div style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          justifyContent: "center",
-          alignItems: "center",
-          flexWrap: "nowrap",
-          flexShrink: 0,
-          alignSelf: "stretch",
-        }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNum
             style={{
               position: "relative",
@@ -168,16 +179,18 @@ export function KeyboardNumpad(_p = {}) {
             dark={"off"}
           />
         </div>
-        <div style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          alignItems: "flex-start",
-          flexWrap: "nowrap",
-          flexShrink: 0,
-          alignSelf: "stretch",
-        }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            alignItems: "flex-start",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNumber
             style={{
               position: "relative",
@@ -224,41 +237,48 @@ export function KeyboardNumpad(_p = {}) {
     </div>
   );
   const __body1 = () => (
-    <div className={props.className} style={{
-      width: 393,
-      height: 289,
-      backgroundColor: "rgba(51,52,52,0.6)",
-      backdropFilter: "blur(12px)",
-      display: "flex",
-      flexDirection: "column",
-      padding: "6px 6px 6px 6px",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "relative",
+    <div
+      className={props.className}
+      style={{
+        width: 393,
+        height: 289,
+        backgroundColor: "rgba(51,52,52,0.6)",
+        backdropFilter: "blur(12px)",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        padding: "6px 6px 6px 6px",
         alignItems: "center",
         flexWrap: "nowrap",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>
-        <div style={{
+        boxSizing: "border-box",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
           position: "relative",
           display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          justifyContent: "center",
+          flexDirection: "column",
+          gap: 8,
           alignItems: "center",
           flexWrap: "nowrap",
           flexShrink: 0,
           alignSelf: "stretch",
-        }}>
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNum
             style={{
               position: "relative",
@@ -293,17 +313,19 @@ export function KeyboardNumpad(_p = {}) {
             dark={"on"}
           />
         </div>
-        <div style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          justifyContent: "center",
-          alignItems: "center",
-          flexWrap: "nowrap",
-          flexShrink: 0,
-          alignSelf: "stretch",
-        }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNum
             style={{
               position: "relative",
@@ -338,17 +360,19 @@ export function KeyboardNumpad(_p = {}) {
             dark={"on"}
           />
         </div>
-        <div style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          justifyContent: "center",
-          alignItems: "center",
-          flexWrap: "nowrap",
-          flexShrink: 0,
-          alignSelf: "stretch",
-        }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNum
             style={{
               position: "relative",
@@ -383,16 +407,18 @@ export function KeyboardNumpad(_p = {}) {
             dark={"on"}
           />
         </div>
-        <div style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          alignItems: "flex-start",
-          flexWrap: "nowrap",
-          flexShrink: 0,
-          alignSelf: "stretch",
-        }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+            gap: 6,
+            alignItems: "flex-start",
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
+        >
           <KeyNumber
             style={{
               position: "relative",

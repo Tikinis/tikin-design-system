@@ -1,455 +1,572 @@
 // figma node: 2:135138 Link (16 variants)
 const __venc = (v) => String(v).replace(/[%|=]/g, encodeURIComponent);
-const __vkey = (p) => "state=" + __venc(p.state) + '|' + "size=" + __venc(p.size);
+const __vkey = (p) => "state=" + __venc(p.state) + "|" + "size=" + __venc(p.size);
 
 export function Link(_p = {}) {
-  const props = { ..._p, label: _p.label ?? "Label", state: _p.state ?? "deault", size: _p.size ?? "s" };
+  const props = {
+    ..._p,
+    label: _p.label ?? "Label",
+    state: _p.state ?? "deault",
+    size: _p.size ?? "s",
+  };
   const __body0 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-default)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-default)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body1 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-default)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.text1 ?? "Label"}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-default)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.text1 ?? "Label"}
+      </span>
     </div>
   );
   const __body2 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "var(--link-bg-hover)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "var(--link-bg-hover)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-hover)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-hover)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body3 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 600,
-        fontSize: "calc(var(--button-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-pressed)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 600,
+          fontSize: "calc(var(--button-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-pressed)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body4 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--button-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-disabled)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--button-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-disabled)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body5 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "var(--link-bg-hover)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "var(--link-bg-hover)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-hover)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-hover)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body6 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 600,
-        fontSize: "calc(var(--button-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-pressed)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 600,
+          fontSize: "calc(var(--button-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-pressed)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body7 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-4) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-4) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--button-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-disabled)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--button-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-disabled)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body8 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-default)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-default)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body9 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "var(--link-bg-hover)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "var(--link-bg-hover)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-hover)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-hover)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body10 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 600,
-        fontSize: "calc(var(--button-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-pressed)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 600,
+          fontSize: "calc(var(--button-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-pressed)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body11 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--button-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-disabled)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--button-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-disabled)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body12 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-default)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-default)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body13 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "var(--link-bg-hover)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "var(--link-bg-hover)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 500,
-        fontSize: "calc(var(--button-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-hover)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 500,
+          fontSize: "calc(var(--button-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-hover)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body14 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 600,
-        fontSize: "calc(var(--button-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-pressed)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 600,
+          fontSize: "calc(var(--button-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-pressed)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body15 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      backgroundColor: "rgba(255,255,255,0)",
-      display: "flex",
-      flexDirection: "row",
-      gap: "calc(var(--numbers-tailwind-8) * 1px)",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        backgroundColor: "rgba(255,255,255,0)",
+        display: "flex",
+        flexDirection: "row",
+        gap: "calc(var(--numbers-tailwind-8) * 1px)",
+        alignItems: "center",
+        flexWrap: "nowrap",
         position: "relative",
-        fontFamily: "\"Ubuntu Sans Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--button-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1.2000000476837158,
-        color: "var(--link-text-disabled)",
-        textDecoration: "underline",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--button-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1.2000000476837158,
+          color: "var(--link-text-disabled)",
+          textDecoration: "underline",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __impls = {

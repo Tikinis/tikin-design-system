@@ -104,13 +104,13 @@ export const EstadosDeArchivo: Story = {
         onResume={() => {}}
       />
       <FileUploadItem name="soporte-pago.pdf" status="done" meta="240 KB · listo" />
+      <FileUploadItem name="foto.png" status="error" meta="supera 10 MB" onRetry={() => {}} />
       <FileUploadItem
-        name="foto.png"
+        name="archivo.zip"
         status="error"
-        meta="supera 10 MB"
-        onRetry={() => {}}
+        meta="formato no permitido"
+        onRemove={() => {}}
       />
-      <FileUploadItem name="archivo.zip" status="error" meta="formato no permitido" onRemove={() => {}} />
     </FileUploadList>
   ),
 };
@@ -237,7 +237,13 @@ export const FlujoCompleto: Story = {
   name: "Flujo completo",
   parameters: { controls: { disable: true } },
   render: function FlujoCompletoStory() {
-    type Fila = { id: number; name: string; status: FileUploadStatus; value: number; meta?: string };
+    type Fila = {
+      id: number;
+      name: string;
+      status: FileUploadStatus;
+      value: number;
+      meta?: string;
+    };
     const [filas, setFilas] = React.useState<Fila[]>([]);
     const siguienteId = React.useRef(0);
 

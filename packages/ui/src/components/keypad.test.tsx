@@ -62,6 +62,33 @@ describe("Keypad", () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
+  it("el cero anclado por la coma no se queda pegado delante de la cifra", async () => {
+    const onValueChange = vi.fn();
+    render(<Keypad action="decimal" onValueChange={onValueChange} />);
+
+    // Camino corto para llegar a un monto que vale exactamente "0": la coma
+    // sobre el vacio ancla un cero, y borrar la coma lo deja solo.
+    await userEvent.click(tecla("Coma decimal"));
+    expect(onValueChange).toHaveBeenLastCalledWith("0,");
+    await userEvent.click(tecla("Borrar"));
+    expect(onValueChange).toHaveBeenLastCalledWith("0");
+
+    // Ese cero es un ancla, no una cifra: la siguiente lo sustituye.
+    await userEvent.click(tecla("5"));
+    expect(onValueChange).toHaveBeenLastCalledWith("5");
+  });
+
+  it("un monto que ya vale cero no acumula mas ceros", async () => {
+    const onValueChange = vi.fn();
+    const onKeyPress = vi.fn();
+    render(<Keypad defaultValue="0" onValueChange={onValueChange} onKeyPress={onKeyPress} />);
+
+    await userEvent.click(tecla("0"));
+
+    expect(onKeyPress).toHaveBeenCalledWith("0");
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
   it("descarta la cifra que pasa del tope sin truncar lo escrito", async () => {
     const onValueChange = vi.fn();
     render(<Keypad defaultValue="9999999" onValueChange={onValueChange} />);
@@ -122,7 +149,12 @@ describe("Keypad", () => {
     const onBiometric = vi.fn();
     const onValueChange = vi.fn();
     render(
-      <Keypad action="biometric" defaultValue="20" onBiometric={onBiometric} onValueChange={onValueChange} />,
+      <Keypad
+        action="biometric"
+        defaultValue="20"
+        onBiometric={onBiometric}
+        onValueChange={onValueChange}
+      />,
     );
 
     await userEvent.click(tecla("Autenticar con huella"));

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from "react";
 export interface Group1623897755Props {
   className?: string;
   style?: React.CSSProperties;

@@ -50,7 +50,7 @@ export const Tamanos: Story = {
           <Spinner size={size} label={null} />
           {/* Mayusculas por CSS, nunca con .toUpperCase(): en JS romperia el
               texto accesible y lo que se copia al portapapeles. */}
-          <span className="font-meta text-ink-500 text-[10px] uppercase">
+          <span className="font-meta text-[10px] text-ink-500 uppercase">
             {size} · {{ s: 16, m: 24, l: 40 }[size]}
           </span>
         </div>
@@ -96,8 +96,8 @@ export const CapaPorSeccion: Story = {
   render: () => (
     <div className="relative w-[320px] rounded-xl border border-edge bg-surface p-6">
       <p className="font-sans text-sm text-ink-700">
-        Contenido de la seccion que se esta recargando. La capa necesita un ancestro
-        posicionado del que colgar.
+        Contenido de la seccion que se esta recargando. La capa necesita un ancestro posicionado del
+        que colgar.
       </p>
       <LoadingOverlay scope="container" showLabel label="Actualizando…" />
     </div>
@@ -112,7 +112,7 @@ export const PantallaCompleta: Story = {
     docs: {
       description: {
         story:
-          "Unico caso que cubre todo. Se pinta aqui con `scope=\"container\"` y `portal={false}` para que quepa en el lienzo de la story; en produccion va `scope=\"screen\"`, que se monta en `document.body` para que ningun `transform` de un ancestro lo desancle del viewport.",
+          'Unico caso que cubre todo. Se pinta aqui con `scope="container"` y `portal={false}` para que quepa en el lienzo de la story; en produccion va `scope="screen"`, que se monta en `document.body` para que ningun `transform` de un ancestro lo desancle del viewport.',
       },
     },
   },
@@ -149,8 +149,8 @@ export const MatrizDeEspecificacion: Story = {
           {filas.map(({ size, px, trazo }) => (
             <tr key={size}>
               <td className={th}>{size}</td>
-              <td className="font-num text-ink-700 text-[13px]">{px}</td>
-              <td className="font-num text-ink-700 text-[13px]">{trazo}</td>
+              <td className="font-num text-[13px] text-ink-700">{px}</td>
+              <td className="font-num text-[13px] text-ink-700">{trazo}</td>
               <td>
                 <Spinner size={size} label={null} />
               </td>

@@ -263,8 +263,7 @@ function GlifoCerrar() {
 }
 
 export interface BannerProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "color">,
-    Omit<BannerVariants, "align"> {
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "color">, Omit<BannerVariants, "align"> {
   /**
    * Segunda linea, mas pequeña y en tinta apagada. Activa el formato de doble
    * linea del documento: todo el contenido se alinea arriba.
@@ -430,7 +429,7 @@ export const Banner = React.forwardRef<HTMLDivElement, BannerProps>(function Ban
 
 /* -------------------------------------------------------------------------- */
 
-export interface BannerActionProps extends React.ComponentPropsWithoutRef<"button"> {}
+export type BannerActionProps = React.ComponentPropsWithoutRef<"button">;
 
 /**
  * Accion del Banner — EXTENSION, medidas del prototipo de la seccion 38.
@@ -461,7 +460,7 @@ export const BannerAction = React.forwardRef<HTMLButtonElement, BannerActionProp
           // Subrayado por variable: activo en los tonos claros, apagado en promo,
           // que ya se distingue por el pill.
           "[text-decoration-line:var(--tk-banner-action-line,underline)] underline-offset-[3px]",
-          "font-mono text-xs font-normal uppercase tracking-[0.02em]",
+          "font-mono text-xs font-normal tracking-[0.02em] uppercase",
           "transition-[color,background-color,opacity] duration-140 ease-out",
           "hover:not-disabled:bg-[var(--tk-banner-action-bg-hover,transparent)]",
           "hover:not-disabled:opacity-[var(--tk-banner-action-opacity-hover,1)]",

@@ -28,7 +28,9 @@ const ArrowDown = glyph("M12 5v14M6 13l6 6 6-6");
 const ArrowUp = glyph("M12 19V5M6 11l6-6 6 6");
 const Bank = glyph("M3 9.5 12 4l9 5.5M5 10v8m6-8v8m8-8v8M3 20h18");
 const Bell = glyph("M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0");
-const Globe = glyph("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18");
+const Globe = glyph(
+  "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18",
+);
 const SignOut = glyph("M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h9");
 
 const meta = {
@@ -49,7 +51,7 @@ const meta = {
           "- **Leading consistente** — personas con avatar circular (42), conceptos con icono en caja r10 (38). Nunca se mezclan en la misma lista.",
           "- **Cifras a la derecha** — montos en mono; entradas en verde, salidas en tinta. El metadato (fecha, $tag) va bajo el titulo.",
           "",
-          "Anatomia: alto 44–68 · padding 14/16 · gap 12 · separador de 1px entre filas, nunca en la ultima. En movil el objetivo tactil sube a `size=\"lg\"` (68).",
+          'Anatomia: alto 44–68 · padding 14/16 · gap 12 · separador de 1px entre filas, nunca en la ultima. En movil el objetivo tactil sube a `size="lg"` (68).',
         ].join("\n"),
       },
     },
@@ -189,7 +191,7 @@ export const AjustesControles: Story = {
         aria-checked={on}
         aria-label={label}
         onClick={onToggle}
-        className={`relative h-[26px] w-11 flex-none rounded-pill outline-none transition-colors duration-140 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page ${
+        className={`relative h-[26px] w-11 flex-none rounded-pill transition-colors duration-140 outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page ${
           on ? "bg-ink" : "bg-edge-2"
         }`}
       >
@@ -357,7 +359,16 @@ export const MatrizDeLeadings: Story = {
   name: "Matriz de leadings",
   parameters: { controls: { disable: true } },
   render: () => {
-    const tones = ["neutral", "success", "warning", "error", "info", "lavender", "lime", "gold"] as const;
+    const tones = [
+      "neutral",
+      "success",
+      "warning",
+      "error",
+      "info",
+      "lavender",
+      "lime",
+      "gold",
+    ] as const;
     return (
       <div className="flex flex-col gap-6">
         {(["circle", "box"] as const).map((shape) => (

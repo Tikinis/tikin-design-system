@@ -5,39 +5,49 @@ const __vkey = (p) => "darkMode=" + __venc(p.darkMode);
 export function HomeBarPro(_p = {}) {
   const props = { ..._p, darkMode: _p.darkMode ?? "off" };
   const __body0 = () => (
-    <div className={props.className} style={{
-      width: 393,
-      height: 34,
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 127,
-        top: 20,
-        width: 139,
-        height: 5,
-        borderRadius: 100,
-        backgroundColor: "rgb(255,255,255)",
-      }} />
+    <div
+      className={props.className}
+      style={{
+        width: 393,
+        height: 34,
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 127,
+          top: 20,
+          width: 139,
+          height: 5,
+          borderRadius: 100,
+          backgroundColor: "rgb(255,255,255)",
+        }}
+      />
     </div>
   );
   const __body1 = () => (
-    <div className={props.className} style={{
-      width: 393,
-      height: 34,
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 127,
-        top: 20,
-        width: 139,
-        height: 5,
-        borderRadius: 100,
-        backgroundColor: "rgb(0,0,0)",
-      }} />
+    <div
+      className={props.className}
+      style={{
+        width: 393,
+        height: 34,
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 127,
+          top: 20,
+          width: 139,
+          height: 5,
+          borderRadius: 100,
+          backgroundColor: "rgb(0,0,0)",
+        }}
+      />
     </div>
   );
   const __impls = {

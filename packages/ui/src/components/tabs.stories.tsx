@@ -48,7 +48,7 @@ type Story = StoryObj<typeof meta>;
 /* Panel de ejemplo, con el estilo de tarjeta que usa el documento. */
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border-edge bg-page mt-4 max-w-[640px] rounded-xl border px-6 py-5">
+    <div className="mt-4 max-w-[640px] rounded-xl border border-edge bg-page px-6 py-5">
       {children}
     </div>
   );
@@ -250,11 +250,11 @@ export const ControlSegmentadoSuelto: Story = {
         <SegmentedControlItem value="pendientes">Pendientes</SegmentedControlItem>
         <SegmentedControlItem value="pagados">Pagados</SegmentedControlItem>
       </SegmentedControl>
-      <ul id="lista-recibos" className="border-edge divide-edge divide-y rounded-xl border">
+      <ul id="lista-recibos" className="divide-y divide-edge rounded-xl border border-edge">
         {["Marzo", "Abril", "Mayo"].map((mes) => (
-          <li key={mes} className="text-ink-800 flex items-center justify-between px-4 py-3">
+          <li key={mes} className="flex items-center justify-between px-4 py-3 text-ink-800">
             <span className="text-sm">Recibo de {mes}</span>
-            <span className="font-num text-ink-600 text-sm">640,00 €</span>
+            <span className="font-num text-sm text-ink-600">640,00 €</span>
           </li>
         ))}
       </ul>
@@ -289,11 +289,11 @@ export const MatrizDeEspecificacion: Story = {
       <div className="flex flex-col gap-10">
         {filas.map((fila) => (
           <div key={fila.variant} className="flex flex-col gap-3">
-            <div className="border-edge flex items-baseline gap-3 border-b pb-2">
-              <span className="font-mono text-ink-600 text-[13px] tracking-[0.14em] uppercase">
+            <div className="flex items-baseline gap-3 border-b border-edge pb-2">
+              <span className="font-mono text-[13px] tracking-[0.14em] text-ink-600 uppercase">
                 {fila.variant} · {fila.origen}
               </span>
-              <span className="font-meta text-ink-500 ml-auto text-xs">{fila.medidas}</span>
+              <span className="ml-auto font-meta text-xs text-ink-500">{fila.medidas}</span>
             </div>
             <Tabs defaultValue="activa" variant={fila.variant}>
               <TabsList aria-label={fila.variant}>

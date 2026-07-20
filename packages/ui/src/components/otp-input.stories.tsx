@@ -24,7 +24,7 @@ const meta = {
           "- **Reenvío** — reenviar con cuenta regresiva para evitar spam; teclado numérico en móvil y autocompletado del SMS.",
           "",
           "Bajo las casillas hay **un solo `<input>`** transparente, no seis: es lo que",
-          "permite el autocompletado del SMS (`autocomplete=\"one-time-code\"`), que pegar",
+          'permite el autocompletado del SMS (`autocomplete="one-time-code"`), que pegar',
           "funcione sin código extra y que el lector de pantalla anuncie el código entero.",
         ].join("\n"),
       },

@@ -1,0 +1,11 @@
+# Material de referencia, no codigo del proyecto: el documento de diseño es un
+# prototipo con HTML que no siempre es valido (etiquetas de cierre en elementos
+# vacios, por ejemplo) y el export de Figma es codigo generado.
+docs/
+
+# Generados
+dist/
+storybook-static/
+apps/storybook/public/r/
+pnpm-lock.yaml
+registry.json

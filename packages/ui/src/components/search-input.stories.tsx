@@ -65,7 +65,7 @@ export const Cargando: Story = {
     docs: {
       description: {
         story:
-          "El estado se anuncia por una region viva oculta (`role=\"status\"`) y por `aria-busy` en el input. La carga **no bloquea**: el usuario puede seguir afinando la consulta.",
+          'El estado se anuncia por una region viva oculta (`role="status"`) y por `aria-busy` en el input. La carga **no bloquea**: el usuario puede seguir afinando la consulta.',
       },
     },
   },

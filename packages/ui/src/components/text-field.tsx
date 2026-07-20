@@ -90,7 +90,7 @@ const fieldBox = cva(
          `feedback`: con el campo inerte tendrian que desactivarse, y una clase
          `hover:` siempre gana a una clase base por especificidad de variante. */
       interactive: {
-        true: "hover:border-ink-600 focus-within:border-ink focus-within:shadow-[inset_0_0_0_0.5px_var(--tk-ink)]",
+        true: "focus-within:border-ink focus-within:shadow-[inset_0_0_0_0.5px_var(--tk-ink)] hover:border-ink-600",
         false: "",
       },
 
@@ -116,11 +116,17 @@ const fieldBox = cva(
         feedback: "error",
         interactive: true,
         class:
-          "hover:border-red focus-within:border-red focus-within:shadow-[inset_0_0_0_0.5px_var(--colours-purered-600)]",
+          "focus-within:border-red focus-within:shadow-[inset_0_0_0_0.5px_var(--colours-purered-600)] hover:border-red",
       },
     ],
 
-    defaultVariants: { size: "l", feedback: "default", interactive: true, disabled: false, readOnly: false },
+    defaultVariants: {
+      size: "l",
+      feedback: "default",
+      interactive: true,
+      disabled: false,
+      readOnly: false,
+    },
   },
 );
 
@@ -156,19 +162,20 @@ function ids(...parts: Array<string | false | null | undefined>): string | undef
 }
 
 /** Longitud del valor, funcione el campo controlado o no. */
-function useValueLength(
-  value: unknown,
-  defaultValue: unknown,
-): [number, (next: string) => void] {
+function useValueLength(value: unknown, defaultValue: unknown): [number, (next: string) => void] {
   const [uncontrolled, setUncontrolled] = React.useState(() => String(defaultValue ?? "").length);
   const isControlled = value !== undefined;
-  return [isControlled ? String(value ?? "").length : uncontrolled, (next) => {
-    if (!isControlled) setUncontrolled(next.length);
-  }];
+  return [
+    isControlled ? String(value ?? "").length : uncontrolled,
+    (next) => {
+      if (!isControlled) setUncontrolled(next.length);
+    },
+  ];
 }
 
 export interface TextFieldProps
-  extends Omit<React.ComponentPropsWithoutRef<"input">, "size" | "prefix">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"input">, "size" | "prefix">,
     Pick<FieldBoxVariants, "size" | "feedback"> {
   /**
    * Etiqueta dentro del campo. Es tambien el nombre accesible, asi que es
@@ -264,7 +271,9 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
           }),
         )}
       >
-        {prefix != null && <span className={cn(adornment, "border-edge border-r-[0.5px]")}>{prefix}</span>}
+        {prefix != null && (
+          <span className={cn(adornment, "border-r-[0.5px] border-edge")}>{prefix}</span>
+        )}
 
         {/* El padding vive aqui y no en la caja para que las capsulas puedan
             pegarse al borde sin margenes negativos. */}
@@ -325,7 +334,9 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
           {endAction != null && <span className="flex shrink-0 text-ink-600">{endAction}</span>}
         </div>
 
-        {suffix != null && <span className={cn(adornment, "border-edge border-l-[0.5px]")}>{suffix}</span>}
+        {suffix != null && (
+          <span className={cn(adornment, "border-l-[0.5px] border-edge")}>{suffix}</span>
+        )}
       </div>
 
       {(message != null || showCounter) && (
@@ -362,7 +373,7 @@ const textareaBox = cva(
   [
     "w-full rounded-lg border-[0.5px] bg-[var(--textfield-bg-default)]",
     "px-3.5 py-3 font-sans text-[15px] leading-[1.5] text-ink",
-    "outline-none transition-[border-color,background-color,box-shadow] duration-140 ease-out",
+    "transition-[border-color,background-color,box-shadow] duration-140 ease-out outline-none",
     "placeholder:text-[color:var(--textfield-text-label-default)]",
     "disabled:cursor-not-allowed disabled:border-[var(--textfield-stroke-disabled)]",
     "disabled:bg-[var(--textfield-bg-disabled)] disabled:text-ink-500",
@@ -385,8 +396,7 @@ const textareaBox = cva(
 );
 
 export interface TextareaProps
-  extends React.ComponentPropsWithoutRef<"textarea">,
-    VariantProps<typeof textareaBox> {
+  extends React.ComponentPropsWithoutRef<"textarea">, VariantProps<typeof textareaBox> {
   /**
    * Etiqueta ENCIMA del campo, no dentro. Es la unica diferencia de anatomia
    * con TextField y viene del documento: con varias lineas la etiqueta dentro
@@ -466,7 +476,11 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(fun
         maxLength={maxLength}
         onChange={handleChange}
         aria-invalid={feedback === "error" || undefined}
-        aria-describedby={ids(helper != null && helperId, message != null && messageId, describedBy)}
+        aria-describedby={ids(
+          helper != null && helperId,
+          message != null && messageId,
+          describedBy,
+        )}
         className={cn(textareaBox({ feedback, resizable, className }))}
         {...props}
       />

@@ -176,11 +176,40 @@ describe("AvatarGroup", () => {
     expect(screen.getByRole("img", { name: "Carlos Diaz" }).className).toContain("size-16");
   });
 
+  it("el borde separador se pinta desde una capa posicionada, o lo tapa el avatar anterior", () => {
+    // ORDEN DE PINTADO (CSS 2.1, apendice E). La raiz de cada Avatar es
+    // `relative`, asi que se pinta en la capa de los posicionados (paso 8),
+    // por encima de TODO el contenido en linea sin posicionar (paso 7). Si el
+    // envoltorio que dibuja el borde separador se queda estatico, su sombra
+    // cae en el paso 7 y el avatar anterior la tapa entera: los circulos se
+    // ven fundidos, sin separacion. Comprobado en navegador.
+    //
+    // Para que el borde gane hace falta que el envoltorio este en esa misma
+    // capa: entonces manda el orden del documento y cada envoltorio, borde
+    // incluido, pinta sobre el avatar que le precede.
+    render(
+      <AvatarGroup max={3}>
+        <Avatar name="Marta Ruiz" />
+        <Avatar name="Carlos Diaz" />
+      </AvatarGroup>,
+    );
+
+    const anterior = screen.getByRole("img", { name: "Marta Ruiz" });
+    const envoltorio = screen.getByRole("img", { name: "Carlos Diaz" }).parentElement;
+
+    // El avatar previo pinta en la capa de posicionados...
+    expect(anterior.className).toContain("relative");
+    // ...y el borde lo pinta el envoltorio, no el avatar.
+    expect(envoltorio?.className).toContain("shadow-[0_0_0_2.5px_var(--tk-avatar-edge");
+    // ...luego el envoltorio tiene que estar en esa misma capa.
+    expect(envoltorio?.className).toContain("relative");
+  });
+
   it("ignora hijos nulos, que es lo que deja un render condicional", () => {
     render(
       <AvatarGroup max={3}>
         <Avatar name="Marta Ruiz" />
-        {false && <Avatar name="Carlos Diaz" />}
+        {undefined}
         {null}
       </AvatarGroup>,
     );

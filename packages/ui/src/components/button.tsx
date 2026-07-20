@@ -34,12 +34,12 @@ const button = cva(
   [
     "relative inline-flex items-center justify-center gap-2",
     // El label va SIEMPRE mono, MAYUSCULAS, +2% de tracking y nunca bold.
-    "font-mono font-normal uppercase tracking-[0.02em] whitespace-nowrap",
+    "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed",
     // Los iconos heredan el tamaño que fija cada size.
-    "[&_svg]:shrink-0 [&_svg]:size-[var(--tk-btn-icon)]",
+    "[&_svg]:size-[var(--tk-btn-icon)] [&_svg]:shrink-0",
   ],
   {
     variants: {
@@ -115,7 +115,8 @@ const button = cva(
       },
       {
         variant: "link",
-        class: "disabled:bg-transparent disabled:text-[var(--link-text-disabled)] disabled:no-underline",
+        class:
+          "disabled:bg-transparent disabled:text-[var(--link-text-disabled)] disabled:no-underline",
       },
       /* La familia compacta nunca es full-width. */
       { family: "compact", fullWidth: true, class: "w-auto" },
@@ -128,7 +129,8 @@ const button = cva(
 type ButtonVariants = VariantProps<typeof button>;
 
 export interface ButtonProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "color">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"button">, "color">,
     Omit<ButtonVariants, "fullWidth"> {
   /** Ocupa todo el ancho. Ignorado en `family="compact"`, que nunca es full-width. */
   fullWidth?: boolean;

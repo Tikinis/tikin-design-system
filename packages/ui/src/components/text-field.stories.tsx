@@ -12,7 +12,9 @@ const Glifo = ({ d }: { d: string }) => (
 );
 const Sobre = () => <Glifo d="M3 7h18v10H3zM3 7l9 6 9-6" />;
 const Lupa = () => <Glifo d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14M16 16l4 4" />;
-const Ojo = () => <Glifo d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6m10 2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5" />;
+const Ojo = () => (
+  <Glifo d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6m10 2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5" />
+);
 const Check = () => <Glifo d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18m-4 9 3 3 5-6" />;
 const Aviso = () => <Glifo d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18m0 4v6m0 3.5v.5" />;
 const Equis = () => <Glifo d="M6 6l12 12M18 6 6 18" />;
@@ -169,7 +171,11 @@ export const Exito: Story = {
     label: "TikinTAG",
     defaultValue: "valentina",
     feedback: "success",
-    endIcon: <span className="text-fg-success"><Check /></span>,
+    endIcon: (
+      <span className="text-fg-success">
+        <Check />
+      </span>
+    ),
     message: (
       <>
         <Check />
@@ -235,7 +241,10 @@ export const MatrizDeEstados: Story = {
   render: () => {
     const filas = [
       { rotulo: "DEFAULT", props: { label: "Correo electrónico" } },
-      { rotulo: "LLENO", props: { label: "Correo electrónico", defaultValue: "valentina@tikin.co" } },
+      {
+        rotulo: "LLENO",
+        props: { label: "Correo electrónico", defaultValue: "valentina@tikin.co" },
+      },
       {
         rotulo: "ÉXITO",
         props: {
@@ -302,12 +311,7 @@ export const AreaConContador: TextareaStory = {
   name: "Textarea · contador",
   parameters: { controls: { disable: true } },
   render: () => (
-    <Textarea
-      label="Nota"
-      maxLength={300}
-      counter
-      defaultValue="Gracias por tu ayuda este mes"
-    />
+    <Textarea label="Nota" maxLength={300} counter defaultValue="Gracias por tu ayuda este mes" />
   ),
 };
 

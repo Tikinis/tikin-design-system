@@ -152,7 +152,7 @@ export const Group: StoryObj = {
             <ButtonGroupItem value="semana">Semana</ButtonGroupItem>
             <ButtonGroupItem value="mes">Mes</ButtonGroupItem>
           </ButtonGroup>
-          <span className="font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase">
+          <span className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
             valor · {rango}
           </span>
           <ButtonGroup defaultValue="semana" disabled aria-label="Rango deshabilitado">
@@ -175,7 +175,7 @@ export const MatrizDeEstados: StoryObj = {
     (Story) => (
       // .tk-static congela el tema claro, igual que hace el documento en sus
       // matrices de especificacion.
-      <div className="tk-static bg-page min-h-[420px] p-6">
+      <div className="tk-static min-h-[420px] bg-page p-6">
         <Story />
       </div>
     ),
@@ -211,7 +211,19 @@ export const MatrizDeEstados: StoryObj = {
                   // verdad desplegaria un panel encima de la matriz, y falsear
                   // data-state/aria-expanded dejaria el arbol de accesibilidad
                   // diciendo que hay un menu desplegado que no existe.
-                  className={f.open ? "bg-ink text-surface [&_svg]:rotate-180" : undefined}
+                  // El hover y el pressed del trigger van condicionados a NO
+                  // estar abierto, asi que la simulacion tiene que pisarlos
+                  // tambien: si no, al pasar el puntero el fondo volveria a
+                  // claro con el texto ya en superficie.
+                  className={
+                    f.open
+                      ? [
+                          "bg-ink text-surface [&_svg]:rotate-180",
+                          "not-data-[state=open]:hover:not-disabled:bg-ink-800",
+                          "not-data-[state=open]:active:not-disabled:bg-ink-strong",
+                        ].join(" ")
+                      : undefined
+                  }
                 >
                   <MenuItem>Enviar dinero</MenuItem>
                 </MenuButton>

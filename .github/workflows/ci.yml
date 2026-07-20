@@ -67,8 +67,8 @@ jobs:
       - name: Empaquetar
         run: |
           mkdir -p /tmp/packs
-          pnpm --filter @tikin/tokens pack --pack-destination /tmp/packs
-          pnpm --filter @tikin/ui pack --pack-destination /tmp/packs
+          pnpm -C packages/tokens pack --pack-destination /tmp/packs
+          pnpm -C packages/ui pack --pack-destination /tmp/packs
 
       - name: Instalar en un proyecto limpio y compilar
         run: node scripts/prueba-instalacion.mjs /tmp/packs

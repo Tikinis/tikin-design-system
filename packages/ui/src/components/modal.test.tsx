@@ -27,6 +27,13 @@ import {
  * accesible, que SIEMPRE haya una salida (scrim, Escape, gesto) y que el foco
  * entre y vuelva donde debe. */
 
+/** El scrim es decorativo (no tiene rol ni texto): se busca por su data-slot. */
+function scrim(): HTMLElement {
+  const el = document.querySelector<HTMLElement>("[data-slot='modal-scrim']");
+  if (!el) throw new Error("La superficie no ha pintado el scrim");
+  return el;
+}
+
 function ModalDemo(props: { onConfirm?: () => void } = {}) {
   return (
     <Modal>
@@ -74,12 +81,25 @@ describe("Modal", () => {
     render(<ModalDemo />);
     await userEvent.click(screen.getByRole("button", { name: "Abrir modal" }));
 
-    const dialog = screen.getByRole("dialog");
-    // El scrim es el padre del contenido: la tarjeta va dentro para centrarla.
-    const overlay = dialog.parentElement as HTMLElement;
-    await userEvent.click(overlay);
+    await userEvent.click(scrim());
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("con modal={false} sigue habiendo tarjeta, aunque sin scrim", () => {
+    render(
+      <Modal open modal={false}>
+        <ModalContent aria-describedby={undefined}>
+          <ModalTitle>Actualiza la app</ModalTitle>
+        </ModalContent>
+      </Modal>,
+    );
+
+    // Radix devuelve null en Dialog.Overlay cuando modal={false} — sin scrim,
+    // porque la pagina de detras sigue siendo usable. Lo que NO puede pasar es
+    // que se lleve por delante el contenido.
+    expect(screen.getByRole("dialog", { name: "Actualiza la app" })).toBeInTheDocument();
+    expect(document.querySelector("[data-slot='modal-scrim']")).toBeNull();
   });
 
   it("el foco entra al dialogo al abrir y vuelve al disparador al cerrar", async () => {
@@ -277,6 +297,19 @@ describe("BottomSheet", () => {
     expect(onSelect).toHaveBeenCalledTimes(1);
 
     expect(screen.getByRole("button", { name: /Cuenta bancaria/ })).toBeDisabled();
+  });
+
+  it("con modal={false} sigue habiendo hoja, aunque sin scrim", () => {
+    render(
+      <BottomSheet open modal={false}>
+        <BottomSheetContent aria-describedby={undefined}>
+          <BottomSheetTitle>Enviar dinero a</BottomSheetTitle>
+        </BottomSheetContent>
+      </BottomSheet>,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Enviar dinero a" })).toBeInTheDocument();
+    expect(document.querySelector("[data-slot='modal-scrim']")).toBeNull();
   });
 
   it("el Close oculto del gesto no aparece en el arbol accesible", async () => {

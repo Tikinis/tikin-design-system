@@ -54,10 +54,30 @@ import { cn } from "../lib/cn";
  * gesto se lee como un tanteo y la hoja vuelve a su sitio. */
 const DRAG_DISMISS_PX = 96;
 
-/* Scrim compartido por modal y sheet. `flex` centra la tarjeta del modal; la
- * sheet lo ignora porque se posiciona en absoluto contra el borde inferior. */
+/* CAPA + SCRIM: POR QUE SON DOS ELEMENTOS
+ * ---------------------------------------
+ * `Dialog.Overlay` de Radix devuelve null cuando el Root va con `modal={false}`
+ * — deliberadamente: sin modo modal la pagina de detras sigue siendo usable y
+ * un velo la taparia. Por eso el contenido NO puede colgar del overlay: si lo
+ * hace, `modal={false}` se lleva por delante tambien la tarjeta y no se pinta
+ * nada. Es justo el caso de la matriz de especimenes de las stories.
+ *
+ * Asi que la posicion la pone una CAPA propia (un div normal, siempre presente)
+ * y el scrim es un hermano del contenido dentro de ella. Radix cuenta con este
+ * montaje: `DialogOverlayImpl` pasa `shards: [contentRef]` a RemoveScroll
+ * precisamente para que el contenido siga scrolleando cuando overlay y content
+ * son hermanos.
+ *
+ * La capa va `pointer-events-none` y solo el scrim y la tarjeta reciben el
+ * puntero: en modo no-modal la capa cubre el viewport entero y sin esto
+ * bloquearia los clics de una pagina que se supone viva. */
+const layer = cva("pointer-events-none fixed inset-0 z-50");
+
+/* Scrim compartido por modal y sheet. Va en absoluto contra la capa, no en
+ * `fixed`, para que acotar la capa (`overlayClassName="absolute"`) acote
+ * tambien el velo. */
 const scrim = cva([
-  "fixed inset-0 z-50 bg-[rgba(11,15,16,0.45)]",
+  "pointer-events-auto absolute inset-0 bg-[rgba(11,15,16,0.45)]",
   "transition-opacity duration-140 ease-out starting:opacity-0",
   "motion-reduce:transition-none",
 ]);
@@ -88,14 +108,15 @@ export const ModalClose = DialogPrimitive.Close;
 
 type PortalContainer = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Portal>["container"];
 
-export interface ModalContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+export interface ModalContentProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {
   /** Contenedor del portal. Por defecto `document.body`. */
   container?: PortalContainer;
   /**
-   * Clases del scrim. Sirve para acotarlo a una caja concreta
-   * (`overlayClassName="absolute"` dentro de un contenedor `relative`), que es
-   * lo que hace la demo del documento.
+   * Clases de la capa que aloja scrim y tarjeta. Sirve para acotarla a una caja
+   * concreta (`overlayClassName="absolute"` dentro de un contenedor
+   * `relative`), que es lo que hace la demo del documento.
    */
   overlayClassName?: string;
 }
@@ -114,16 +135,15 @@ export const ModalContent = React.forwardRef<HTMLDivElement, ModalContentProps>(
   function ModalContent({ className, overlayClassName, container, children, ...props }, ref) {
     return (
       <DialogPrimitive.Portal container={container}>
-        {/* La tarjeta va DENTRO del overlay para poder centrarla con flex sin
-            un wrapper extra. Radix sigue cerrando al pulsar fuera porque lo
-            detecta por pointerdown contra el contenido, no contra el overlay. */}
-        <DialogPrimitive.Overlay
-          className={cn(scrim(), "flex items-center justify-center p-6", overlayClassName)}
-        >
+        <div className={cn(layer(), "flex items-center justify-center p-6", overlayClassName)}>
+          {/* Hermano de la tarjeta, no su padre. Radix cierra igual al pulsar
+              aqui: lo detecta por pointerdown fuera del contenido, mire donde
+              mire el evento. */}
+          <DialogPrimitive.Overlay data-slot="modal-scrim" className={scrim()} />
           <DialogPrimitive.Content
             ref={ref}
             className={cn(
-              "relative flex w-[340px] max-w-full flex-col gap-2",
+              "pointer-events-auto relative flex w-[340px] max-w-full flex-col gap-2",
               // Si el cuerpo se pasa de largo la tarjeta scrollea; nunca se sale
               // de la pantalla. dvh y no vh por la barra del navegador movil.
               "max-h-[calc(100dvh-48px)] overflow-y-auto",
@@ -139,7 +159,7 @@ export const ModalContent = React.forwardRef<HTMLDivElement, ModalContentProps>(
           >
             {children}
           </DialogPrimitive.Content>
-        </DialogPrimitive.Overlay>
+        </div>
       </DialogPrimitive.Portal>
     );
   },
@@ -164,8 +184,7 @@ const modalIcon = cva(
 );
 
 export interface ModalIconProps
-  extends React.ComponentPropsWithoutRef<"div">,
-    VariantProps<typeof modalIcon> {}
+  extends React.ComponentPropsWithoutRef<"div">, VariantProps<typeof modalIcon> {}
 
 /**
  * Icono de estado, 44 de lado — OPCIONAL. Solo cuando el modal comunica el
@@ -178,7 +197,9 @@ export const ModalIcon = React.forwardRef<HTMLDivElement, ModalIconProps>(functi
   { className, tone, ...props },
   ref,
 ) {
-  return <div ref={ref} aria-hidden="true" className={cn(modalIcon({ tone }), className)} {...props} />;
+  return (
+    <div ref={ref} aria-hidden="true" className={cn(modalIcon({ tone }), className)} {...props} />
+  );
 });
 
 export type ModalTitleProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>;
@@ -187,17 +208,18 @@ export type ModalTitleProps = React.ComponentPropsWithoutRef<typeof DialogPrimit
  * Titulo — Funnel Display 19, UNA linea. Es el nombre accesible del dialogo,
  * asi que nunca se omite: si no cabe, se acorta el texto, no se quita.
  */
-export const ModalTitle = React.forwardRef<HTMLHeadingElement, ModalTitleProps>(
-  function ModalTitle({ className, ...props }, ref) {
-    return (
-      <DialogPrimitive.Title
-        ref={ref}
-        className={cn("font-display text-[19px] leading-snug font-semibold text-ink", className)}
-        {...props}
-      />
-    );
-  },
-);
+export const ModalTitle = React.forwardRef<HTMLHeadingElement, ModalTitleProps>(function ModalTitle(
+  { className, ...props },
+  ref,
+) {
+  return (
+    <DialogPrimitive.Title
+      ref={ref}
+      className={cn("font-display text-[19px] leading-snug font-semibold text-ink", className)}
+      {...props}
+    />
+  );
+});
 
 export type ModalDescriptionProps = React.ComponentPropsWithoutRef<
   typeof DialogPrimitive.Description
@@ -225,17 +247,18 @@ export type ModalFooterProps = React.ComponentPropsWithoutRef<"div">;
  * exacto del seguro y el error de pulsacion sale gratis; apilados, la salida
  * queda siempre debajo de la accion que confirma.
  */
-export const ModalFooter = React.forwardRef<HTMLDivElement, ModalFooterProps>(
-  function ModalFooter({ className, ...props }, ref) {
-    return <div ref={ref} className={cn("mt-3.5 flex flex-col gap-2", className)} {...props} />;
-  },
-);
+export const ModalFooter = React.forwardRef<HTMLDivElement, ModalFooterProps>(function ModalFooter(
+  { className, ...props },
+  ref,
+) {
+  return <div ref={ref} className={cn("mt-3.5 flex flex-col gap-2", className)} {...props} />;
+});
 
 const modalAction = cva(
   [
     "inline-flex w-full items-center justify-center gap-2",
     // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
-    "font-mono font-normal uppercase tracking-[0.02em] whitespace-nowrap",
+    "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
     "cursor-pointer rounded-lg text-sm transition-colors duration-140 ease-out select-none",
     // El offset del anillo es del color de la tarjeta, no de la pagina: sobre
     // el scrim un halo del color de la pagina se ve como un corte.
@@ -288,8 +311,7 @@ const modalAction = cva(
 );
 
 export interface ModalActionProps
-  extends React.ComponentPropsWithoutRef<"button">,
-    VariantProps<typeof modalAction> {}
+  extends React.ComponentPropsWithoutRef<"button">, VariantProps<typeof modalAction> {}
 
 /**
  * Boton del pie del modal.
@@ -330,9 +352,11 @@ export const BottomSheetTrigger = DialogPrimitive.Trigger;
 /** Cierra la bottom sheet. */
 export const BottomSheetClose = DialogPrimitive.Close;
 
-export interface BottomSheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+export interface BottomSheetContentProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {
   container?: PortalContainer;
+  /** Clases de la capa que aloja scrim y hoja. Ver `ModalContentProps`. */
   overlayClassName?: string;
   /** Pinta el grabber de 36x4. Ocultarlo tambien desactiva el gesto de arrastre. */
   showHandle?: boolean;
@@ -410,11 +434,12 @@ export const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetCo
 
     return (
       <DialogPrimitive.Portal container={container}>
-        <DialogPrimitive.Overlay className={cn(scrim(), overlayClassName)}>
+        <div className={cn(layer(), overlayClassName)}>
+          <DialogPrimitive.Overlay data-slot="modal-scrim" className={scrim()} />
           <DialogPrimitive.Content
             ref={ref}
             className={cn(
-              "absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col overflow-y-auto",
+              "pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col overflow-y-auto",
               "rounded-t-2xl bg-surface px-4 pt-2.5 text-ink outline-none",
               // Safe-area SUMADA al padding, no sustituyendolo: en un movil sin
               // gesto de home env() vale 0 y quedan los 20 del documento.
@@ -448,7 +473,7 @@ export const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetCo
             {children}
             <DialogPrimitive.Close ref={closeRef} hidden tabIndex={-1} aria-hidden="true" />
           </DialogPrimitive.Content>
-        </DialogPrimitive.Overlay>
+        </div>
       </DialogPrimitive.Portal>
     );
   },
@@ -504,8 +529,10 @@ export const BottomSheetList = React.forwardRef<HTMLDivElement, BottomSheetListP
 
 /* `title` se redefine como nodo: el atributo HTML del mismo nombre es un string
  * que ademas pinta un tooltip nativo. Se omite para poder aceptar JSX. */
-export interface BottomSheetItemProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "title"> {
+export interface BottomSheetItemProps extends Omit<
+  React.ComponentPropsWithoutRef<"button">,
+  "title"
+> {
   /** Avatar o icono de 38 a la izquierda. El glifo se dibuja a 19px. */
   icon?: React.ReactNode;
   /** Linea principal, Sans 14. */
@@ -528,10 +555,7 @@ export interface BottomSheetItemProps
  * — aqui va contenido real (un alias, un nombre), no un label de sistema.
  */
 export const BottomSheetItem = React.forwardRef<HTMLButtonElement, BottomSheetItemProps>(
-  function BottomSheetItem(
-    { className, icon, title, description, endIcon, type, ...props },
-    ref,
-  ) {
+  function BottomSheetItem({ className, icon, title, description, endIcon, type, ...props }, ref) {
     return (
       <button
         ref={ref}

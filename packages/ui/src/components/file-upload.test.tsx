@@ -86,7 +86,11 @@ describe("FileUpload", () => {
     const onFilesAccepted = vi.fn();
     const onFilesRejected = vi.fn();
     const { container } = render(
-      <FileUpload maxSize={10} onFilesAccepted={onFilesAccepted} onFilesRejected={onFilesRejected} />,
+      <FileUpload
+        maxSize={10}
+        onFilesAccepted={onFilesAccepted}
+        onFilesRejected={onFilesRejected}
+      />,
     );
 
     const pesado = pdf("foto.pdf", 40);
@@ -191,6 +195,48 @@ describe("FileUpload", () => {
     expect(screen.getByText("Adjunta un soporte")).toBeInTheDocument();
   });
 
+  it("compone los manejadores de arrastre del consumidor sin perder los propios", () => {
+    // El consumidor puede querer telemetria o un overlay propio durante el
+    // arrastre. Sus manejadores deben sumarse a los internos, nunca
+    // sustituirlos: si lo hicieran, la zona dejaria de aceptar archivos.
+    const onDragEnter = vi.fn();
+    const onDragOver = vi.fn();
+    const onDragLeave = vi.fn();
+    const onDrop = vi.fn();
+    const onFilesAccepted = vi.fn();
+
+    render(
+      <FileUpload
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onFilesAccepted={onFilesAccepted}
+      />,
+    );
+    const zone = screen.getByRole("button");
+
+    fireEvent.dragEnter(zone, { dataTransfer: dataTransfer([]) });
+    expect(onDragEnter).toHaveBeenCalledTimes(1);
+    expect(zone).toHaveAttribute("data-dragging", "true");
+
+    // fireEvent devuelve false cuando se llamo a preventDefault. Sin el en
+    // dragover el navegador NUNCA dispara drop.
+    expect(fireEvent.dragOver(zone, { dataTransfer: dataTransfer([]) })).toBe(false);
+    expect(onDragOver).toHaveBeenCalledTimes(1);
+
+    const file = pdf();
+    fireEvent.drop(zone, { dataTransfer: dataTransfer([file]) });
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onFilesAccepted).toHaveBeenCalledWith([file]);
+    expect(zone).not.toHaveAttribute("data-dragging");
+
+    fireEvent.dragEnter(zone, { dataTransfer: dataTransfer([]) });
+    fireEvent.dragLeave(zone);
+    expect(onDragLeave).toHaveBeenCalledTimes(1);
+    expect(zone).not.toHaveAttribute("data-dragging");
+  });
+
   it("permite sobreescribir estilos por className", () => {
     render(<FileUpload className="rounded-none" />);
     const cls = screen.getByRole("button").className;
@@ -284,9 +330,7 @@ describe("FileUploadItem", () => {
 
   it("reanudar solo aparece en pausa", async () => {
     const onResume = vi.fn();
-    row(
-      <FileUploadItem name="carta.docx" status="paused" value={40} onResume={onResume} />,
-    );
+    row(<FileUploadItem name="carta.docx" status="paused" value={40} onResume={onResume} />);
 
     await userEvent.click(screen.getByRole("button", { name: "Reanudar carta.docx" }));
     expect(onResume).toHaveBeenCalledTimes(1);
@@ -318,7 +362,11 @@ describe("FileUploadThumbnail", () => {
   it("la miniatura lista se puede quitar", async () => {
     const onRemove = vi.fn();
     render(
-      <FileUploadThumbnail src="/comprobante.png" alt="Comprobante de nomina" onRemove={onRemove} />,
+      <FileUploadThumbnail
+        src="/comprobante.png"
+        alt="Comprobante de nomina"
+        onRemove={onRemove}
+      />,
     );
 
     expect(screen.getByRole("img", { name: "Comprobante de nomina" })).toBeInTheDocument();
@@ -358,5 +406,38 @@ describe("FileTypeIcon", () => {
 
     rerender(<FileTypeIcon name="archivo.zip" />);
     expect(container.querySelector("text")).toBeNull();
+  });
+});
+
+describe("FileUpload · props del consumidor sobre los internos", () => {
+  // `{...props}` va delante de los atributos explicitos del <button> para que
+  // los manejadores de arrastre internos no se puedan anular por descuido. El
+  // precio es que TODO lo que se fije despues pisa al consumidor, asi que lo
+  // que si debe poder sobreescribirse se desestructura a proposito. Estos dos
+  // tests vigilan justo eso.
+
+  it("respeta el data-dragging del consumidor cuando no hay arrastre real", () => {
+    render(<FileUpload data-dragging="true" />);
+    expect(screen.getByRole("button")).toHaveAttribute("data-dragging", "true");
+  });
+
+  it("permite cambiar el type del boton", () => {
+    render(<FileUpload type="submit" />);
+    expect(screen.getByRole("button")).toHaveAttribute("type", "submit");
+  });
+
+  it("sigue componiendo los manejadores de arrastre, no sustituyendolos", () => {
+    const onDrop = vi.fn();
+    const onFilesAccepted = vi.fn();
+    render(<FileUpload onDrop={onDrop} onFilesAccepted={onFilesAccepted} />);
+
+    const zona = screen.getByRole("button");
+    fireEvent.drop(zona, {
+      dataTransfer: { files: [new File(["x"], "a.pdf", { type: "application/pdf" })] },
+    });
+
+    // El del consumidor se invoca Y el motor interno sigue funcionando.
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onFilesAccepted).toHaveBeenCalledTimes(1);
   });
 });

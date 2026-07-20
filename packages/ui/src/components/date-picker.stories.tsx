@@ -128,7 +128,7 @@ export const ConConfirmacion: Story = {
     docs: {
       description: {
         story:
-          "Es el modo del bloque movil — `CONFIRMAR · 12 JUN`. La accion queda apagada mientras la seleccion no esta completa; en rango eso significa hasta que hay fin.",
+          "Es el modo del bloque movil — `CONFIRMAR · 12 JUN`. La accion queda apagada mientras la seleccion no esta completa; en rango eso significa hasta que hay fin. El borrador solo vive dentro del panel: el disparador muestra siempre el valor confirmado, y cerrar sin aceptar (Escape o clic fuera) lo descarta.",
       },
     },
   },
@@ -208,7 +208,6 @@ export const Controlado: Story = {
   /* Sin `{...args}`: al fijar mode="range" aqui, el spread arrastraria tambien
    * la rama `single` de la union de props y TS no puede reconciliar las dos. */
   render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [rango, setRango] = React.useState<DateRange | null>({
       from: new Date(2026, 6, 8),
       to: new Date(2026, 6, 15),
@@ -264,7 +263,10 @@ export const MatrizDeCeldas: Story = {
         <thead>
           <tr>
             {["estado", "origen", "regla"].map((th) => (
-              <th key={th} className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <th
+                key={th}
+                className="font-meta text-[11px] tracking-[0.1em] text-ink-500 uppercase"
+              >
                 {th}
               </th>
             ))}

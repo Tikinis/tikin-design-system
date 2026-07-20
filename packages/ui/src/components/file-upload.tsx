@@ -274,7 +274,7 @@ export const FileTypeIcon = React.forwardRef<SVGSVGElement, FileTypeIconProps>(
 
 const dropzone = cva(
   [
-    "group relative cursor-pointer select-none text-left",
+    "group relative cursor-pointer text-left select-none",
     "transition-[border-color,background-color,box-shadow] duration-140 ease-out",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed",
@@ -298,7 +298,7 @@ const dropzone = cva(
           "flex h-control-l w-full items-center gap-2.5 rounded-lg py-0 pr-2 pl-4",
           "shadow-[inset_0_0_0_1px_var(--tk-border-2)]",
           "hover:not-disabled:shadow-[inset_0_0_0_1px_var(--tk-ink)]",
-          "data-[dragging=true]:shadow-[inset_0_0_0_1px_var(--tk-ink)] data-[dragging=true]:bg-surface-2",
+          "data-[dragging=true]:bg-surface-2 data-[dragging=true]:shadow-[inset_0_0_0_1px_var(--tk-ink)]",
           "disabled:bg-surface-2 disabled:shadow-[inset_0_0_0_1px_var(--tk-border)]",
         ],
       },
@@ -318,8 +318,14 @@ export interface FileRejection {
 }
 
 export interface FileUploadProps
-  extends Omit<React.ComponentPropsWithoutRef<"button">, "onChange" | "value">,
-    DropzoneVariants {
+  extends Omit<React.ComponentPropsWithoutRef<"button">, "onChange" | "value">, DropzoneVariants {
+  /**
+   * Fuerza el resalte de arrastre. Pensado para documentacion: durante un
+   * arrastre real el navegador no emite `:hover` sobre el destino, asi que el
+   * estado no se puede ver estatico de ninguna otra forma. Un arrastre en
+   * curso siempre manda sobre este valor.
+   */
+  "data-dragging"?: boolean | "true" | "false";
   /** Formatos admitidos, con la misma sintaxis que el atributo `accept`. */
   accept?: string;
   /** Permite seleccionar y soltar varios archivos a la vez. */
@@ -380,163 +386,193 @@ function matchesAccept(file: File, accept?: string): boolean {
  * la sube. Eso vive en el consumidor, que es quien sabe de reintentos y de
  * progreso real.
  */
-export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(
-  function FileUpload(
-    {
-      className,
-      variant = "dropzone",
-      accept,
-      multiple = false,
-      maxSize,
-      onFilesAccepted,
-      onFilesRejected,
-      label = (
-        <>
-          Arrastra un archivo o <span className="underline underline-offset-2">selecciona</span>
-        </>
-      ),
-      hint,
-      placeholder = "Adjunta un soporte…",
-      action = "Examinar",
-      disabled,
-      onClick,
-      children,
-      ...props
-    },
-    ref,
-  ) {
-    const localInput = React.useRef<HTMLInputElement>(null);
-    const [dragging, setDragging] = React.useState(false);
-
-    /* dragenter y dragleave burbujean tambien desde los hijos: al pasar el
-     * puntero del titulo a la pista el navegador emite leave+enter y el borde
-     * parpadearia. Se cuenta la profundidad y solo se apaga al llegar a cero. */
-    const dragDepth = React.useRef(0);
-
-    const emit = (list: FileList | File[] | null) => {
-      const incoming = list ? Array.from(list) : [];
-      if (incoming.length === 0) return;
-
-      const accepted: File[] = [];
-      const rejected: FileRejection[] = [];
-
-      for (const file of incoming) {
-        if (!matchesAccept(file, accept)) rejected.push({ file, reason: "type" });
-        else if (maxSize != null && file.size > maxSize) rejected.push({ file, reason: "size" });
-        else accepted.push(file);
-      }
-
-      // El input nativo ya limita a uno sin `multiple`, pero un drop puede
-      // traer diez. Sin este recorte el consumidor recibiria mas de los que
-      // pidio y tendria que volver a validarlo el mismo.
-      const kept = multiple ? accepted : accepted.slice(0, 1);
-
-      if (kept.length > 0) onFilesAccepted?.(kept);
-      if (rejected.length > 0) onFilesRejected?.(rejected);
-    };
-
-    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-      onClick?.(event);
-      if (disabled || event.defaultPrevented) return;
-      localInput.current?.click();
-    };
-
-    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      emit(event.target.files);
-      // Ver la nota del bloque de documentacion: permite repetir archivo.
-      event.target.value = "";
-    };
-
-    const handleDragOver = (event: React.DragEvent<HTMLButtonElement>) => {
-      if (disabled) return;
-      // Sin preventDefault en dragover el navegador NUNCA dispara drop.
-      event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
-    };
-
-    const carriesFiles = (event: React.DragEvent<HTMLButtonElement>) => {
-      const types = event.dataTransfer?.types;
-      // Si el navegador no declara tipos, se asume que si: mas vale resaltar de
-      // mas que dejar la zona muerta ante un origen que no los expone.
-      if (!types) return true;
-      return Array.from(types).includes("Files");
-    };
-
-    const handleDragEnter = (event: React.DragEvent<HTMLButtonElement>) => {
-      if (disabled || !carriesFiles(event)) return;
-      event.preventDefault();
-      dragDepth.current += 1;
-      setDragging(true);
-    };
-
-    const handleDragLeave = () => {
-      if (disabled) return;
-      dragDepth.current = Math.max(0, dragDepth.current - 1);
-      if (dragDepth.current === 0) setDragging(false);
-    };
-
-    const handleDrop = (event: React.DragEvent<HTMLButtonElement>) => {
-      if (disabled) return;
-      event.preventDefault();
-      dragDepth.current = 0;
-      setDragging(false);
-      emit(event.dataTransfer?.files ?? null);
-    };
-
-    return (
+export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(function FileUpload(
+  {
+    className,
+    variant = "dropzone",
+    accept,
+    multiple = false,
+    maxSize,
+    onFilesAccepted,
+    onFilesRejected,
+    label = (
       <>
-        {/* Fuera del <button> y fuera del arbol de accesibilidad: solo existe
+        Arrastra un archivo o <span className="underline underline-offset-2">selecciona</span>
+      </>
+    ),
+    hint,
+    placeholder = "Adjunta un soporte…",
+    action = "Examinar",
+    disabled,
+    onClick,
+    onDragEnter,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+    children,
+    // Se desestructuran para que el consumidor pueda seguir fijandolos pese a
+    // que `{...props}` va delante. Sin esto, los atributos explicitos del JSX
+    // los pisaban en silencio: `type` quedaba clavado en "button" y la story
+    // Arrastrando, que fuerza data-dragging para poder verlo estatico, dejaba
+    // de resaltar.
+    type,
+    "data-dragging": dataDragging,
+    ...props
+  },
+  ref,
+) {
+  const localInput = React.useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = React.useState(false);
+
+  /* dragenter y dragleave burbujean tambien desde los hijos: al pasar el
+   * puntero del titulo a la pista el navegador emite leave+enter y el borde
+   * parpadearia. Se cuenta la profundidad y solo se apaga al llegar a cero. */
+  const dragDepth = React.useRef(0);
+
+  const emit = (list: FileList | File[] | null) => {
+    const incoming = list ? Array.from(list) : [];
+    if (incoming.length === 0) return;
+
+    const accepted: File[] = [];
+    const rejected: FileRejection[] = [];
+
+    for (const file of incoming) {
+      if (!matchesAccept(file, accept)) rejected.push({ file, reason: "type" });
+      else if (maxSize != null && file.size > maxSize) rejected.push({ file, reason: "size" });
+      else accepted.push(file);
+    }
+
+    // El input nativo ya limita a uno sin `multiple`, pero un drop puede
+    // traer diez. Sin este recorte el consumidor recibiria mas de los que
+    // pidio y tendria que volver a validarlo el mismo.
+    const kept = multiple ? accepted : accepted.slice(0, 1);
+
+    if (kept.length > 0) onFilesAccepted?.(kept);
+    if (rejected.length > 0) onFilesRejected?.(rejected);
+  };
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    if (disabled || event.defaultPrevented) return;
+    localInput.current?.click();
+  };
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    emit(event.target.files);
+    // Ver la nota del bloque de documentacion: permite repetir archivo.
+    event.target.value = "";
+  };
+
+  /* Los cuatro manejadores de arrastre se COMPONEN con los del consumidor en
+   * vez de dejar que `{...props}` los pise. Antes iban solo en el JSX y el
+   * spread caia detras, asi que un `onDrop` de fuera sustituia al interno y la
+   * zona dejaba de aceptar archivos sin avisar.
+   *
+   * Se llama primero al del consumidor y DESPUES siempre al interno. A
+   * diferencia de `onClick`, aqui no se usa `defaultPrevented` como via de
+   * escape: en arrastrar y soltar `preventDefault()` significa "acepto el
+   * drop", es obligatorio en dragover, y muchos consumidores lo llaman por
+   * costumbre. Tomarlo como "cancela lo interno" romperia justo el caso
+   * normal. Quien quiera desactivar la zona tiene `disabled`. */
+  const handleDragOver = (event: React.DragEvent<HTMLButtonElement>) => {
+    onDragOver?.(event);
+    if (disabled) return;
+    // Sin preventDefault en dragover el navegador NUNCA dispara drop.
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  };
+
+  const carriesFiles = (event: React.DragEvent<HTMLButtonElement>) => {
+    const types = event.dataTransfer?.types;
+    // Si el navegador no declara tipos, se asume que si: mas vale resaltar de
+    // mas que dejar la zona muerta ante un origen que no los expone.
+    if (!types) return true;
+    return Array.from(types).includes("Files");
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLButtonElement>) => {
+    onDragEnter?.(event);
+    if (disabled || !carriesFiles(event)) return;
+    event.preventDefault();
+    dragDepth.current += 1;
+    setDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLButtonElement>) => {
+    onDragLeave?.(event);
+    if (disabled) return;
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLButtonElement>) => {
+    onDrop?.(event);
+    if (disabled) return;
+    event.preventDefault();
+    dragDepth.current = 0;
+    setDragging(false);
+    emit(event.dataTransfer?.files ?? null);
+  };
+
+  return (
+    <>
+      {/* Fuera del <button> y fuera del arbol de accesibilidad: solo existe
             para abrir el selector nativo del sistema. */}
-        <input
-          ref={localInput}
-          type="file"
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden="true"
-          accept={accept}
-          multiple={multiple}
-          disabled={disabled}
-          onChange={handleChange}
-        />
-        <button
-          ref={ref}
-          type="button"
-          className={cn(dropzone({ variant }), className)}
-          data-dragging={dragging || undefined}
-          disabled={disabled}
-          onClick={handleClick}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          {...props}
-        >
-          {children ??
-            (variant === "inline" ? (
-              <>
-                <PaperclipGlyph className="size-[18px] text-ink-600" />
-                <span className="min-w-0 flex-1 truncate text-sm text-ink-500">{placeholder}</span>
-                {/* Es un <span>, no un <button>: un boton dentro de otro es HTML
+      <input
+        ref={localInput}
+        type="file"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        accept={accept}
+        multiple={multiple}
+        disabled={disabled}
+        onChange={handleChange}
+      />
+      {/* `{...props}` va DELANTE de todo lo que el componente necesita
+            controlar. Asi, si mañana se añade otro manejador interno y alguien
+            olvida desestructurarlo, el consumidor lo complementa por
+            composicion explicita o no lo pisa; nunca lo anula en silencio. */}
+      <button
+        {...props}
+        ref={ref}
+        type={type ?? "button"}
+        className={cn(dropzone({ variant }), className)}
+        // El arrastre real manda; si no hay ninguno, vale lo que fije el
+        // consumidor (asi la documentacion puede congelar el estado).
+        data-dragging={dragging || dataDragging || undefined}
+        disabled={disabled}
+        onClick={handleClick}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {children ??
+          (variant === "inline" ? (
+            <>
+              <PaperclipGlyph className="size-[18px] text-ink-600" />
+              <span className="min-w-0 flex-1 truncate text-sm text-ink-500">{placeholder}</span>
+              {/* Es un <span>, no un <button>: un boton dentro de otro es HTML
                     invalido y ademas partiria la zona en dos paradas de
                     tabulador que hacen exactamente lo mismo. */}
-                <span className="inline-flex h-control-s shrink-0 items-center rounded-sm px-3.5 font-mono text-xs tracking-[0.02em] text-ink uppercase shadow-[inset_0_0_0_1px_var(--tk-ink)]">
-                  {action}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="flex size-[52px] items-center justify-center rounded-xl bg-surface text-ink shadow-xs">
-                  <UploadSimpleGlyph className="size-[26px]" />
-                </span>
-                <span className="font-display text-base font-medium text-ink">{label}</span>
-                {hint && <span className="font-mono text-xs text-ink-600">{hint}</span>}
-              </>
-            ))}
-        </button>
-      </>
-    );
-  },
-);
+              <span className="inline-flex h-control-s shrink-0 items-center rounded-sm px-3.5 font-mono text-xs tracking-[0.02em] text-ink uppercase shadow-[inset_0_0_0_1px_var(--tk-ink)]">
+                {action}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="flex size-[52px] items-center justify-center rounded-xl bg-surface text-ink shadow-xs">
+                <UploadSimpleGlyph className="size-[26px]" />
+              </span>
+              <span className="font-display text-base font-medium text-ink">{label}</span>
+              {hint && <span className="font-mono text-xs text-ink-600">{hint}</span>}
+            </>
+          ))}
+      </button>
+    </>
+  );
+});
 
 /* ---------------------------------------------------------------------------
  * Lista de archivos
@@ -567,22 +603,19 @@ export const FileUploadList = React.forwardRef<HTMLUListElement, FileUploadListP
 /** Los seis estados que dibuja el documento; `error` cubre peso y formato. */
 export type FileUploadStatus = "queued" | "uploading" | "paused" | "done" | "error";
 
-const fileRow = cva(
-  "flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left",
-  {
-    variants: {
-      status: {
-        queued: "border-edge",
-        uploading: "border-edge",
-        paused: "border-edge",
-        done: "border-edge",
-        // Ver decisiones (a) y (b) de la cabecera.
-        error: "border-red-soft bg-red-tint",
-      },
+const fileRow = cva("flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left", {
+  variants: {
+    status: {
+      queued: "border-edge",
+      uploading: "border-edge",
+      paused: "border-edge",
+      done: "border-edge",
+      // Ver decisiones (a) y (b) de la cabecera.
+      error: "border-red-soft bg-red-tint",
     },
-    defaultVariants: { status: "queued" },
   },
-);
+  defaultVariants: { status: "queued" },
+});
 
 const fileRowTile = cva("flex size-9 shrink-0 items-center justify-center rounded-sm", {
   variants: {
@@ -610,20 +643,23 @@ const fileRowMeta = cva("shrink-0 font-mono text-[11px]", {
   defaultVariants: { status: "queued" },
 });
 
-const fileRowBar = cva("h-full rounded-full transition-[width] duration-200 ease-linear motion-reduce:transition-none", {
-  variants: {
-    status: {
-      queued: "bg-ink",
-      uploading: "bg-ink",
-      // En pausa el relleno baja a gris: el documento lo pide para que una fila
-      // detenida no se confunda con una que avanza.
-      paused: "bg-ink-500",
-      done: "bg-ink",
-      error: "bg-ink",
+const fileRowBar = cva(
+  "h-full rounded-full transition-[width] duration-200 ease-linear motion-reduce:transition-none",
+  {
+    variants: {
+      status: {
+        queued: "bg-ink",
+        uploading: "bg-ink",
+        // En pausa el relleno baja a gris: el documento lo pide para que una fila
+        // detenida no se confunda con una que avanza.
+        paused: "bg-ink-500",
+        done: "bg-ink",
+        error: "bg-ink",
+      },
     },
+    defaultVariants: { status: "uploading" },
   },
-  defaultVariants: { status: "uploading" },
-});
+);
 
 /* Boton de icono de la fila. 24 de lado para llegar al area tactil minima sin
    engordar la fila, que mide 60 en total. */
@@ -647,8 +683,10 @@ const rowIconButton = cva(
 
 /* Se omite `value` de los props de <li>: ahi es el numero de orden de la lista
  * (un entero), y aqui es el porcentaje de la barra, que ademas admite null. */
-export interface FileUploadItemProps
-  extends Omit<React.ComponentPropsWithoutRef<"li">, "children" | "value"> {
+export interface FileUploadItemProps extends Omit<
+  React.ComponentPropsWithoutRef<"li">,
+  "children" | "value"
+> {
   /** Nombre del archivo. De el sale tambien el glifo del formato. */
   name: string;
   /** Estado de la subida. */
@@ -706,12 +744,7 @@ export const FileUploadItem = React.forwardRef<HTMLLIElement, FileUploadItemProp
     const metaNode = meta ?? (showBar ? `${Math.round(percent)}%` : null);
 
     return (
-      <li
-        ref={ref}
-        data-status={status}
-        className={cn(fileRow({ status }), className)}
-        {...props}
-      >
+      <li ref={ref} data-status={status} className={cn(fileRow({ status }), className)} {...props}>
         <span className={fileRowTile({ status })}>
           {status === "error" ? (
             <FileXGlyph className="size-[19px]" />
@@ -804,8 +837,10 @@ const thumbnail = cva("relative size-[88px] shrink-0 overflow-hidden rounded-lg"
   defaultVariants: { state: "ready" },
 });
 
-export interface FileUploadThumbnailProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "children"> {
+export interface FileUploadThumbnailProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "children"
+> {
   /** `ready` muestra la imagen, `uploading` el spinner, `add` el tile de "+". */
   state?: "ready" | "uploading" | "add";
   /** Origen de la imagen. Solo en `state="ready"`. */
@@ -863,7 +898,11 @@ export const FileUploadThumbnail = React.forwardRef<HTMLElement, FileUploadThumb
     }
 
     return (
-      <div ref={ref as React.Ref<HTMLDivElement>} className={cn(thumbnail({ state }), className)} {...props}>
+      <div
+        ref={ref as React.Ref<HTMLDivElement>}
+        className={cn(thumbnail({ state }), className)}
+        {...props}
+      >
         {state === "uploading" ? (
           <span
             // El estado ya lo anuncia el consumidor en su lista; aqui el

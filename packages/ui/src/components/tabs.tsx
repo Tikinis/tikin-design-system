@@ -68,7 +68,7 @@ const tabsTrigger = cva(
   [
     "relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
     // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
-    "font-mono font-normal uppercase tracking-[0.02em]",
+    "font-mono font-normal tracking-[0.02em] uppercase",
     "cursor-pointer transition-colors duration-140 ease-out select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2",
     "disabled:cursor-not-allowed disabled:text-ink-400",
@@ -138,7 +138,8 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(function Tabs(
 });
 
 export interface TabsListProps
-  extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>,
+  extends
+    React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>,
     VariantProps<typeof tabsList> {}
 
 /** Riel que agrupa las pestañas. Toma la variante de la raiz. */
@@ -157,7 +158,8 @@ export const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(function
 });
 
 export interface TabsTriggerProps
-  extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>,
+  extends
+    React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>,
     VariantProps<typeof tabsTrigger> {
   /** Icono antes del label, a 16px. En el segmentado del archivo va con gap 6. */
   startIcon?: React.ReactNode;
@@ -205,7 +207,7 @@ export const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(fu
     <TabsPrimitive.Content
       ref={ref}
       className={cn(
-        "text-ink-800 text-sm leading-[1.55]",
+        "text-sm leading-[1.55] text-ink-800",
         "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
         className,
       )}
@@ -221,8 +223,10 @@ export const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(fu
  * apuntamos ahi, y si no, se quita el atributo. */
 const SegmentedControlsContext = React.createContext<string | undefined>(undefined);
 
-export interface SegmentedControlProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "defaultValue" | "onChange" | "dir"> {
+export interface SegmentedControlProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "defaultValue" | "onChange" | "dir"
+> {
   /** Valor seleccionado (modo controlado). */
   value?: string;
   /** Valor inicial (modo no controlado). */

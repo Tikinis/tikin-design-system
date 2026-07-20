@@ -19,6 +19,104 @@ import {
  * abrir/cerrar, Escape, click fuera, foco de vuelta al trigger, y la regla de
  * que el group siempre tiene exactamente una opcion activa. */
 
+/* ------------------------------------------------------------------------- */
+/* Mini-cascada                                                               */
+/* ------------------------------------------------------------------------- */
+
+/* jsdom no aplica CSS, asi que para comprobar QUE UTILIDAD GANA hay que
+ * modelar la cascada a mano. No es comprobar que una clase esta presente —eso
+ * si seria tautologico—, es comprobar cual de las que estan presentes pinta:
+ * una utilidad solo entra si TODOS sus modificadores casan con el estado, y
+ * entre las que entran gana la de mayor especificidad (1 punto por la clase
+ * mas 1 por cada modificador, que son todos pseudoclases o atributos), con el
+ * orden en la hoja como desempate.
+ *
+ * Sirve para el fallo que motiva estos tests: un hover generico de la base
+ * (0,3,0) le gana al data-[state=open] (0,2,0) y devuelve el fondo a claro
+ * mientras el texto se queda en surface. */
+interface Estado {
+  hover?: boolean;
+  active?: boolean;
+  /** data-state=open del trigger o data-state=on del segmento. */
+  on?: boolean;
+  disabled?: boolean;
+}
+
+function partirClase(clase: string): string[] {
+  // Los `:` de dentro de un [] no separan modificadores.
+  const partes: string[] = [];
+  let actual = "";
+  let profundidad = 0;
+  for (const ch of clase) {
+    if (ch === "[") profundidad += 1;
+    else if (ch === "]") profundidad -= 1;
+    if (ch === ":" && profundidad === 0) {
+      partes.push(actual);
+      actual = "";
+    } else {
+      actual += ch;
+    }
+  }
+  partes.push(actual);
+  return partes;
+}
+
+function casaModificador(modificador: string, estado: Estado): boolean | undefined {
+  switch (modificador) {
+    case "hover":
+      return Boolean(estado.hover);
+    case "active":
+      return Boolean(estado.active);
+    case "disabled":
+      return Boolean(estado.disabled);
+    case "not-disabled":
+      return !estado.disabled;
+    case "data-[state=open]":
+    case "data-[state=on]":
+      return Boolean(estado.on);
+    case "not-data-[state=open]":
+    case "not-data-[state=on]":
+      return !estado.on;
+    default:
+      // Modificador que no modelamos (focus-visible, first, group-*...).
+      return undefined;
+  }
+}
+
+/** Utilidad que acaba pintando `propiedad` con el estado dado, o undefined. */
+function utilidadGanadora(
+  className: string,
+  propiedad: RegExp,
+  estado: Estado,
+): string | undefined {
+  let ganadora: string | undefined;
+  let mejorEspecificidad = -1;
+
+  className
+    .split(/\s+/)
+    .filter(Boolean)
+    .forEach((clase) => {
+      const partes = partirClase(clase);
+      const utilidad = partes.pop();
+      if (!utilidad || !propiedad.test(utilidad)) return;
+      // Si alguno de los modificadores no casa —o no sabemos modelarlo— la
+      // regla no pinta en este estado.
+      if (partes.some((m) => casaModificador(m, estado) !== true)) return;
+      // Empate de especificidad: gana la ultima, como en la hoja de estilos.
+      const especificidad = 1 + partes.length;
+      if (especificidad >= mejorEspecificidad) {
+        mejorEspecificidad = especificidad;
+        ganadora = utilidad;
+      }
+    });
+
+  return ganadora;
+}
+
+const FONDO = /^bg-/;
+// Solo colores de texto: `text-sm` o `text-[13px]` son tamaño, no color.
+const COLOR_TEXTO = /^text-(?:ink|surface|edge|fg-|tint-)/;
+
 beforeAll(() => {
   // El posicionador de Radix (floating-ui) observa el tamaño del panel. jsdom
   // no trae ResizeObserver, asi que lo stubeamos con un doble inerte: aqui no
@@ -292,5 +390,61 @@ describe("ButtonGroup", () => {
   it("no pone los labels en mayusculas en JS", () => {
     render(<Group />);
     expect(screen.getByRole("radio", { name: "Semana" })).toHaveTextContent("Semana");
+  });
+});
+
+describe("contraste del estado invertido bajo el puntero", () => {
+  /* El estado open/activa se pinta invertido —fondo tinta, texto superficie— y
+   * el hover generico solo describe el fondo. Si ese hover llega a ganarle al
+   * estado, el fondo vuelve a claro y el texto se queda en superficie: texto
+   * casi blanco sobre casi blanco. El fondo y el color de texto tienen que
+   * moverse SIEMPRE juntos. */
+
+  it("el trigger abierto sigue invertido con el puntero encima y pulsado", () => {
+    render(<Menu />);
+    const cls = screen.getByRole("button", { name: /acciones/i }).className;
+
+    for (const estado of [
+      { on: true },
+      { on: true, hover: true },
+      { on: true, hover: true, active: true },
+    ]) {
+      expect(utilidadGanadora(cls, FONDO, estado)).toMatch(/^bg-ink/);
+      expect(utilidadGanadora(cls, COLOR_TEXTO, estado)).toBe("text-surface");
+    }
+  });
+
+  it("el trigger cerrado conserva su hover claro", () => {
+    render(<Menu />);
+    const cls = screen.getByRole("button", { name: /acciones/i }).className;
+
+    expect(utilidadGanadora(cls, FONDO, { hover: true })).toBe("bg-surface-2");
+    expect(utilidadGanadora(cls, FONDO, { active: true })).toBe("bg-edge");
+    expect(utilidadGanadora(cls, COLOR_TEXTO, { hover: true })).toBe("text-ink");
+    // Deshabilitado manda sobre todo lo demas, tambien bajo el puntero.
+    expect(utilidadGanadora(cls, FONDO, { hover: true, disabled: true })).toBe("bg-edge");
+  });
+
+  it("el segmento activo del group sigue invertido con el puntero encima", () => {
+    render(
+      <ButtonGroup defaultValue="dia" aria-label="Rango">
+        <ButtonGroupItem value="dia">Día</ButtonGroupItem>
+        <ButtonGroupItem value="semana">Semana</ButtonGroupItem>
+      </ButtonGroup>,
+    );
+    const cls = screen.getByRole("radio", { name: "Día" }).className;
+
+    for (const estado of [
+      { on: true },
+      { on: true, hover: true },
+      { on: true, hover: true, active: true },
+    ]) {
+      expect(utilidadGanadora(cls, FONDO, estado)).toMatch(/^bg-ink/);
+      expect(utilidadGanadora(cls, COLOR_TEXTO, estado)).toBe("text-surface");
+    }
+
+    // El inactivo mantiene el hover de la matriz de estados: superficie 2.
+    expect(utilidadGanadora(cls, FONDO, { hover: true })).toBe("bg-surface-2");
+    expect(utilidadGanadora(cls, COLOR_TEXTO, { hover: true })).toBe("text-ink");
   });
 });

@@ -1,343 +1,445 @@
 // figma node: 2:13 Toggle (16 variants)
 const __venc = (v) => String(v).replace(/[%|=]/g, encodeURIComponent);
-const __vkey = (p) => "state=" + __venc(p.state) + '|' + "size=" + __venc(p.size) + '|' + "active=" + __venc(p.active);
+const __vkey = (p) =>
+  "state=" + __venc(p.state) + "|" + "size=" + __venc(p.size) + "|" + "active=" + __venc(p.active);
 
 export function Toggle(_p = {}) {
-  const props = { ..._p, state: _p.state ?? "default", size: _p.size ?? "l", active: _p.active ?? "on" };
+  const props = {
+    ..._p,
+    state: _p.state ?? "default",
+    size: _p.size ?? "l",
+    active: _p.active ?? "on",
+  };
   const __body0 = () => (
-    <div className={props.className} style={{
-      width: 42,
-      height: "calc(var(--numbers-tailwind-24) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 42,
-        height: 24,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-on)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-on), 0 0 0 0.250px var(--toggle-track-stroke-on)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 20,
-        top: 2,
-        width: 20,
-        height: 20,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-on)",
-      }} />
+        height: "calc(var(--numbers-tailwind-24) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 42,
+          height: 24,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-on)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-on), 0 0 0 0.250px var(--toggle-track-stroke-on)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 20,
+          top: 2,
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-on)",
+        }}
+      />
     </div>
   );
   const __body1 = () => (
-    <div className={props.className} style={{
-      width: 29,
-      height: "calc(var(--numbers-tailwind-16) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 29,
-        height: 16,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-off)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-off), 0 0 0 0.250px var(--toggle-track-stroke-off)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 1,
-        top: 1,
-        width: 14,
-        height: 14,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-off)",
-      }} />
+        height: "calc(var(--numbers-tailwind-16) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 29,
+          height: 16,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-off)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-off), 0 0 0 0.250px var(--toggle-track-stroke-off)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 1,
+          top: 1,
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-off)",
+        }}
+      />
     </div>
   );
   const __body2 = () => (
-    <div className={props.className} style={{
-      width: 29,
-      height: "calc(var(--numbers-tailwind-16) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 29,
-        height: 16,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-disabled)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 1,
-        top: 1,
-        width: 14,
-        height: 14,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-disabled)",
-      }} />
+        height: "calc(var(--numbers-tailwind-16) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 29,
+          height: 16,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-disabled)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 1,
+          top: 1,
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-disabled)",
+        }}
+      />
     </div>
   );
   const __body3 = () => (
-    <div className={props.className} style={{
-      width: 34,
-      height: "calc(var(--numbers-tailwind-20) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 34,
-        height: 20,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-off)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-off), 0 0 0 0.250px var(--toggle-track-stroke-off)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 2,
-        top: 2,
-        width: 16,
-        height: 16,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-off)",
-      }} />
+        height: "calc(var(--numbers-tailwind-20) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 34,
+          height: 20,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-off)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-off), 0 0 0 0.250px var(--toggle-track-stroke-off)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 2,
+          top: 2,
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-off)",
+        }}
+      />
     </div>
   );
   const __body4 = () => (
-    <div className={props.className} style={{
-      width: 34,
-      height: "calc(var(--numbers-tailwind-20) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 34,
-        height: 20,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-disabled)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 2,
-        top: 2,
-        width: 16,
-        height: 16,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-disabled)",
-      }} />
+        height: "calc(var(--numbers-tailwind-20) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 34,
+          height: 20,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-disabled)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 2,
+          top: 2,
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-disabled)",
+        }}
+      />
     </div>
   );
   const __body5 = () => (
-    <div className={props.className} style={{
-      width: 34,
-      height: "calc(var(--numbers-tailwind-20) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 34,
-        height: 20,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-on)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-on), 0 0 0 0.250px var(--toggle-track-stroke-on)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 16,
-        top: 2,
-        width: 16,
-        height: 16,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-on)",
-      }} />
+        height: "calc(var(--numbers-tailwind-20) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 34,
+          height: 20,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-on)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-on), 0 0 0 0.250px var(--toggle-track-stroke-on)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 16,
+          top: 2,
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-on)",
+        }}
+      />
     </div>
   );
   const __body6 = () => (
-    <div className={props.className} style={{
-      width: 34,
-      height: "calc(var(--numbers-tailwind-20) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 34,
-        height: 20,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-disabled)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 16,
-        top: 2,
-        width: 16,
-        height: 16,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-disabled)",
-      }} />
+        height: "calc(var(--numbers-tailwind-20) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 34,
+          height: 20,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-disabled)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 16,
+          top: 2,
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-disabled)",
+        }}
+      />
     </div>
   );
   const __body7 = () => (
-    <div className={props.className} style={{
-      width: 42,
-      height: "calc(var(--numbers-tailwind-24) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 42,
-        height: 24,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-off)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-off), 0 0 0 0.250px var(--toggle-track-stroke-off)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 2,
-        top: 2,
-        width: 20,
-        height: 20,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-off)",
-      }} />
+        height: "calc(var(--numbers-tailwind-24) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 42,
+          height: 24,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-off)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-off), 0 0 0 0.250px var(--toggle-track-stroke-off)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 2,
+          top: 2,
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-off)",
+        }}
+      />
     </div>
   );
   const __body8 = () => (
-    <div className={props.className} style={{
-      width: 42,
-      height: "calc(var(--numbers-tailwind-24) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 42,
-        height: 24,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-disabled)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 2,
-        top: 2,
-        width: 20,
-        height: 20,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-disabled)",
-      }} />
+        height: "calc(var(--numbers-tailwind-24) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 42,
+          height: 24,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-disabled)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 2,
+          top: 2,
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-disabled)",
+        }}
+      />
     </div>
   );
   const __body9 = () => (
-    <div className={props.className} style={{
-      width: 42,
-      height: "calc(var(--numbers-tailwind-24) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 42,
-        height: 24,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-disabled)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 20,
-        top: 2,
-        width: 20,
-        height: 20,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-disabled)",
-      }} />
+        height: "calc(var(--numbers-tailwind-24) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 42,
+          height: 24,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-disabled)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 20,
+          top: 2,
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-disabled)",
+        }}
+      />
     </div>
   );
   const __body10 = () => (
-    <div className={props.className} style={{
-      width: 29,
-      height: "calc(var(--numbers-tailwind-16) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 29,
-        height: 16,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-on)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-on), 0 0 0 0.250px var(--toggle-track-stroke-on)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 14,
-        top: 1,
-        width: 14,
-        height: 14,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-on)",
-      }} />
+        height: "calc(var(--numbers-tailwind-16) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 29,
+          height: 16,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-on)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-on), 0 0 0 0.250px var(--toggle-track-stroke-on)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 14,
+          top: 1,
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-on)",
+        }}
+      />
     </div>
   );
   const __body11 = () => (
-    <div className={props.className} style={{
-      width: 29,
-      height: "calc(var(--numbers-tailwind-16) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <div style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
+    <div
+      className={props.className}
+      style={{
         width: 29,
-        height: 16,
-        borderRadius: 16,
-        backgroundColor: "var(--toggle-track-bg-disabled)",
-        boxShadow: "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: 14,
-        top: 1,
-        width: 14,
-        height: 14,
-        borderRadius: "50%",
-        backgroundColor: "var(--toggle-thumb-bg-disabled)",
-      }} />
+        height: "calc(var(--numbers-tailwind-16) * 1px)",
+        position: "relative",
+        ...props.style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 29,
+          height: 16,
+          borderRadius: 16,
+          backgroundColor: "var(--toggle-track-bg-disabled)",
+          boxShadow:
+            "inset 0 0 0 0.250px var(--toggle-track-stroke-disabled), 0 0 0 0.250px var(--toggle-track-stroke-disabled)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 14,
+          top: 1,
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          backgroundColor: "var(--toggle-thumb-bg-disabled)",
+        }}
+      />
     </div>
   );
   const __impls = {

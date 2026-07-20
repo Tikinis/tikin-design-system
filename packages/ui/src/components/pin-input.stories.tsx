@@ -21,7 +21,7 @@ const meta = {
           "2. **Se valida solo**, sin botón de confirmar — eso es `onComplete`, que se dispara al llenar el último punto.",
           "3. **Error = shake.** Los puntos pasan a rojo, la fila se agita y la clave se limpia sola para reintentar.",
           "",
-          "Bajo los puntos hay un campo invisible pero enfocable. No es un adorno: es lo que hace funcionar el teclado físico, el pegado, el autorrelleno del código y el lector de pantalla. Con `keypad` activo lleva `inputMode=\"none\"` para que el teclado del sistema no tape al teclado propio.",
+          'Bajo los puntos hay un campo invisible pero enfocable. No es un adorno: es lo que hace funcionar el teclado físico, el pegado, el autorrelleno del código y el lector de pantalla. Con `keypad` activo lleva `inputMode="none"` para que el teclado del sistema no tape al teclado propio.',
         ].join("\n"),
       },
     },
@@ -70,7 +70,7 @@ export const ClaveIncorrecta: Story = {
     docs: {
       description: {
         story:
-          "Aquí `clearOnError` va en `false` para poder ver el estado quieto. En producto se deja en su valor por defecto: el componente limpia la clave al terminar la animación, porque el consumidor sabe que falló pero no cuándo acaba el shake.",
+          "Aquí `clearOnError` va en `false` para poder ver el estado quieto. En producto se deja en su valor por defecto: el componente limpia la clave al terminar la animación, porque el consumidor sabe que falló pero no cuándo acaba el shake. El shake y la limpieza responden a la **transición** a `error`: devuelve `feedback` a `default` al empezar un intento nuevo para que vuelvan a dispararse. No se cuentan los intentos a propósito — el contador subiría al llenar el último punto, no al conocer el resultado, y con validación asíncrona eso borraría un PIN correcto antes de validarlo. Mientras el estado sea `error`, teclear con la clave llena empieza un intento nuevo en lugar de ignorarse.",
       },
     },
   },

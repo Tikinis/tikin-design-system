@@ -70,8 +70,23 @@ const toggleTrack = cva(
     // sobre por que el borde va como sombra inset de 1px y no como `border`:
     // un border real comeria 2px de la altura y descuadraria el thumb.
     "bg-[var(--toggle-track-bg-off)] shadow-[inset_0_0_0_1px_var(--toggle-track-stroke-off)]",
+    /* `[data-state=checked]` y `[data-disabled]` pesan lo mismo (0,2,0), y
+       Tailwind ordena sus variantes por su cuenta: emite `data-[disabled]`
+       ANTES que `data-[state=checked]`, se escriban en el orden que se
+       escriban. A igualdad de peso gana la ultima, asi que un toggle
+       deshabilitado Y encendido se pintaba con los tokens de ON.
+
+       El desempate se resuelve SUBIENDO el peso de deshabilitado —el atributo
+       repetido da (0,3,0)— en vez de bajando el de encendido con un
+       `not-data-[disabled]`. Las dos formas arreglan el bug, pero la segunda
+       tiene un coste que esta no tiene: dejaria el encendido en (0,3,0) y un
+       consumidor que pasara `className="data-[state=checked]:bg-…"` (0,2,0) ya
+       no podria repintarlo, porque tailwind-merge tampoco ve el conflicto al
+       diferir el juego de modificadores. Asi, encendido se queda en (0,2,0),
+       empata con lo que escriba el consumidor y tailwind-merge se queda con lo
+       suyo. Ver el test de sobreescritura por className. */
     "data-[state=checked]:bg-[var(--toggle-track-bg-on)] data-[state=checked]:shadow-[inset_0_0_0_1px_var(--toggle-track-stroke-on)]",
-    "data-[disabled]:cursor-not-allowed data-[disabled]:bg-[var(--toggle-track-bg-disabled)] data-[disabled]:shadow-[inset_0_0_0_1px_var(--toggle-track-stroke-disabled)]",
+    "data-[disabled]:cursor-not-allowed data-[disabled]:data-[disabled]:bg-[var(--toggle-track-bg-disabled)] data-[disabled]:data-[disabled]:shadow-[inset_0_0_0_1px_var(--toggle-track-stroke-disabled)]",
     /* El tamaño S mide 16px de alto: por debajo del minimo de area tactil. El
      * pseudo-elemento agranda la zona pulsable sin tocar el layout ni la caja
      * visible. El margen horizontal se queda en 4px para no invadir el texto de
@@ -96,8 +111,11 @@ const toggleThumb = cva(
   [
     "pointer-events-none block rounded-full",
     "bg-[var(--toggle-thumb-bg-off)]",
+    // Mismo empate de especificidad que en el track, misma solucion: el color de
+    // ON solo se aplica si el interruptor no esta deshabilitado. Radix propaga
+    // data-disabled tambien al thumb, asi que el selector casa.
     "data-[state=checked]:bg-[var(--toggle-thumb-bg-on)]",
-    "data-[disabled]:bg-[var(--toggle-thumb-bg-disabled)]",
+    "data-[disabled]:data-[disabled]:bg-[var(--toggle-thumb-bg-disabled)]",
     /* El documento pide un muelle (stiffness 680). CSS no tiene springs, asi
      * que se aproxima con una curva de rebote corto. El sobreimpulso maximo de
      * esta curva ronda el 10% del recorrido — 1.8px en L — y el thumb tiene 2px
@@ -117,8 +135,7 @@ const toggleThumb = cva(
 type ToggleVariants = VariantProps<typeof toggleTrack>;
 
 export interface ToggleProps
-  extends React.ComponentPropsWithoutRef<typeof Switch.Root>,
-    ToggleVariants {
+  extends React.ComponentPropsWithoutRef<typeof Switch.Root>, ToggleVariants {
   /** Clases para el thumb. El track se estiliza con `className`. */
   thumbClassName?: string;
 }
@@ -134,16 +151,15 @@ export interface ToggleProps
  * Necesita SIEMPRE un nombre accesible: `aria-label` si va suelto, o
  * `aria-labelledby` apuntando al texto de la fila. `SwitchField` ya lo cablea.
  */
-export const Toggle = React.forwardRef<
-  React.ComponentRef<typeof Switch.Root>,
-  ToggleProps
->(function Toggle({ className, thumbClassName, size, ...props }, ref) {
-  return (
-    <Switch.Root ref={ref} className={cn(toggleTrack({ size, className }))} {...props}>
-      <Switch.Thumb className={cn(toggleThumb({ size }), thumbClassName)} />
-    </Switch.Root>
-  );
-});
+export const Toggle = React.forwardRef<React.ComponentRef<typeof Switch.Root>, ToggleProps>(
+  function Toggle({ className, thumbClassName, size, ...props }, ref) {
+    return (
+      <Switch.Root ref={ref} className={cn(toggleTrack({ size, className }))} {...props}>
+        <Switch.Thumb className={cn(toggleThumb({ size }), thumbClassName)} />
+      </Switch.Root>
+    );
+  },
+);
 
 /* ------------------------------------------------------------------------- */
 
@@ -185,10 +201,7 @@ export interface SwitchFieldProps extends ToggleProps {
 export const SwitchField = React.forwardRef<
   React.ComponentRef<typeof Switch.Root>,
   SwitchFieldProps
->(function SwitchField(
-  { title, description, size, rowClassName, className, id, ...props },
-  ref,
-) {
+>(function SwitchField({ title, description, size, rowClassName, className, id, ...props }, ref) {
   const generatedId = React.useId();
   const baseId = id ?? generatedId;
   const titleId = `${baseId}-title`;

@@ -1,599 +1,716 @@
 // figma node: 2:5085 Chip (16 variants)
 const __venc = (v) => String(v).replace(/[%|=]/g, encodeURIComponent);
-const __vkey = (p) => "size=" + __venc(p.size) + '|' + "feedback=" + __venc(p.feedback);
+const __vkey = (p) => "size=" + __venc(p.size) + "|" + "feedback=" + __venc(p.feedback);
 
 export function Chip(_p = {}) {
-  const props = { ..._p, label: _p.label ?? "Label", size: _p.size ?? "s", feedback: _p.feedback ?? "info" };
+  const props = {
+    ..._p,
+    label: _p.label ?? "Label",
+    size: _p.size ?? "s",
+    feedback: _p.feedback ?? "info",
+  };
   const __body0 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 26,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-info)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 26,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-info)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-info)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-info)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body1 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 22,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-info)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 22,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-info)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-info)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-info)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body2 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 20,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-success)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 20,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-success)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-success)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-success)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body3 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 20,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-error)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 20,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-error)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-error)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-error)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body4 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 20,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-info)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 20,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-info)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-info)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-info)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body5 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 20,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-warning)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 20,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-warning)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--dropdown-option-corner-s) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-warning)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-xs) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-warning)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body6 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 22,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-success)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 22,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-success)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-success)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-success)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body7 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 22,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-error)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 22,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-error)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-error)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-error)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body8 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 22,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-warning)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "4px 8px 4px 8px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
-      paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 22,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-warning)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "4px 8px 4px 8px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingTop: "calc(var(--numbers-tailwind-4) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-8) * 1px)",
+        paddingBottom: "calc(var(--numbers-tailwind-4) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-s) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-warning)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-s) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-warning)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body9 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 26,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-success)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 26,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-success)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-success)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-success)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body10 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 26,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-error)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 26,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-error)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-error)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-error)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body11 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 26,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-warning)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 26,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-warning)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-m) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-warning)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-m) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-warning)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body12 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 28,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-success)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 28,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-success)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-success)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-success)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body13 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 28,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-error)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 28,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-error)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-error)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-error)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body14 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 28,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-info)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 28,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-info)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-info)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-info)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __body15 = () => (
-    <div className={props.className} style={{
-      width: "fit-content",
-      height: 28,
-      borderRadius: 100,
-      backgroundColor: "var(--chip-bg-warning)",
-      display: "flex",
-      flexDirection: "row",
-      padding: "6px 12px 6px 12px",
-      justifyContent: "center",
-      alignItems: "center",
-      flexWrap: "nowrap",
-      boxSizing: "border-box",
-      gap: "calc(var(--numbers-tailwind-0) * 1px)",
-      paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
-      paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
-      paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
-      position: "relative",
-      ...props.style,
-    }}>
-      <span style={{
+    <div
+      className={props.className}
+      style={{
+        width: "fit-content",
+        height: 28,
+        borderRadius: 100,
+        backgroundColor: "var(--chip-bg-warning)",
+        display: "flex",
+        flexDirection: "row",
+        padding: "6px 12px 6px 12px",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        boxSizing: "border-box",
+        gap: "calc(var(--numbers-tailwind-0) * 1px)",
+        paddingLeft: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingTop: "calc(var(--numbers-uniques-6) * 1px)",
+        paddingRight: "calc(var(--numbers-tailwind-12) * 1px)",
+        paddingBottom: "calc(var(--numbers-uniques-6) * 1px)",
         position: "relative",
-        fontFamily: "\"Ubuntu Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
-        fontWeight: 400,
-        fontSize: "calc(var(--chip-typo-size-l) * 1px)",
-        textAlign: "center",
-        whiteSpace: "nowrap",
-        lineHeight: 1,
-        letterSpacing: "0.050em",
-        color: "var(--chip-text-warning)",
-        textTransform: "uppercase",
-        flexShrink: 0,
-        alignSelf: "stretch",
-      }}>{props.label}</span>
+        ...props.style,
+      }}
+    >
+      <span
+        style={{
+          position: "relative",
+          fontFamily: '"Ubuntu Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontWeight: 400,
+          fontSize: "calc(var(--chip-typo-size-l) * 1px)",
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          letterSpacing: "0.050em",
+          color: "var(--chip-text-warning)",
+          textTransform: "uppercase",
+          flexShrink: 0,
+          alignSelf: "stretch",
+        }}
+      >
+        {props.label}
+      </span>
     </div>
   );
   const __impls = {

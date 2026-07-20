@@ -15,7 +15,7 @@ const meta: Meta<typeof Progress> = {
           "",
           "Dos reglas de uso mandan sobre la API:",
           "",
-          "- **Tinta vs lima** — el progreso de una tarea va en tinta (`tone=\"ink\"`); el avance hacia una meta de ahorro va en lima (`tone=\"lime\"`). El verde y el check solo al 100%.",
+          '- **Tinta vs lima** — el progreso de una tarea va en tinta (`tone="ink"`); el avance hacia una meta de ahorro va en lima (`tone="lime"`). El verde y el check solo al 100%.',
           "- **Determinado primero** — si conoces el porcentaje, muestralo. El indeterminado (`value={null}`, segmento animado) solo cuando no hay forma de estimar.",
           "",
           "Geometria del documento: barra de alto 8 y radio 999; circular de viewBox 96 con radio 38, trazo 12 y extremo redondeado, pintado a 88px.",
@@ -97,7 +97,13 @@ export const Circular: Story = {
 /** El circular tambien admite lima y tamaño libre. */
 export const CircularLima: Story = {
   name: "Circular · lima",
-  args: { shape: "circular", value: 88, tone: "lime", diameter: 120, "aria-label": "Meta de viaje" },
+  args: {
+    shape: "circular",
+    value: 88,
+    tone: "lime",
+    diameter: 120,
+    "aria-label": "Meta de viaje",
+  },
 };
 
 /** Sin valor conocido, el arco gira; la cifra desaparece porque no hay cifra. */
@@ -139,7 +145,7 @@ export const MatrizDeEstados: Story = {
         {filas.map((fila) => (
           <div key={fila.nota} className="flex flex-col gap-1.5">
             <Progress {...fila.props} aria-label={fila.nota} />
-            <span className="font-meta text-ink-500 text-[10px] tracking-[0.08em] uppercase">
+            <span className="font-meta text-[10px] tracking-[0.08em] text-ink-500 uppercase">
               {fila.nota}
             </span>
           </div>
@@ -154,7 +160,7 @@ export const EnUnaTarjeta: Story = {
   name: "En una tarjeta",
   parameters: { controls: { disable: true } },
   render: () => (
-    <div className="border-edge bg-surface flex w-[320px] items-center gap-5 rounded-xl border p-5">
+    <div className="flex w-[320px] items-center gap-5 rounded-xl border border-edge bg-surface p-5">
       <Progress
         shape="circular"
         tone="lime"
@@ -163,10 +169,10 @@ export const EnUnaTarjeta: Story = {
         aria-labelledby="tk-story-meta-titulo"
       />
       <div className="flex flex-col gap-1">
-        <span id="tk-story-meta-titulo" className="font-display text-ink text-base font-medium">
+        <span id="tk-story-meta-titulo" className="font-display text-base font-medium text-ink">
           Meta de viaje
         </span>
-        <span className="font-num text-ink-600 text-[13px]">$ 3.500.000 de $ 5.000.000</span>
+        <span className="font-num text-[13px] text-ink-600">$ 3.500.000 de $ 5.000.000</span>
       </div>
     </div>
   ),

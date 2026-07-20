@@ -81,7 +81,9 @@ function analizar(nombre) {
   };
 }
 
-const nombres = readdirSync(COMPONENTES).filter(esFuente).map((f) => f.replace(/\.tsx$/, ""));
+const nombres = readdirSync(COMPONENTES)
+  .filter(esFuente)
+  .map((f) => f.replace(/\.tsx$/, ""));
 
 const registry = {
   $schema: "https://ui.shadcn.com/schema/registry.json",
@@ -106,5 +108,7 @@ writeFileSync(join(RAIZ, "registry.json"), JSON.stringify(registry, null, 2) + "
 const sinClasificar = registry.items.filter((i) => i.description.includes("Sin clasificar"));
 console.log(`registry.json generado con ${registry.items.length} items.`);
 if (sinClasificar.length) {
-  console.log(`Aviso: ${sinClasificar.length} sin cabecera de seccion: ${sinClasificar.map((i) => i.name).join(", ")}`);
+  console.log(
+    `Aviso: ${sinClasificar.length} sin cabecera de seccion: ${sinClasificar.map((i) => i.name).join(", ")}`,
+  );
 }

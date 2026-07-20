@@ -183,6 +183,38 @@ describe("CardMedia", () => {
     render(<CardMedia title="Tu tarjeta" />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  /* Excepcion deliberada a "los tests cubren comportamiento, no apariencia":
+   * aqui la clase ES el contrato. La media card mezclaba dos regimenes de
+   * color — un fondo que se invertia con el tema (surface="ink") bajo un
+   * overlay congelado en blanco fijo — y en tema oscuro el fondo subia a casi
+   * blanco mientras el texto seguia blanco. Sin un contexto congelado propio,
+   * cualquier blanco fijo vuelve a abrir el mismo agujero. */
+  it("no mezcla regimenes de color: congela su tema y no pinta blancos fijos", () => {
+    render(
+      <CardMedia
+        data-testid="card"
+        eyebrow="Tarjeta · Tikin"
+        title="Tu tarjeta física"
+        description="Pídela sin costo."
+        action={<svg />}
+        actionLabel="Ver detalle"
+      />,
+    );
+    const card = screen.getByTestId("card");
+
+    // La tarjeta es una isla de tema congelado: su fondo hace de fotografia y
+    // una fotografia no se invierte con el tema de la pagina.
+    expect(card.className).toContain("tk-static");
+
+    // Y dentro de esa isla el color vuelve a ser semantico: ni un solo
+    // `*-white`, que es lo que congelaba el overlay al margen del fondo.
+    const conBlancoFijo = [card, ...card.querySelectorAll("*")]
+      // getAttribute y no .className: en SVG className es un SVGAnimatedString.
+      .map((el) => el.getAttribute("class") ?? "")
+      .filter((cls) => /(?:^|[\s:])(?:text|bg|border|ring|from|via|to)-white(?:\/|$|\s)/.test(cls));
+    expect(conBlancoFijo).toEqual([]);
+  });
 });
 
 describe("CardStat", () => {
@@ -221,5 +253,39 @@ describe("CardStat", () => {
     render(<CardStat interactive onClick={onClick} label="Ahorro" value="$ 480.000" />);
     await userEvent.click(screen.getByRole("button"));
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("CardMedia · anillo de foco", () => {
+  /* `tk-static` congela el tema dentro de la tarjeta para que el par
+     bg-ink/text-surface signifique siempre "fondo oscuro, tinta clara". El
+     efecto colateral es que tambien congelaba los tokens del anillo de foco de
+     `interactive`, que son del tema de la PAGINA: sobre una pagina oscura el
+     anillo salia casi negro y el hueco hueso hacia de anillo. */
+
+  it("dibuja el anillo hacia dentro, sin depender del tema de la pagina", () => {
+    render(<CardMedia interactive title="Bolsillo" data-testid="media" />);
+    const clases = screen.getByTestId("media").className;
+
+    expect(clases).toContain("focus-visible:ring-inset");
+    expect(clases).toContain("focus-visible:ring-surface");
+    // Sin hueco no hay banda del color de la pagina entre tarjeta y anillo.
+    expect(clases).toContain("focus-visible:ring-offset-0");
+  });
+
+  it("tailwind-merge descarta el color y el hueco dependientes de la pagina", () => {
+    render(<CardMedia interactive title="Bolsillo" data-testid="media" />);
+    const clases = screen.getByTestId("media").className;
+
+    // Estas dos son las que invertian el indicador al congelarse.
+    expect(clases).not.toContain("focus-visible:ring-ink");
+    expect(clases).not.toContain("focus-visible:ring-offset-2");
+
+    /* `focus-visible:ring-offset-page` SI sobrevive, y es correcto que lo haga:
+       tailwind-merge trata anchura y color del hueco como grupos distintos, asi
+       que `ring-offset-0` no desplaza a `ring-offset-page`. Es inocuo porque
+       con anchura 0 no hay banda que pintar. Se afirma aqui para que quede
+       claro que es sabido y no un descuido. */
+    expect(clases).toContain("focus-visible:ring-offset-0");
   });
 });
