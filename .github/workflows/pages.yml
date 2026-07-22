@@ -1,0 +1,61 @@
+name: Storybook a GitHub Pages
+
+# Publica el Storybook — que ademas sirve el registry en /r/ — en GitHub Pages
+# en cada push a main. A diferencia del release de npm, esto SI se activa: la
+# documentacion es publica hacia dentro de la empresa y no tiene efectos
+# irreversibles.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # permite lanzarlo a mano desde la pestaña Actions
+
+# El token solo necesita poder escribir en Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez; si llegan varios push, encola sin cancelar el que
+# ya esta subiendo.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # El registry se genera con la URL publica de Pages ANTES de compilar el
+      # Storybook, para que los JSON de /r/ apunten al dominio real. La URL sale
+      # del propio paso de configuracion de Pages.
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      - name: Registry con la URL de Pages
+        run: TIKIN_REGISTRY_URL="${{ steps.pages.outputs.base_url }}" pnpm registry
+
+      - run: pnpm build:storybook
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/storybook/storybook-static
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy

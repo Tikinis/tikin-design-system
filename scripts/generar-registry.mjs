@@ -24,7 +24,8 @@ const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const COMPONENTES = join(RAIZ, "packages/ui/src/components");
 
 // Sin esto, el consumidor se instala el paquete pero no el CSS de los tokens.
-const BASE_URL = process.env.TIKIN_REGISTRY_URL ?? "https://tikin-ds.vercel.app";
+const BASE_URL =
+  process.env.TIKIN_REGISTRY_URL ?? "https://nicolasgardila.github.io/tikin-design-system";
 
 const esFuente = (f) =>
   f.endsWith(".tsx") && !f.endsWith(".test.tsx") && !f.endsWith(".stories.tsx");
