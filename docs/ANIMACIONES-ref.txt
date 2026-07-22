@@ -1,0 +1,114 @@
+# Animaciones del diseño original — extraídas de Sistema de Diseño.dc.html
+# Referencia para clavar timing, easing, spring y transforms.
+
+## @keyframes (4)
+
+@keyframes dsSpin { to { transform: rotate(360deg); } }
+@keyframes dsBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes tkIndet { 0% { transform: translateX(-100%); } 100% { transform: translateX(380%); } }
+@keyframes tkShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+## transition / animation (23)
+
+animation: tkShimmer 1.4s ease-in-out infinite
+animation:dsBlink 1s step-end infinite
+animation:dsSpin .7s linear infinite
+animation:tkIndet 1.3s ease-in-out infinite
+transition: background .14s ease
+transition: border-color .14s ease
+transition: opacity .14s ease
+transition: top .14s ease, font-size .14s ease, transform .14s ease, color .14s ease
+transition:background .14s ease
+transition:background .15s
+transition:background .15s, box-shadow .15s
+transition:background .15s, color .15s
+transition:background .2s
+transition:background .35s ease
+transition:background .3s
+transition:background .3s, box-shadow .3s
+transition:background .3s, color .3s
+transition:border-color .14s ease
+transition:border-color .15s, background .15s
+transition:opacity .25s
+transition:transform .15s
+transition:width .18s linear
+transition:width .4s ease
+
+## Parámetros de animación en el JS (76)
+
+duration: 0.5, ease: [0.2, 0.8, 0.2, 1]
+duration: 0.35, type: 'spring', stiffness: 520, damping: 14
+duration: 0.18
+type: 'spring', stiffness: 420, damping: 28
+type: 'spring', stiffness: 380, damping: 34
+duration: 0.16
+duration: 0.24, ease: [0.4, 0, 1, 1]
+duration: 0.24, delay: 0.05
+duration: 0.2
+type: 'spring', stiffness: 460, damping: 14
+type: 'spring', stiffness: 480, damping: 12
+duration: 0.45
+duration: 0.22, ease: [0.2, 0.8, 0.2, 1]
+if (tf) f.transform = tf.trim()
+duration: (opts.duration || 0.3) * 1000, delay: (opts.delay || 0) * 1000, easing: 'cubic-bezier(.2,.85,.25,1)', fill: 'both'
+type: 'spring', stiffness: 600, damping: 13
+type: 'spring', stiffness: 420, damping: 26
+type: 'spring', stiffness: 680, damping: 20
+k.style.transform = 'translateX(' + to + 'px)'
+duration: 0.3
+type: 'spring', stiffness: 440, damping: 30
+bar.style.transform = 'scaleX(1)'
+duration: 5, ease: 'linear'
+if (bar) bar.style.transform = 'scaleX(0)'
+type: 'spring', stiffness: 500, damping: 11
+duration: 0.26, ease: [0.4, 0, 1, 1]
+duration: 0.3, ease: [0.4, 0, 1, 1]
+duration: 0.25
+type: 'spring', stiffness: 420, damping: 30
+duration: 0.5, type: 'spring', stiffness: 480, damping: 12
+duration: 0.4, ease: 'easeIn'
+duration: 0.32, ease: [0.4, 0, 1, 1]
+duration: 0.35, type: 'spring', stiffness: 500, damping: 13
+duration: 0.35, type: 'spring', stiffness: 460, damping: 14
+duration: 0.55, delay: i * 0.08, type: 'spring', stiffness: 380, damping: 20
+duration: 0.45, delay: i * 0.06, type: 'spring', stiffness: 500, damping: 13
+duration: 0.45, ease: 'easeInOut'
+duration: 0.45, type: 'spring', stiffness: 620, damping: 15
+rip.style.transform = 'translate(-50%,-50%) scale(0)'
+duration: 0.6, ease: 'easeOut'
+duration: 0.5, type: 'spring', stiffness: 360, damping: 11
+type: 'spring', stiffness: 680, damping: 18
+knob.style.transform = 'translateX(' + to + 'px)'
+duration: 0.35, ease: 'easeOut'
+type: 'spring', stiffness: 520, damping: 30
+pill.style.transform = 'translateX(' + btn.offsetLeft + 'px)'
+duration: 0.42, type: 'spring', stiffness: 400, damping: 12
+duration: 0.7, type: 'spring', stiffness: 380, damping: 16
+duration: 700, easing: 'ease-out'
+duration: 0.6, type: 'spring', stiffness: 460, damping: 10
+ring.style.transform = 'scale(0.55)'
+p.style.transform = 'none'
+countUp = () =>
+duration: 0.5, type: 'spring', stiffness: 380, damping: 12
+duration: 1.4, ease: [0.2, 0.8, 0.2, 1], onUpdate: v => el.textContent = fmt(v)
+if (p < 1) requestAnimationFrame(step)
+requestAnimationFrame(step)
+staggerList = () =>
+duration: 0.5, delay: i * 0.09, type: 'spring', stiffness: 480, damping: 26
+duration: 0.28
+sh.style.transform = 'translateY(340px)'
+type: 'spring', stiffness: 400, damping: 30
+sh.style.transform = 'translateY(0px)'
+['mo-ease-linear', 'mo-ease-standard', 'mo-ease-spring'].forEach((id, i) =>
+el.style.transform = 'translateX(0px)'
+duration: 0.9, ease: 'linear'
+duration: 0.9, ease: [0.2, 0.8, 0.2, 1]
+type: 'spring', stiffness: 380, damping: 18
+el.style.transform = 'translateX(' + dist + 'px)'
+duration: 0.2, ease: [0.2, 0.8, 0.2, 1]
+duration: 0.25, ease: [0.2, 0.8, 0.2, 1]
+duration: 0.45, type: 'spring', stiffness: 480, damping: 12
+duration: 0.4, type: 'spring', stiffness: 500, damping: 12
+replayCard: this.replayCard, burstHeart: this.burstHeart, countUp: this.countUp,
+staggerList: this.staggerList, toggleSheet: this.toggleSheet, replayEasings: this.replayEasings,
+transform: extra.upper ? 'uppercase' : 'none', color: extra.color || 'var(--tk-ink-strong)',
