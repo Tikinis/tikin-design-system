@@ -5,7 +5,11 @@ en TypeScript, con tema claro/oscuro, accesibilidad sobre Radix y los valores
 literales del archivo de Figma.
 
 La documentación viva es el Storybook. Ahí está cada componente con sus
-variantes, sus estados y su matriz de especificación.
+variantes, sus estados y su matriz de especificación:
+
+**→ https://nicolasgardila.github.io/tikin-design-system/**
+
+Se redespliega solo en cada push a `main` (workflow `pages.yml`).
 
 ---
 
