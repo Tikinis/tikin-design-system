@@ -216,8 +216,12 @@ const CHECK = (
  * pone el documento y en el mismo orden. */
 const VARIANTES: { rotulo: string; props: SnackbarProps }[] = [
   {
+    // La anatomia del documento dibuja todas las variantes como piezas estaticas
+    // SIN la barra de cuenta (la barra solo sale en la demo EN VIVO). Por eso el
+    // caso base tambien va con countdown "none" en la matriz: refleja el snapshot
+    // de estructura, no el conteo en marcha, que se ve en la story "Deshacer".
     rotulo: "Texto + acción",
-    props: { message: "Movimiento eliminado", actionLabel: "Deshacer" },
+    props: { message: "Movimiento eliminado", actionLabel: "Deshacer", countdown: "none" },
   },
   {
     rotulo: "Icono leading",

@@ -47,7 +47,12 @@ const searchBox = cva(
     // foco: el input real es un hermano, no un ancestro del icono.
     "group relative flex w-full items-center gap-2.5 px-4",
     "h-[52px] rounded-lg border-[0.5px] bg-surface",
-    "transition-[border-color,background-color,box-shadow] duration-140 ease-out",
+    // El doc fija la curva en "140ms ease" (el CSS del prototipo usa
+    // border-color .14s ease). `ease` es cubic-bezier(.25,.1,.25,1), NO
+    // `ease-out` (cubic-bezier(0,0,.58,1)): son curvas distintas, y esta es la
+    // misma que clava el TextField, del que este campo es primo. motion-reduce
+    // corta la transicion para quien pide menos movimiento (regla dura de a11y).
+    "transition-[border-color,background-color,box-shadow] duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
   ],
   {
     variants: {
@@ -358,7 +363,9 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             aria-hidden="true"
             className={cn(
               "pointer-events-none flex size-5 shrink-0 items-center justify-center",
-              "text-ink-600 transition-colors duration-140 ease-out",
+              // Misma curva `ease` (.14s) y motion-reduce que la caja: el tinte
+              // de la lupa en foco debe acompasarse al borde, no adelantarse.
+              "text-ink-600 transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
               // En foco la lupa sube a tinta, como el borde.
               !disabled && "group-focus-within:text-ink",
               disabled && "text-ink-500",
@@ -411,7 +418,8 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
               className={cn(
                 "-mr-1 flex size-[26px] shrink-0 cursor-pointer items-center justify-center",
                 "rounded-pill bg-edge text-ink-700",
-                "transition-colors duration-140 ease-out hover:bg-edge-2 hover:text-ink",
+                // Misma curva `ease` (.14s) y motion-reduce que el resto del campo.
+                "transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] hover:bg-edge-2 hover:text-ink motion-reduce:transition-none",
                 "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
               )}
             >

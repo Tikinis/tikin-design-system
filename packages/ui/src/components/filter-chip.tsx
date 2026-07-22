@@ -49,7 +49,14 @@ const filterChip = cva(
     "box-border inline-flex h-10 items-center gap-2 rounded-(--radius-pill) border px-4",
     // El label va SIEMPRE mono, MAYUSCULAS por CSS y +2% de tracking.
     "font-mono text-sm font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    /* El chip es un control: hover/press/open cruzan fondo y borde con la misma
+       transicion que el prototipo pone en sus controles — `transition: background
+       .14s ease` y `transition: border-color .14s ease`. El keyword CSS `ease` es
+       cubic-bezier(.25,.1,.25,1), NO `ease-out`; se calca literal para no cambiar
+       la curva. `transition-colors` cubre fondo, borde y texto a la vez, asi el
+       paso a tinta invertida del estado abierto no deja texto sobre su mismo tono
+       un frame. */
+    "cursor-pointer transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     // El icono lo fija el chip, no el consumidor: 16 en las cinco maquetas.
     "[&_svg]:size-4 [&_svg]:shrink-0",
@@ -89,6 +96,21 @@ const filterPanel = [
   "z-50 flex min-w-[230px] flex-col gap-0.5 p-2",
   "rounded-xl border border-edge bg-surface shadow-md",
   "outline-none",
+  /* ENTRADA DEL PANEL — el prototipo abre todos sus popovers con Motion:
+       { opacity:[0,1], y:[-8,0], scale:[0.97,1] }, duracion 0.22s, ease cubic-bezier(.2,.8,.2,1).
+     Se replica con @starting-style (variante `starting:` de Tailwind 4) + una
+     transicion, la misma via que el menu y el tooltip de este paquete. No con
+     @keyframes: mientras Radix mide la posicion del panel aparca el nodo y anula
+     ahi las `animation`, pero NO las `transition`, asi que solo la transicion
+     sobrevive a esa medida. NO hay salida a proposito: el original quita el panel
+     de golpe (sc-if) y Radix, al no hallar animacion de cierre, lo desmonta en el
+     acto. `-translate-y-2` son los 8px de subida; el escalado crece desde el
+     centro, el default de Motion. */
+  "opacity-100 translate-y-0 scale-100",
+  "transition-[opacity,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+  "starting:opacity-0 starting:-translate-y-2 starting:scale-[0.97]",
+  // Con menos movimiento el panel aparece ya colocado, sin deslizar ni escalar.
+  "motion-reduce:transition-none",
 ];
 
 /* Fila marcable. Radix Checkbox.Root ya es un <button role="checkbox">, asi que
@@ -97,7 +119,11 @@ const filterPanel = [
 const filterOption = [
   "flex w-full cursor-pointer items-center gap-2.5 rounded-sm px-2.5 py-[9px] text-left",
   "font-sans text-sm text-ink",
-  "transition-colors duration-140 ease-out select-none",
+  /* Sin `transition`: las opciones del panel del prototipo cambian el fondo del
+     hover de golpe, no con un fundido (misma regla que las opciones del menu de
+     este paquete). Meter un transition-colors aqui era justo lo que el original
+     NO hace. */
+  "select-none",
   "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset",
   "hover:not-disabled:bg-surface-2",
   "disabled:cursor-not-allowed disabled:text-ink-400",
@@ -109,7 +135,10 @@ const filterAction = cva(
   [
     "inline-flex h-9 flex-1 items-center justify-center rounded-md",
     "font-mono text-xs tracking-[0.02em] whitespace-nowrap uppercase",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    /* Botones = controles: la misma transicion de fondo del prototipo, con el
+       keyword `ease` (cubic-bezier(.25,.1,.25,1)), no `ease-out`, para clavar la
+       curva y quedar igual que el chip disparador. */
+    "cursor-pointer transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
   ],
   {
@@ -493,7 +522,11 @@ export const FilterChip = React.forwardRef<HTMLButtonElement, FilterChipProps>(f
                   <span
                     aria-hidden="true"
                     className={cn(
-                      "flex size-5 shrink-0 items-center justify-center rounded-xs transition-colors duration-140 ease-out",
+                      /* Sin `transition`: la casilla del prototipo cambia fondo y
+                         borde al instante (misma regla que el checkbox del
+                         sistema). El filtro no lleva el "pop con spring" de aquel
+                         — su seccion no lo dibuja — asi que aqui es un salto seco. */
+                      "flex size-5 shrink-0 items-center justify-center rounded-xs",
                       marcado ? "bg-ink text-surface" : "border border-edge-2 bg-surface",
                     )}
                   >

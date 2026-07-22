@@ -71,7 +71,7 @@ type Story = StoryObj<typeof meta>;
 export const Inline: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
-    <p className="max-w-[420px] text-sm leading-relaxed text-ink">
+    <p className="max-w-[420px] text-sm leading-relaxed text-ink-strong">
       Al continuar aceptas los <Link href="#links">términos y condiciones</Link> y la{" "}
       <Link href="#links">política de datos</Link>.
     </p>

@@ -124,7 +124,7 @@ const listItem = cva(
   [
     "relative flex w-full items-center gap-3 px-4 py-3.5 text-left",
     // El contenido de una fila es prosa: nunca mono, nunca mayusculas.
-    "font-sans transition-colors duration-140 ease-out",
+    "font-sans transition-colors duration-140 ease-[ease]",
   ],
   {
     variants: {
@@ -572,7 +572,7 @@ export const ListItemCheck = React.forwardRef<HTMLSpanElement, ListItemCheckProp
         aria-hidden="true"
         data-state={isChecked ? "checked" : "unchecked"}
         className={cn(
-          "flex size-[22px] flex-none items-center justify-center rounded-pill transition-colors duration-140 ease-out",
+          "flex size-[22px] flex-none items-center justify-center rounded-pill transition-colors duration-140 ease-[ease]",
           isChecked
             ? // En una fila deshabilitada el circulo tampoco puede quedarse a
               // tinta plena: seria la pieza mas contrastada de la fila.

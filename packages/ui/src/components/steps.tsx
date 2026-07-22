@@ -95,7 +95,11 @@ const stepCircle = cva(
     "flex size-[30px] shrink-0 items-center justify-center rounded-full",
     // El glifo numerico va mono 13, como el resto de cifras del sistema.
     "font-mono text-[13px] leading-none",
-    "transition-[background-color,box-shadow,color] duration-300 ease-out motion-reduce:transition-none",
+    /* Animacion del original (demo "EN VIVO"): transition:background .3s,
+       box-shadow .3s. Easing por DEFECTO — CSS `ease` = cubic-bezier(.25,.1,.25,1),
+       NO `ease-out`, que es otra curva. El color NO se transiciona en el
+       original: cambia al instante, por eso queda fuera de la lista. */
+    "transition-[background-color,box-shadow] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
   ],
   {
     variants: {
@@ -139,23 +143,30 @@ const stepTitle = cva("font-display text-[15px] font-medium", {
   defaultVariants: { status: "pending" },
 });
 
-const stepConnector = cva("transition-colors duration-300 ease-out motion-reduce:transition-none", {
-  variants: {
-    orientation: {
-      // margin-top 14 + medio grosor = 15 = centro exacto del circulo de 30.
-      horizontal: "mt-[14px] h-0.5 flex-1",
-      vertical: "min-h-[28px] w-0.5 flex-1",
-    },
-    /* El color va ENTERO en la variante, nunca `bg-edge` en la base y `bg-ink`
+const stepConnector = cva(
+  /* Animacion del original: transition:background .35s ease. Solo el fondo, en
+     .35s (no .3s), con easing por defecto `ease` (no `ease-out`). El conector se
+     rellena de tinta al hacerse el paso: esta es la transicion que el doc
+     describe como "el conector se llena". */
+  "transition-[background-color] duration-[350ms] ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
+  {
+    variants: {
+      orientation: {
+        // margin-top 14 + medio grosor = 15 = centro exacto del circulo de 30.
+        horizontal: "mt-[14px] h-0.5 flex-1",
+        vertical: "min-h-[28px] w-0.5 flex-1",
+      },
+      /* El color va ENTERO en la variante, nunca `bg-edge` en la base y `bg-ink`
        aqui: cva concatena, no fusiona, asi que las dos clases saldrian juntas en
        el mismo atributo y quien ganara dependeria del orden en que Tailwind las
        emita en la hoja. Hoy `.bg-edge` cae antes que `.bg-ink` por puro
        alfabeto; renombrar el token a `bg-line` o `bg-rail` apagaria el conector
        sin ningun error visible. */
-    filled: { true: "bg-ink", false: "bg-edge" },
+      filled: { true: "bg-ink", false: "bg-edge" },
+    },
+    defaultVariants: { orientation: "horizontal", filled: false },
   },
-  defaultVariants: { orientation: "horizontal", filled: false },
-});
+);
 
 export interface StepItem {
   /** Etiqueta corta del paso. Se escribe en capitalizacion normal, no en mayusculas. */
@@ -461,7 +472,11 @@ export const StepsDots = React.forwardRef<HTMLDivElement, StepsDotsProps>(functi
           key={index}
           aria-hidden="true"
           className={cn(
-            "h-2 rounded-full transition-[width,background-color] duration-300 ease-out motion-reduce:transition-none",
+            /* Los puntos del original son estaticos (el doc no anima esta pieza),
+               asi que la transicion es extension. Se usa el mismo easing `ease`
+               que el circulo y el conector para que el movimiento del sistema sea
+               coherente, no la curva `ease-out` que traia antes. */
+            "h-2 rounded-full transition-[width,background-color] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
             index === current ? "w-6 bg-ink" : index < current ? "w-2 bg-ink" : "w-2 bg-edge-2",
           )}
         />

@@ -34,7 +34,13 @@ const card = cva(
   [
     // relative: la media card apila imagen y scrim en absoluto sobre el.
     "relative flex flex-col",
-    "transition-[box-shadow,transform,background-color,border-color] duration-140 ease-out",
+    /* Timing del original para la familia card: el ref de animaciones da
+       `background .15s, box-shadow .15s` y `transform .15s` para el hover/press
+       de la tarjeta (150ms, easing por defecto `ease` = cubic-bezier(.25,.1,.25,1)),
+       distinto del `.14s ease-out` del boton. Como la transicion incluye
+       `transform` (el lift de 2px), se apaga bajo prefers-reduced-motion: el
+       estado sigue cambiando, pero de golpe, sin desplazamiento animado. */
+    "transition-[box-shadow,transform,background-color,border-color] duration-150 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
   ],
   {
     variants: {
@@ -363,7 +369,9 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
           depender de como interpole el navegador hacia `transparent`. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--tk-ink)_15%,transparent)_0%,color-mix(in_srgb,var(--tk-ink)_0%,transparent)_38%,color-mix(in_srgb,var(--tk-ink)_78%,transparent)_100%)]"
+        // pointer-events-none como en el original: el scrim es decorativo y no
+        // debe interceptar el click que va a la tarjeta o a la imagen debajo.
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--tk-ink)_15%,transparent)_0%,color-mix(in_srgb,var(--tk-ink)_0%,transparent)_38%,color-mix(in_srgb,var(--tk-ink)_78%,transparent)_100%)]"
       />
 
       {/* Todo el color de aqui es semantico y se resuelve contra el tema
@@ -397,7 +405,7 @@ export const CardMedia = React.forwardRef<HTMLDivElement, CardMediaProps>(functi
                  uno oscuro sobre una foto oscura. Con el hueco pintado en
                  tinta congelada, el indicador siempre tiene un borde de
                  contraste contra la imagen, venga como venga. */
-              className="ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill border border-surface/40 transition-colors duration-140 ease-out outline-none hover:bg-surface/15 focus-visible:ring-2 focus-visible:ring-surface focus-visible:ring-offset-2 focus-visible:ring-offset-ink [&_svg]:size-[18px]"
+              className="ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill border border-surface/40 transition-colors duration-150 ease-[cubic-bezier(0.25,0.1,0.25,1)] outline-none hover:bg-surface/16 focus-visible:ring-2 focus-visible:ring-surface focus-visible:ring-offset-2 focus-visible:ring-offset-ink [&_svg]:size-[18px]"
             >
               {action}
             </button>

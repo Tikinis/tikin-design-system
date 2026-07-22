@@ -55,7 +55,16 @@ const notification = cva(
   [
     "relative flex items-start gap-3 rounded-lg px-[14px] py-3",
     // Texto de notificacion es prosa: nunca mono, nunca mayusculas.
-    "font-sans transition-colors duration-300 ease-out",
+    //
+    // La transicion es EXACTAMENTE la del prototipo (`transition:background
+    // .3s`): 300ms con la curva por defecto del navegador. `background .3s` no
+    // declara funcion de easing, asi que cae en el `ease` de CSS, que equivale
+    // a cubic-bezier(0.25,0.1,0.25,1); NO se usa el `ease-out` de la casa.
+    // Mismo criterio que el caret del accordion, que se ciñe al default cuando
+    // el prototipo no declara easing. Solo se dispara al marcar leida/no leida
+    // (cambio de fondo del <li>); el color del texto vive en los <span> hijos,
+    // que no llevan transicion y saltan al instante, igual que el original.
+    "font-sans transition-colors duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
   ],
   {
     variants: {
@@ -66,18 +75,14 @@ const notification = cva(
         true: "bg-page [--tk-notif-meta:var(--tk-600)] [--tk-notif-text:var(--tk-ink)]",
         false: "bg-transparent [--tk-notif-meta:var(--tk-500)] [--tk-notif-text:var(--tk-700)]",
       },
-      /* El prototipo pone cursor:pointer pero no dibuja hover. Sin una señal de
-       * que la fila responde, en desktop no se distingue de un bloque de texto:
-       * se añade el hover mas suave del sistema.
-       *
-       * `hover:duration-140` no es redundante con el 300 de la base: el fondo
-       * leido/no leido y el fondo de hover son la MISMA propiedad CSS, asi que
-       * no se pueden temporizar por separado con dos clases sueltas. Poniendo la
-       * duracion corta solo dentro del estado :hover, la entrada del hover
-       * responde a los 140ms del resto del sistema (button, accordion, alert...)
-       * mientras el cambio de estado, que ocurre fuera de :hover, conserva los
-       * .3s que pide el prototipo. */
-      interactive: { true: "cursor-pointer hover:bg-surface-2 hover:duration-140", false: "" },
+      /* El prototipo pone en la fila SOLO `cursor:pointer` (junto a
+       * `transition:background .3s`) y no dibuja ninguna regla :hover — el fondo
+       * cambia unicamente al marcarla leida, por estado. Para clavar el diseño
+       * no se añade hover de raton: la fila interactiva se distingue por el
+       * cursor y por esa transicion .3s del cambio de estado, exactamente como
+       * el original. Un consumidor que quiera hover propio lo pone por
+       * className y tailwind-merge lo respeta. */
+      interactive: { true: "cursor-pointer", false: "" },
     },
     defaultVariants: { unread: false, interactive: false },
   },
@@ -358,7 +363,7 @@ const notificationAction = cva(
     "inline-flex h-8 cursor-pointer items-center justify-center rounded-sm px-[14px]",
     // El label va SIEMPRE mono, MAYUSCULAS y +2% de tracking, como el boton.
     "font-mono text-xs font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "transition-colors duration-140 ease-out",
+    "transition-colors duration-140 ease-[ease]",
     // outline en vez de ring con offset de color: el fondo de la fila cambia
     // con el estado (hueso o transparente) y un ring-offset fijo se veria mal
     // en uno de los dos.

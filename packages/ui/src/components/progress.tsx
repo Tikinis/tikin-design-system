@@ -33,12 +33,13 @@ import { cn } from "../lib/cn";
  *    llegar al 100%, no solo a lima. El documento pinta COMPLETO como una fila
  *    mas de la lista de estados de la barra lineal, y su regla es "verde/check
  *    solo al 100%" — o sea, el verde pertenece al estado, no al tono.
- * b. El check va dibujado a mano con la geometria de Phosphor (viewBox 256,
- *    trazo 16 = peso regular) en vez de <i class="ph-fill ph-check-circle">:
- *    el paquete de iconos no es dependencia de packages/ui y no toco su
- *    package.json. El hueco del icono se reserva SIEMPRE que `showCheck` este
- *    activo, aunque este invisible, o la barra pegaria un salto de 28px justo
- *    al completarse.
+ * b. El check va dibujado a mano con la geometria de Phosphor check-circle en
+ *    peso FILL (viewBox 256, disco solido con el check en negativo): es la MISMA
+ *    silueta rellena que <i class="ph-fill ph-check-circle"> del prototipo, no un
+ *    contorno, redibujada a mano porque el paquete de iconos no es dependencia de
+ *    packages/ui y no toco su package.json. El hueco del icono se reserva SIEMPRE
+ *    que `showCheck` este activo, aunque este invisible, o la barra pegaria un
+ *    salto de 28px justo al completarse.
  * c. El slider y el indicador por pasos de esta misma seccion NO estan aqui:
  *    son controles distintos (uno es interactivo, el otro es un stepper) y no
  *    entran en este encargo.
@@ -164,23 +165,20 @@ export interface ProgressProps
   rowClassName?: string;
 }
 
-/* Geometria de Phosphor (check-circle, peso regular): viewBox 256, trazo 16. */
+/* Geometria exacta de Phosphor check-circle en peso FILL (viewBox 256): un solo
+ * path que pinta el disco solido y deja el check en negativo por la regla de
+ * relleno nonzero, igual que <i class="ph-fill ph-check-circle">. `currentColor`
+ * lo hereda el disco; el check muestra lo que hay detras (la superficie), tal
+ * cual el filled check-circle del prototipo. */
 const CheckCircle = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 256 256"
-    fill="none"
+    fill="currentColor"
     aria-hidden="true"
     className={cn("size-[18px]", className)}
     {...props}
   >
-    <circle cx="128" cy="128" r="96" stroke="currentColor" strokeWidth="16" />
-    <path
-      d="M88 136l32 32 64-64"
-      stroke="currentColor"
-      strokeWidth="16"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+    <path d="M128,24A104,104,0,1,0,232,128,104.13,104.13,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z" />
   </svg>
 );
 

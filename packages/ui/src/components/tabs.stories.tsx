@@ -31,7 +31,9 @@ const meta = {
           "",
           "**Seleccion en tinta**: la activa se marca con tinta (pildora, tarjeta o subrayado) — nunca con lima ni otro acento. Inactivas en `ink-600`, hover a tinta.",
           "",
-          "**Labels**: mono 13 (14 en el segmentado del archivo), MAYUSCULAS por CSS, +2% tracking. Maximo una palabra por pestaña; el ancho lo da el contenido, no se estiran a partes iguales.",
+          "**Labels**: mono 13 (14 en el segmentado del archivo), MAYUSCULAS por CSS, +2% tracking. Maximo una palabra por pestaña; el ancho lo da el contenido, no se estiran a partes iguales. En el segmentado la activa sube a peso 500 (sin descuadre: la fuente es monoespaciada).",
+          "",
+          "**Motion**: al seleccionar, la pestaña hace un *pop* del archivo (`_pop`: scale a 0.9, 0.94 en underline; muelle 520/14, ~0.35s), aproximado con `@keyframes` y desactivado bajo `prefers-reduced-motion`.",
           "",
           "**`SegmentedControl` no es un `tablist`**: comparte la piel del segmentado pero se monta sobre Radix RadioGroup, porque filtra una lista que ya esta en pantalla y no tiene paneles que intercambiar. Un `tab` sin `tabpanel` al que apuntar no es conforme con la APG.",
         ].join("\n"),
@@ -288,7 +290,7 @@ export const MatrizDeEspecificacion: Story = {
       {
         variant: "soft",
         origen: "EXTENSIÓN",
-        medidas: "riel r12 · padding 4 · gap 2 · activa tarjeta r8 + sombra · mono 13",
+        medidas: "riel r12 · padding 4 · gap 2 · activa tarjeta r8 + borde + sombra · mono 13",
       },
       {
         variant: "underline",

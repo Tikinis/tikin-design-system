@@ -293,8 +293,12 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert
           // alcanzable por teclado; manda el bloque en vivo, que si usa boton.
           aria-label={dismissLabel}
           className={cn(
-            "mt-px inline-flex size-6 shrink-0 cursor-pointer items-center justify-center self-start rounded-xs",
-            "bg-transparent text-ink-600 transition-colors duration-140 ease-out",
+            // Sin margin-top, a ras del borde superior de la fila: el prototipo
+            // pone la X con align-self:flex-start y SIN margen (a diferencia del
+            // icono, que si lleva margin-top 1). Esa asimetria de 1px es del
+            // original y se conserva; meterle mt-px la bajaba 1px de mas.
+            "inline-flex size-6 shrink-0 cursor-pointer items-center justify-center self-start rounded-xs",
+            "bg-transparent text-ink-600 transition-colors duration-140 ease-[ease]",
             // Hover y foco no estan en el prototipo: sin ellos el boton no da
             // ninguna señal de que es pulsable ni de donde esta el foco.
             "hover:text-ink",
@@ -349,7 +353,7 @@ export const AlertAction = React.forwardRef<HTMLButtonElement, AlertActionProps>
           "inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md px-4",
           "bg-ink whitespace-nowrap text-surface",
           "font-mono text-xs font-normal tracking-[0.02em] uppercase",
-          "transition-colors duration-140 ease-out hover:not-disabled:bg-ink-800",
+          "transition-colors duration-140 ease-[ease] hover:not-disabled:bg-ink-800",
           // --tk-alert-bg solo existe dentro de un Alert y AlertAction se
           // exporta suelto. Sin el fallback, --tw-ring-offset-color cae a su
           // initial-value (#fff) y deja un halo blanco fijo en tema oscuro.

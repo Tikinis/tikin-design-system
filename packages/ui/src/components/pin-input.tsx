@@ -75,9 +75,12 @@ const SHAKE_KEYFRAMES = `
 
 const pinFila = cva(
   [
-    // Separacion 12 del bloque canonico. El padding y el radio existen solo
-    // para que el anillo de foco no corte los puntos.
-    "flex items-center gap-3 rounded-full p-1",
+    // Separacion 12 del bloque canonico. Sin padding: el original no lo lleva y
+    // acolchar la fila corria los puntos 4px dentro del hueco de 22 de la
+    // columna, rompiendo esa medida. El radio se queda solo para dar forma de
+    // pastilla al anillo de foco, que igualmente no corta los puntos porque el
+    // ring-offset ya deja 2px de aire alrededor.
+    "flex items-center gap-3 rounded-full",
     /* El campo real es invisible (ver mas abajo), asi que el foco tiene que
        verse aqui. `peer` va en el input, que es hermano ANTERIOR: peer-* solo
        alcanza hacia delante en el DOM. */
@@ -100,7 +103,11 @@ const pinFila = cva(
 const pinPunto = cva(
   [
     "size-4 shrink-0 rounded-full",
-    "transition-[background-color,box-shadow] duration-150 ease-out",
+    // El original es `transition:background .15s, box-shadow .15s`: sin curva
+    // declarada, o sea `ease` (cubic-bezier(.25,.1,.25,1)). Nada de ease-out,
+    // que el diseno no usa en ninguna transicion; es la misma forma que el resto
+    // del sistema escribe para representar ese `ease`.
+    "transition-[background-color,box-shadow] duration-150 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
   ],
   {
     variants: {
@@ -121,7 +128,9 @@ const pinBiometria = cva([
   "inline-flex h-control-m items-center gap-2 rounded-md px-4",
   // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
   "font-mono text-[13px] font-normal tracking-[0.02em] whitespace-nowrap text-ink uppercase",
-  "cursor-pointer transition-colors duration-140 ease-out select-none",
+  // .14s con `ease` como el resto de botones del sistema (`background .14s ease`
+  // en la referencia); el diseno no usa ease-out en ningun sitio.
+  "cursor-pointer transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] select-none",
   "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
   "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
   "disabled:cursor-not-allowed disabled:text-ink-500",
@@ -532,7 +541,9 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(function
         id={idMensaje}
         role="status"
         className={cn(
-          "inline-flex min-h-[18px] items-center gap-1.5 text-center text-[12.5px]",
+          // El original no lleva text-align: display inline-flex, gap 6, min-h
+          // 18, 12.5px. La columna ya centra el propio span.
+          "inline-flex min-h-[18px] items-center gap-1.5 text-[12.5px]",
           tonoMensaje[feedback],
         )}
       >

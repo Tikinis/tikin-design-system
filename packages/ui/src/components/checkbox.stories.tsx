@@ -162,10 +162,9 @@ export const MatrizDeEstados: Story = {
         {estados.map(({ nombre, props, nota }) => (
           <div key={nombre} className="flex flex-col items-center gap-2">
             <Checkbox {...props} aria-label={nombre} />
-            <span
-              className="font-meta text-[10px] tracking-[0.1em] text-ink-600 uppercase"
-              title={nota}
-            >
+            {/* Etiqueta del swatch, igual que la matriz del doc: Ubuntu Mono
+                (font-meta) 10px en tk-500, sin tracking. */}
+            <span className="font-meta text-[10px] text-ink-500 uppercase" title={nota}>
               {nombre}
             </span>
           </div>

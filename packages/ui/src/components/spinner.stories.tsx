@@ -57,7 +57,9 @@ export const Tamanos: Story = {
           <Spinner size={size} label={null} />
           {/* Mayusculas por CSS, nunca con .toUpperCase(): en JS romperia el
               texto accesible y lo que se copia al portapapeles. */}
-          <span className="font-meta text-[10px] text-ink-600 uppercase">
+          {/* tk-500 es el gris exacto de la etiqueta "S · 16" del documento; no
+              subir a ink-600, que la oscurece de mas. */}
+          <span className="font-meta text-[10px] text-ink-500 uppercase">
             {size} · {{ s: 16, m: 24, l: 40 }[size]}
           </span>
         </div>
@@ -119,13 +121,22 @@ export const PantallaCompleta: Story = {
     docs: {
       description: {
         story:
-          'Unico caso que cubre todo. Se pinta aqui con `scope="container"` y `portal={false}` para que quepa en el lienzo de la story; en produccion va `scope="screen"`, que se monta en `document.body` para que ningun `transform` de un ancestro lo desancle del viewport.',
+          'Unico caso que cubre todo. Se pinta aqui con `scope="container"` y `portal={false}` para que quepa en el lienzo de la story; en produccion va `scope="screen"`, que se monta en `document.body` para que ningun `transform` de un ancestro lo desancle del viewport. El velo por seccion es translucido sobre `--tk-surface`; aqui se repinta a `bg-page` (el `--tk-bg` opaco que usa la pantalla de arranque real) para que la maqueta se vea igual que el bloque "PANTALLA COMPLETA" del documento.',
       },
     },
   },
   render: () => (
     <div className="relative h-[220px] w-[320px] overflow-hidden rounded-xl border border-edge">
-      <LoadingOverlay scope="container" portal={false} brand="tikin" spinnerSize="m" />
+      {/* bg-page = --tk-bg opaco: el documento pinta la pantalla de arranque
+          solida, no el velo translucido del velo por seccion. twMerge
+          sustituye el bg-surface/80 del scope container. */}
+      <LoadingOverlay
+        scope="container"
+        portal={false}
+        brand="tikin"
+        spinnerSize="m"
+        className="bg-page"
+      />
     </div>
   ),
 };

@@ -42,11 +42,17 @@ import { cn } from "../lib/cn";
  *
  * MOTION
  * ------
- * Entrada por @starting-style (`starting:`) + transition: modal scale .94->1 con
- * fade, sheet subiendo desde abajo. La SALIDA es instantanea a proposito: Radix
- * retrasa el desmontaje esperando un `animationend`, no un `transitionend`, y
- * el tema no declara keyframes (packages/tokens es territorio de otro agente).
- * Si algun dia se añaden keyframes al tema, este es el sitio donde cambiarlo.
+ * Entrada por @starting-style (`starting:`) + transition, replicando los muelles
+ * del original sin libreria de animacion:
+ *   - Modal: opacity 0->1, scale .94->1 y translateY 8->0 con muelle 420/28
+ *     (~5% de overshoot); se aproxima con cubic-bezier(0.34,1.28,0.64,1) a 300ms.
+ *   - Sheet: translateY 100%->0 con muelle 380/34 (muy amortiguado, sin rebote);
+ *     se aproxima con un ease-out cuadratico a 250ms.
+ *   - Scrim: fade 0->1 en 180ms.
+ * La SALIDA es instantanea a proposito: Radix retrasa el desmontaje esperando un
+ * `animationend`, no un `transitionend`, y el tema no declara keyframes
+ * (packages/tokens es territorio de otro agente). Si algun dia se añaden
+ * keyframes al tema, este es el sitio donde cambiarlo.
  */
 
 /* Distancia que hay que arrastrar la sheet hacia abajo para que se cierre.
@@ -78,7 +84,10 @@ const layer = cva("pointer-events-none fixed inset-0 z-50");
  * tambien el velo. */
 const scrim = cva([
   "pointer-events-auto absolute inset-0 bg-[rgba(11,15,16,0.45)]",
-  "transition-opacity duration-140 ease-out starting:opacity-0",
+  // El velo del original hace fade opacity 0->1 en 0.18s (JS: _showModal /
+  // openSheet animan el scrim con { opacity:[0,1] }, { duration: 0.18 }), no en
+  // 0.14 — ese .14s es el de los hover de fondo, no el del scrim.
+  "transition-opacity duration-180 ease-out starting:opacity-0",
   "motion-reduce:transition-none",
 ]);
 
@@ -149,15 +158,26 @@ export const ModalContent = React.forwardRef<HTMLDivElement, ModalContentProps>(
               "max-h-[calc(100dvh-48px)] overflow-y-auto",
               "rounded-2xl bg-surface p-6 text-ink outline-none",
               "shadow-[0_20px_40px_-12px_rgba(0,0,0,0.4)]",
-              // scale .94 -> 1 + fade, del pie de la demo del documento.
-              // `scale` va LISTADO APARTE de `transform`: en Tailwind 4 la
-              // utilidad scale-* no compila a `transform: scale()` sino a la
-              // propiedad independiente `scale: .94`, que una lista con solo
-              // `transform` no cubre — el fade transicionaba y la escala
-              // saltaba de golpe. `transform` se mantiene para no romper la
-              // transicion de un consumidor que si use translate/rotate.
-              "transition-[opacity,transform,scale] duration-140 ease-out",
-              "starting:scale-[0.94] starting:opacity-0",
+              // Entrada del original (JS _showModal): la tarjeta anima
+              // { opacity:[0,1], scale:[0.94,1], y:[8,0] } con un muelle
+              // { type:'spring', stiffness:420, damping:28 }. Ese muelle
+              // (razon de amortiguamiento ~0.68) sube al pico ~5% por encima
+              // hacia los 200ms y se asienta sobre los 300ms. Se aproxima con
+              // un cubic-bezier con overshoot y duracion 300ms: iguala la
+              // sensacion sin meter libreria de animacion.
+              //
+              // Cada propiedad va LISTADA APARTE en Tailwind 4: scale-* compila
+              // a la propiedad independiente `scale`, translate-y-* a
+              // `translate`, y ninguna la cubre una lista con solo `transform`
+              // — sin nombrarlas el fade transicionaba y la escala / el
+              // desplazamiento saltaban de golpe. `transform` se mantiene para
+              // no romper la transicion de un consumidor que use translate o
+              // rotate por esa via.
+              "transition-[opacity,transform,translate,scale] duration-300",
+              "ease-[cubic-bezier(0.34,1.28,0.64,1)]",
+              // scale 0.94->1, y 8->0 (translate-y-2 = 8px) y fade, replicando
+              // los tres canales que anima el muelle del original.
+              "starting:translate-y-2 starting:scale-[0.94] starting:opacity-0",
               "motion-reduce:transition-none",
               className,
             )}
@@ -221,7 +241,11 @@ export const ModalTitle = React.forwardRef<HTMLHeadingElement, ModalTitleProps>(
   return (
     <DialogPrimitive.Title
       ref={ref}
-      className={cn("font-display text-[19px] leading-snug font-semibold text-ink", className)}
+      // El titulo del original no declara line-height: cae en `normal`, no en
+      // el 1.375 de leading-snug. En una linea, ese 1.375 engordaba la caja del
+      // titulo y descuadraba el ritmo vertical de los gaps de 8; se clava a
+      // `normal` para que la altura de linea sea identica a la del documento.
+      className={cn("font-display text-[19px] leading-[normal] font-semibold text-ink", className)}
       {...props}
     />
   );
@@ -265,7 +289,7 @@ const modalAction = cva(
     "inline-flex w-full items-center justify-center gap-2",
     // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
     "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "cursor-pointer rounded-lg text-sm transition-colors duration-140 ease-out select-none",
+    "cursor-pointer rounded-lg text-sm transition-colors duration-140 ease-[ease] select-none",
     // El offset del anillo es del color de la tarjeta, no de la pagina: sobre
     // el scrim un halo del color de la pagina se ve como un corte.
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
@@ -460,14 +484,19 @@ export const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetCo
               // Safe-area SUMADA al padding, no sustituyendolo: en un movil sin
               // gesto de home env() vale 0 y quedan los 20 del documento.
               "pb-[calc(20px+env(safe-area-inset-bottom))]",
-              // Sube desde abajo con asentamiento de resorte, como pide el pie
-              // de la demo. La curva es la misma familia que ya usan toggle y
-              // checkbox para el "spring", pero SIN rebote: un overshoot en
-              // translateY levantaria la hoja por encima de bottom:0 y dejaria
-              // ver una franja de scrim bajo el borde inferior.
+              // Entrada del original (JS openSheet): la hoja anima
+              // { y:['100%','0%'] } con { type:'spring', stiffness:380,
+              // damping:34 }. Es un muelle MUY amortiguado (razon ~0.87): sube
+              // suave y se asienta hacia los 250ms sin rebote perceptible. El
+              // cubic-bezier(0.25,0.46,0.45,0.94) es un ease-out cuadratico que
+              // sigue casi punto por punto ese ascenso (63% a 100ms, 85% a
+              // 150ms, 95% a 200ms) — mas fiel que una curva expo agresiva, que
+              // llegaria arriba demasiado pronto. Sin overshoot A PROPOSITO: un
+              // rebote levantaria la hoja por encima de bottom:0 y dejaria ver
+              // una franja de scrim bajo el borde inferior.
               // Durante el arrastre la transicion estorbaria: la hoja iria por
               // detras del dedo.
-              "transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] starting:translate-y-full",
+              "transition-transform duration-250 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] starting:translate-y-full",
               dragging && "transition-none",
               "motion-reduce:transition-none",
               className,
@@ -596,7 +625,7 @@ export const BottomSheetItem = React.forwardRef<HTMLButtonElement, BottomSheetIt
           // el consumidor haya declarado en un ancestro de la hoja.
           "group/tk-sheet-item",
           "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left",
-          "transition-colors duration-140 ease-out",
+          "transition-colors duration-140 ease-[ease]",
           "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
           "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
           "disabled:cursor-not-allowed disabled:text-ink-400",

@@ -43,6 +43,27 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/* Glifos dibujados a mano: `packages/ui` no depende de `@phosphor-icons` y este
+ * encargo no puede añadir dependencias. Son los mismos que el documento pone en
+ * el mensaje (`ph-fill ph-warning-circle` y `ph-fill ph-check-circle`, trazados
+ * de Phosphor a viewBox 256). El componente los escala a 14px y les da el color
+ * del tono via `currentColor`; por eso no llevan ni tamaño ni color propios. */
+function WarningCircleFill() {
+  return (
+    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm-8,56a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm8,104a12,12,0,1,1,12-12A12,12,0,0,1,128,184Z" />
+    </svg>
+  );
+}
+
+function CheckCircleFill() {
+  return (
+    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z" />
+    </svg>
+  );
+}
+
 /** Vacío y sin foco: seis casillas en reposo, borde 0.5px. */
 export const Vacio: Story = { name: "Vacío" };
 
@@ -65,7 +86,12 @@ export const ConError: Story = {
   args: {
     defaultValue: "999999",
     feedback: "error",
-    message: "Código incorrecto. Te quedan 2 intentos.",
+    message: (
+      <>
+        <WarningCircleFill />
+        Código incorrecto. Te quedan 2 intentos.
+      </>
+    ),
   },
   parameters: {
     docs: {
@@ -80,7 +106,16 @@ export const ConError: Story = {
 /** Válido · 6 / 6. */
 export const Valido: Story = {
   name: "Válido",
-  args: { defaultValue: "314279", feedback: "success", message: "Verificado" },
+  args: {
+    defaultValue: "314279",
+    feedback: "success",
+    message: (
+      <>
+        <CheckCircleFill />
+        Verificado
+      </>
+    ),
+  },
 };
 
 /** Deshabilitado: gris apagado que gana al rojo y al verde. Un campo inerte no da feedback. */
@@ -138,12 +173,26 @@ export const MatrizDeEstados: Story = {
         props: {
           defaultValue: "999999",
           feedback: "error" as const,
-          message: "Código incorrecto. Te quedan 2 intentos.",
+          message: (
+            <>
+              <WarningCircleFill />
+              Código incorrecto. Te quedan 2 intentos.
+            </>
+          ),
         },
       },
       {
         estado: "Válido",
-        props: { defaultValue: "314279", feedback: "success" as const, message: "Verificado" },
+        props: {
+          defaultValue: "314279",
+          feedback: "success" as const,
+          message: (
+            <>
+              <CheckCircleFill />
+              Verificado
+            </>
+          ),
+        },
       },
       { estado: "Deshabilitado", props: { disabled: true } },
     ];
@@ -194,11 +243,17 @@ export const PantallaDeVerificacion: Story = {
       };
 
       const mensaje =
-        estado === "success"
-          ? "Verificado"
-          : estado === "error"
-            ? `Código incorrecto. Te quedan ${intentos} intentos.`
-            : undefined;
+        estado === "success" ? (
+          <>
+            <CheckCircleFill />
+            Verificado
+          </>
+        ) : estado === "error" ? (
+          <>
+            <WarningCircleFill />
+            Código incorrecto. Te quedan {intentos} intentos.
+          </>
+        ) : undefined;
 
       return (
         <div className="flex w-[380px] flex-col gap-6">

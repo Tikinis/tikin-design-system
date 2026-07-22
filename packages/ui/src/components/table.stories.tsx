@@ -119,7 +119,9 @@ export const Dispersion: Story = {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[40%]">Contacto</TableHead>
-            <TableHead>Fecha</TableHead>
+            {/* El archivo pinta la flecha ↕ junto a FECHA. Sin `onSort` es solo
+                el afijo estatico —igual que el prototipo—, no un boton. */}
+            <TableHead sortable>Fecha</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead align="right">Monto</TableHead>
           </TableRow>
@@ -345,18 +347,24 @@ export const ConTotal: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
     <div className="w-[480px] max-w-full">
-      {/* Filas de 12 en vertical, como el bloque del archivo; el pie no se
-          comprime con la densidad y mantiene su 14/16 y su DM Mono 16. */}
+      {/* El bloque CON TOTAL del archivo es su propio juego de medidas: filas
+          12/16 con sans e importe a 14/400, y pie 14/16 con display 15/600 y DM
+          Mono 16/500. `density="medium"` clava el 12 vertical y el 400 del
+          importe; el 16 lateral (px-4) y el importe a 14 (text-sm) van por
+          override, que es lo que el prototipo hace y las otras densidades no
+          dan. El pie no se comprime con la densidad y ya sale en su 14/16. */}
       <Table density="medium">
         <TableCaption visuallyHidden>Resumen del envío</TableCaption>
         <TableBody>
           <TableRow hover={false}>
-            <TableCell>Envíos</TableCell>
-            <TableCell font="num">$1.240.000</TableCell>
+            <TableCell className="px-4">Envíos</TableCell>
+            <TableCell font="num" className="px-4 text-sm">
+              $1.240.000
+            </TableCell>
           </TableRow>
           <TableRow hover={false}>
-            <TableCell>Comisiones</TableCell>
-            <TableCell font="num" tone="success">
+            <TableCell className="px-4">Comisiones</TableCell>
+            <TableCell font="num" tone="success" className="px-4 text-sm">
               $0
             </TableCell>
           </TableRow>

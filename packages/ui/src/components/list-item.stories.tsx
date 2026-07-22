@@ -32,6 +32,18 @@ const Globe = glyph(
   "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18",
 );
 const SignOut = glyph("M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h9");
+// Netflix es un concepto, no una persona: en el diseño lleva un icono de TV.
+const Television = glyph(
+  "M4 8h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM9 4l3 4 3-4",
+);
+// "Ingreso con biometria" muestra una huella en el diseño, no una campana.
+const Fingerprint = glyph(
+  "M12 11a2 2 0 0 0-2 2v2M9 12a3 3 0 0 1 6 0v3M6.5 12a5.5 5.5 0 0 1 11 0v1",
+);
+// La fila de ANATOMIA usa un icono de billetera en el diseño.
+const Wallet = glyph(
+  "M3 8a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2M3 8v9a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-3M21 11v4h-4a2 2 0 0 1 0-4h4",
+);
 
 const meta = {
   title: "Componentes/ListItem",
@@ -76,7 +88,7 @@ export const Anatomia: Story = {
     <List className="w-[360px]">
       <ListItem
         {...args}
-        leading={<ListItemIcon tone="lavender">{Bank}</ListItemIcon>}
+        leading={<ListItemIcon tone="lavender">{Wallet}</ListItemIcon>}
         trailing={<ListItemAmount>$ 120.000</ListItemAmount>}
       />
     </List>
@@ -96,6 +108,13 @@ export const Movimientos: Story = {
         onClick={() => {}}
       />
       <ListItem
+        leading={<ListItemIcon>{Television}</ListItemIcon>}
+        title="Netflix"
+        meta="Ayer · Suscripción"
+        trailing={<ListItemAmount direction="out">− $38.900</ListItemAmount>}
+        onClick={() => {}}
+      />
+      <ListItem
         leading={<ListItemIcon tone="success">{Bank}</ListItemIcon>}
         title="Recarga PSE"
         meta="12 jul · Bancolombia"
@@ -107,13 +126,6 @@ export const Movimientos: Story = {
         title="Carlos Pérez"
         meta="10 jul · Arriendo"
         trailing={<ListItemAmount direction="out">− $850.000</ListItemAmount>}
-        onClick={() => {}}
-      />
-      <ListItem
-        leading={<ListItemIcon>{ArrowUp}</ListItemIcon>}
-        title="Un comercio con un nombre larguísimo que no cabe en la fila"
-        meta="Ayer · Suscripción"
-        trailing={<ListItemAmount direction="out">− $38.900</ListItemAmount>}
         onClick={() => {}}
       />
     </List>
@@ -133,10 +145,16 @@ export const ContactosSeleccion: Story = {
     },
   },
   render: function ContactosSeleccionStory() {
+    // Los tres pasteles del diseño: lavanda SI es token del sistema
+    // (--colours-lavenderblue-100 === rgb(223,225,255)); el melocoton y el menta
+    // NO existen como token, asi que se clavan por className con su rgb literal,
+    // que es justo la via que documenta ListItemIcon. Se apoyan en tone="lavender"
+    // para heredar text-on-accent (tinta oscura, legible en claro y oscuro, como
+    // cualquier acento de marca) sin arrastrar el hover del tono neutro.
     const gente = [
-      { id: "mr", nombre: "María Rojas", tag: "$mariarojas", tone: "lavender" as const },
-      { id: "cp", nombre: "Carlos Pérez", tag: "$carlosp", tone: "gold" as const },
-      { id: "lg", nombre: "Laura Gómez", tag: "$lauragomez", tone: "lime" as const },
+      { id: "mr", nombre: "María Rojas", tag: "$mariarojas", bg: "" },
+      { id: "cp", nombre: "Carlos Pérez", tag: "$carlosp", bg: "bg-[rgb(255,230,210)]" },
+      { id: "lg", nombre: "Laura Gómez", tag: "$lauragomez", bg: "bg-[rgb(220,240,225)]" },
     ];
     const [elegidos, setElegidos] = React.useState<string[]>(["mr"]);
     return (
@@ -144,7 +162,11 @@ export const ContactosSeleccion: Story = {
         {gente.map((p) => (
           <ListItem
             key={p.id}
-            leading={<ListItemIcon tone={p.tone}>{p.id}</ListItemIcon>}
+            leading={
+              <ListItemIcon tone="lavender" className={p.bg}>
+                {p.id}
+              </ListItemIcon>
+            }
             title={p.nombre}
             meta={p.tag}
             selected={elegidos.includes(p.id)}
@@ -196,7 +218,11 @@ export const AjustesControles: Story = {
         }`}
       >
         <span
-          className={`absolute top-[3px] size-5 rounded-pill bg-surface transition-[left] duration-140 ${
+          // El knob del toggle del diseño se mueve con muelle (stiffness 680,
+          // damping ~20): asentamiento rapido con un pequeño rebase. Se aproxima
+          // con un back-out cubic-bezier que sobrepasa y vuelve. Con
+          // prefers-reduced-motion salta sin desplazamiento animado.
+          className={`absolute top-[3px] size-5 rounded-pill bg-surface transition-[left] duration-[220ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none ${
             on ? "left-[21px]" : "left-[3px]"
           }`}
         />
@@ -214,7 +240,7 @@ export const AjustesControles: Story = {
         />
         <ListItem
           interactive={false}
-          leading={<ListItemIcon shape="box">{Bell}</ListItemIcon>}
+          leading={<ListItemIcon shape="box">{Fingerprint}</ListItemIcon>}
           title="Ingreso con biometría"
           trailing={
             <Toggle on={bio} onToggle={() => setBio((v) => !v)} label="Ingreso con biometría" />

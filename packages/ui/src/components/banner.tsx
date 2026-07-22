@@ -23,7 +23,7 @@ import { cn } from "../lib/cn";
  *   icono       18px · color pleno del tono
  *   mensaje     14px
  *   descripcion 12.5px, tinta apagada (doble linea)
- *   accion      mono 12 · +2% track · pill r8 px16 en promo · subrayada en el
+ *   accion      mono 12 · +2% track · pill r8 px14 en promo · subrayada en el
  *               resto (px 0, como en el documento)
  *   cerrar      30x30 · r8 · X de 16
  *
@@ -113,7 +113,10 @@ const banner = cva(
           "[--tk-banner-ring:var(--tk-surface)]",
           "[--tk-banner-x:color-mix(in_oklab,var(--tk-surface)_70%,transparent)]",
           "[--tk-banner-x-fg-hover:var(--tk-surface)]",
-          "[--tk-banner-x-bg-hover:color-mix(in_oklab,var(--tk-surface)_15%,transparent)]",
+          // data-hover="rgba(255,255,255,0.14)" del bloque en vivo, en semantico:
+          // sobre la franja de tinta el blanco del prototipo es --tk-surface, asi
+          // que el 14% del prototipo se traslada literal (no 15%).
+          "[--tk-banner-x-bg-hover:color-mix(in_oklab,var(--tk-surface)_14%,transparent)]",
           // data-press="rgba(255,255,255,0.24)" del bloque en vivo, en semantico:
           // sobre la franja de tinta el blanco del prototipo es --tk-surface.
           "[--tk-banner-x-bg-active:color-mix(in_oklab,var(--tk-surface)_24%,transparent)]",
@@ -123,7 +126,10 @@ const banner = cva(
           "[--tk-banner-action-bg-hover:var(--tk-border)]",
           "[--tk-banner-action-bg-active:var(--tk-border-2)]",
           "[--tk-banner-action-fg:var(--tk-ink)]",
-          "[--tk-banner-action-px:16px]",
+          // El pill canonico es px14 (POR TIPO / OTROS FORMATOS: padding 6px 14px).
+          // El bloque EN VIVO usa 16px, pero es la demo AMPLIADA: manda el bloque
+          // por-tipo, que es la anatomia del componente.
+          "[--tk-banner-action-px:14px]",
           "[--tk-banner-action-line:none]",
           "[--tk-banner-action-opacity-hover:1]",
         ],
@@ -401,9 +407,21 @@ export const Banner = React.forwardRef<HTMLDivElement, BannerProps>(function Ban
       {!hideIcon &&
         (loading ? (
           <span
-            // 18px, borde 2 y cabeza en el color del texto: el spinner del
-            // bloque "progreso". Usa currentColor para no depender del tono.
-            className="size-[18px] shrink-0 animate-spin rounded-full border-2 border-[color-mix(in_oklab,currentColor_25%,transparent)] border-t-current"
+            // Spinner del bloque "progreso", clavado al documento:
+            //   border:2px solid var(--tk-border-2); border-top-color:var(--tk-ink);
+            //   animation:dsSpin .7s linear infinite
+            // Los dos tokens (--tk-border-2 aro, --tk-ink cabeza) invierten con el
+            // tema, asi que el par vale en claro y en oscuro sin capa blanca; aqui
+            // NO aplica la desviacion #5 del button (que partia de un rgba blanco).
+            // El giro es 0.7s lineal, no el 1s de animate-spin: se corrige la
+            // duracion igual que en button.tsx. Con "reducir movimiento" se
+            // ralentiza a un tercio en vez de congelarse —un aro parado se lee como
+            // interfaz rota— y por eso no vale un motion-reduce:animate-none.
+            className={cn(
+              "size-[18px] shrink-0 rounded-full border-2",
+              "border-[var(--tk-border-2)] border-t-[var(--tk-ink)]",
+              "animate-spin [animation-duration:0.7s] motion-reduce:[animation-duration:2.1s]",
+            )}
             aria-hidden="true"
           />
         ) : icon !== undefined && icon !== null ? (
@@ -456,7 +474,7 @@ export const Banner = React.forwardRef<HTMLDivElement, BannerProps>(function Ban
           aria-label={dismissLabel}
           className={cn(
             "inline-flex size-[30px] shrink-0 cursor-pointer items-center justify-center rounded-sm",
-            "bg-transparent text-[var(--tk-banner-x)] transition-colors duration-140 ease-out",
+            "bg-transparent text-[var(--tk-banner-x)] transition-colors duration-140 ease-[ease]",
             "hover:bg-[var(--tk-banner-x-bg-hover)] hover:text-[var(--tk-banner-x-fg-hover)]",
             // El bloque en vivo da a la X los dos estados (data-hover y
             // data-press), igual que a la accion. Sin el pressed, la X se queda

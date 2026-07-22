@@ -293,7 +293,7 @@ export const TopBar = React.forwardRef<HTMLElement, TopBarProps>(function TopBar
 const topBarAction = cva(
   [
     "relative inline-flex shrink-0 cursor-pointer items-center justify-center",
-    "text-ink transition-colors duration-140 ease-out",
+    "text-ink transition-colors duration-140 ease-[ease]",
     "hover:not-disabled:bg-surface-2",
     "disabled:cursor-not-allowed disabled:text-ink-500",
     focusRing,
@@ -351,7 +351,7 @@ export const TopBarAction = React.forwardRef<HTMLButtonElement, TopBarActionProp
 const topBarLink = cva(
   [
     "cursor-pointer border-b-2 pb-1 font-sans text-sm no-underline",
-    "transition-colors duration-140 ease-out",
+    "transition-colors duration-140 ease-[ease]",
     focusRing,
     "focus-visible:ring-offset-surface",
   ],
@@ -498,7 +498,7 @@ export const TabBar = React.forwardRef<HTMLElement, TabBarProps>(function TabBar
 const tabBarItem = cva(
   [
     "flex w-16 cursor-pointer flex-col items-center gap-1 pt-1.5",
-    "bg-transparent transition-colors duration-140 ease-out select-none",
+    "bg-transparent transition-colors duration-140 ease-[ease] select-none",
     /* El estado inhabilitado se pinta por aria-disabled y no por :disabled
        porque con asChild el elemento es un <a>, que nunca casa con :disabled.
        Ver decision 5. El componente emite aria-disabled en los dos casos. */
@@ -614,7 +614,7 @@ export const TabBarAction = React.forwardRef<HTMLButtonElement, TabBarActionProp
         className={cn(
           "absolute -top-3.5 left-1/2 flex size-13 -translate-x-1/2 cursor-pointer",
           "items-center justify-center rounded-full bg-ink text-surface",
-          "transition-colors duration-140 ease-out",
+          "transition-colors duration-140 ease-[ease]",
           "hover:not-disabled:bg-ink-800",
           "disabled:cursor-not-allowed disabled:bg-edge disabled:text-ink-500",
           // Sombra proyectada literal: es oscura en los dos temas y no hay
@@ -683,7 +683,7 @@ export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(function Side
 const sidebarItem = cva(
   [
     "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-[9px]",
-    "text-left text-[13.5px] no-underline transition-colors duration-140 ease-out",
+    "text-left text-[13.5px] no-underline transition-colors duration-140 ease-[ease]",
     /* Por aria-disabled y no por :disabled: con asChild el elemento es un <a>,
        que nunca casa con :disabled. Ver decision 5. */
     "aria-disabled:cursor-not-allowed aria-disabled:text-ink-400",
@@ -848,7 +848,7 @@ export const SidebarUser = React.forwardRef<HTMLDivElement, SidebarUserProps>(fu
 
 const breadcrumbItem = cva(
   [
-    "truncate no-underline transition-colors duration-140 ease-out",
+    "truncate no-underline transition-colors duration-140 ease-[ease]",
     focusRing,
     "rounded-sm focus-visible:ring-offset-surface",
   ],

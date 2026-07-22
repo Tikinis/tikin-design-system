@@ -91,15 +91,32 @@ import { cn } from "../lib/cn";
 /* Los @keyframes no se pueden expresar como utilidad de Tailwind sin declararlos
  * en el tema, y packages/tokens es territorio de otro agente. React 19 hoista a
  * <head> cualquier <style> con `href` + `precedence` y lo deduplica por href,
- * asi que la regla se inserta una sola vez aunque haya varios snackbars. */
+ * asi que la regla se inserta una sola vez aunque haya varios snackbars.
+ *
+ * ENTRADA: calca el muelle del prototipo (fireSnack en el documento):
+ *   _animate(el, { y: [56, 0], opacity: [0, 1] }, { type: 'spring', stiffness: 440, damping: 30 })
+ * Ese spring (masa 1) tiene ζ = 30 / (2·√440) ≈ 0.72 — subamortiguado, con un
+ * rebote de ~4% que asoma sobre 56px (~2px por encima) hacia el 43% del recorrido
+ * y se asienta despues. Sin libreria, se reproduce muestreando la posicion del
+ * muelle en varias paradas y dejando la interpolacion en `linear`. NO lleva
+ * scale: el original solo traslada en Y (el scale era una herencia del toast).
+ *
+ * SALIDA: closeSnack usa y 0→48 y opacity 1→0 en 260ms con cubic-bezier(0.4,0,1,1),
+ * sin rebote. Tambien sin scale. */
 const SNACKBAR_KEYFRAMES = `
 @keyframes tk-snackbar-in {
-  from { opacity: 0; transform: translateY(140%) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  0%   { opacity: 0;    transform: translateY(56px); }
+  8%   { opacity: 0.35; transform: translateY(43px); }
+  16%  { opacity: 0.85; transform: translateY(22px); }
+  24%  { opacity: 1;    transform: translateY(8px); }
+  32%  {                transform: translateY(0.5px); }
+  43%  {                transform: translateY(-2px); }
+  60%  {                transform: translateY(-1px); }
+  100% { opacity: 1;    transform: translateY(0); }
 }
 @keyframes tk-snackbar-out {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to   { opacity: 0; transform: translateY(60%) scale(0.97); }
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(48px); }
 }
 @keyframes tk-snackbar-countdown {
   from { transform: scaleX(1); }
@@ -108,6 +125,9 @@ const SNACKBAR_KEYFRAMES = `
 @keyframes tk-snackbar-ring {
   from { stroke-dashoffset: 0; }
   to   { stroke-dashoffset: var(--tk-snack-ring-c); }
+}
+@keyframes tk-snackbar-spin {
+  to { transform: rotate(360deg); }
 }`;
 
 /* Anillo de 18px con trazo de 3 sobre un viewBox de 24: r = 9 y la
@@ -128,15 +148,25 @@ const snackbarRoot = cva([
   // Radix hace el <li> enfocable para poder alcanzarlo con F8; sin anillo
   // propio, ese salto no se veria en pantalla.
   "outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-page",
-  // Entrada spring desde abajo. La salida es mas corta: cerrar no necesita
-  // rebote, y Radix espera al animationend para desmontar.
-  "data-[state=open]:animate-[tk-snackbar-in_320ms_cubic-bezier(0.16,1,0.3,1)]",
-  "data-[state=closed]:animate-[tk-snackbar-out_140ms_ease-in]",
-  "motion-reduce:animate-none",
+  // Entrada spring desde abajo (fireSnack: spring 440/30, y 56→0, sin scale) y
+  // salida sin rebote (closeSnack: 260ms cubic-bezier(0.4,0,1,1), y 0→48). Radix
+  // espera al animationend para desmontar, asi que la salida es una animacion de
+  // verdad y no una transicion. Timings y curvas exactos del prototipo.
+  "data-[state=open]:animate-[tk-snackbar-in_500ms_linear]",
+  "data-[state=closed]:animate-[tk-snackbar-out_260ms_cubic-bezier(0.4,0,1,1)]",
+  /* El apagado repite el atributo a proposito. Un `motion-reduce:animate-none` a
+     secas pesa (0,1,0) — la media query no suma especificidad — frente a los
+     (0,2,0) de las animaciones data-state de arriba, asi que NUNCA las apagaba:
+     quien pide menos movimiento se lo comia igual. Repitiendo el atributo sube a
+     (0,3,0) y gana sin depender del orden en que Tailwind emita las variantes.
+     Mismo arreglo que en toast.tsx. */
+  "motion-reduce:data-[state=open]:data-[state=open]:animate-none",
+  "motion-reduce:data-[state=closed]:data-[state=closed]:animate-none",
   // Arrastre hacia abajo para descartar (swipeDirection del provider).
   "data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)]",
   "data-[swipe=cancel]:translate-y-0 data-[swipe=cancel]:transition-transform data-[swipe=cancel]:duration-200",
-  "data-[swipe=end]:animate-[tk-snackbar-out_140ms_ease-in]",
+  "data-[swipe=end]:animate-[tk-snackbar-out_260ms_cubic-bezier(0.4,0,1,1)]",
+  "motion-reduce:data-[swipe=end]:data-[swipe=end]:animate-none",
 ]);
 
 const snackbarAction = cva(
@@ -144,7 +174,7 @@ const snackbarAction = cva(
     "inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-sm px-2.5 py-1.5",
     // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
     "font-mono text-[13px] font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "transition-colors duration-140 ease-out select-none",
+    "transition-colors duration-140 ease-[ease] select-none",
     // Hover y pressed con los mismos alfas de blanco del prototipo (.12 y .22).
     // Van sobre blanco literal y no sobre currentColor porque la superficie es
     // fija: currentColor cambiaria el realce segun el tono de la accion.
@@ -510,11 +540,15 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
       >
         <div className="flex items-center gap-3 py-3 pr-3 pl-4">
           {loading ? (
-            // Spinner de 16 con borde 2, como el prototipo: aro gris 550 y solo
-            // el borde superior en la tinta de la pieza.
+            // Spinner de 16 con borde 2, como el prototipo (animation:dsSpin .7s
+            // linear infinite): aro gris 550 y solo el borde superior en la tinta
+            // de la pieza. El giro NO lleva motion-reduce: es la unica señal de
+            // que el proceso sigue en marcha, misma decision que el spinner del
+            // toast. El keyframe va en el <style> propio para no depender de que
+            // Tailwind emita el `spin` global.
             <span
               aria-hidden="true"
-              className="size-4 shrink-0 animate-spin rounded-full border-2 border-[var(--colours-grayscale-dark-550)] border-t-[var(--tk-snack-ink)] motion-reduce:animate-none"
+              className="size-4 shrink-0 animate-[tk-snackbar-spin_0.7s_linear_infinite] rounded-full border-2 border-[var(--colours-grayscale-dark-550)] border-t-[var(--tk-snack-ink)]"
             />
           ) : shape === "ring" ? (
             <svg
@@ -577,22 +611,33 @@ export const Snackbar = React.forwardRef<HTMLLIElement, SnackbarProps>(function 
             />
           )}
 
-          {showClose && (
-            <Toast.Close className={snackbarAction({ tone: "muted" })}>{closeLabel}</Toast.Close>
-          )}
+          {/* Las dos acciones van agrupadas con gap 2px (no los 12 del flex de
+              arriba): en el bloque DOS ACCIONES del documento CERRAR y REINTENTAR
+              se tocan, separados solo por 2px, y el hueco de 12 queda entre el
+              separador y el grupo. Con una sola accion el grupo tiene un hijo y el
+              gap no se nota. */}
+          {(showAction || showClose) && (
+            <div className="flex shrink-0 items-center gap-0.5">
+              {showClose && (
+                <Toast.Close className={snackbarAction({ tone: "muted" })}>
+                  {closeLabel}
+                </Toast.Close>
+              )}
 
-          {showAction && actionLabel && (
-            // `altText` es obligatorio en Radix: es lo que lee un lector de
-            // pantalla cuando el snackbar ya se ha ido y la accion sigue siendo
-            // alcanzable. Va sin mayusculas forzadas, igual que el label.
-            <Toast.Action
-              altText={actionAltText ?? actionLabel}
-              onClick={onAction}
-              className={snackbarAction({ tone: "primary" })}
-            >
-              {actionIcon}
-              {actionLabel}
-            </Toast.Action>
+              {showAction && actionLabel && (
+                // `altText` es obligatorio en Radix: es lo que lee un lector de
+                // pantalla cuando el snackbar ya se ha ido y la accion sigue siendo
+                // alcanzable. Va sin mayusculas forzadas, igual que el label.
+                <Toast.Action
+                  altText={actionAltText ?? actionLabel}
+                  onClick={onAction}
+                  className={snackbarAction({ tone: "primary" })}
+                >
+                  {actionIcon}
+                  {actionLabel}
+                </Toast.Action>
+              )}
+            </div>
           )}
         </div>
 

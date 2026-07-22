@@ -83,7 +83,13 @@ const accordionTrigger = cva(
     // La pregunta hereda la tinta del trigger para que el estado disabled la
     // apague de una sola vez, sin repetir color en el <span>.
     "text-ink",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    // Sin transicion en el fondo: la fila del prototipo no declara ninguna
+    // (`style-hover="background:var(--tk-bg)"` a secas), asi que el resalte del
+    // hover aparece y desaparece de golpe. Se replica ese salto instantaneo en
+    // vez de meter el `transition-colors` de la casa: la seccion 35 se apoya en
+    // los defaults del navegador (el caret tambien usa el `ease` por defecto),
+    // y la unica animacion que el documento le atribuye es el giro del caret.
+    "cursor-pointer select-none",
     // Anillo por dentro: el idioma del sistema para filas que viven dentro de
     // un contenedor que recorta (list-item.tsx, menu-button.tsx).
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset",
@@ -144,7 +150,12 @@ function Caret({ className }: { className?: string }) {
       aria-hidden="true"
       focusable="false"
       className={cn(
-        "size-4 shrink-0 text-ink-600 transition-transform duration-150 ease-out",
+        // 150ms con la curva por defecto del navegador (`ease`), que es la que
+        // usa el prototipo: `transition:transform .15s` sin funcion declarada.
+        // `ease` equivale exactamente a cubic-bezier(0.25,0.1,0.25,1); NO se usa
+        // `ease-out` (la curva de la casa) porque esta seccion se ciñe al
+        // default del navegador. Mismo patron que la card volteable.
+        "size-4 shrink-0 text-ink-600 transition-transform duration-150 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
         // Es el unico movimiento del componente, asi que es el unico que hay
         // que poder apagar con prefers-reduced-motion: el caret sigue girando,
         // pero salta al estado final en vez de recorrerlo.

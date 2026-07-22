@@ -195,7 +195,7 @@ export const TableFooter = React.forwardRef<HTMLTableSectionElement, TableFooter
 /* Fila                                                                */
 /* ------------------------------------------------------------------ */
 
-const tableRow = cva("transition-colors duration-140 ease-out", {
+const tableRow = cva("transition-colors duration-140 ease-[ease]", {
   variants: {
     section: {
       /* Borde de cabecera: --tk-border, mas marcado que el de fila. */
@@ -290,13 +290,14 @@ const tableCell = cva("align-middle", {
       /* "Los montos en DM Mono" y cifras de ancho fijo para que las columnas de
          importes alineen digito con digito.
 
-         El peso 500 es una UNIFICACION nuestra, no una medida del archivo: alli
-         solo van en 500 los montos de la dispersion y la cifra del Total; los
-         de COMPACTA, CON SELECCION y las filas del bloque CON TOTAL van sin
-         peso declarado (400). Un mismo rol —un importe— no puede pesar distinto
-         segun el bloque en el que caiga, y el 500 es el que aparece en la tabla
-         canonica de la seccion. Quien necesite el 400 pone `font-normal`. */
-      num: "font-num font-medium text-ink tabular-nums",
+         El PESO sigue al archivo, que NO lo unifica: la dispersion (default) y la
+         cifra del Total van en 500; los importes de COMPACTA, CON SELECCION y las
+         filas del bloque CON TOTAL van en 400. Por eso el font-medium no vive en
+         la base sino en el compound de `default` (y en el pie, via cellClasses);
+         `medium` y `compact` se quedan en el 400 nativo de DM Mono. Un peso fijo
+         en la base pintaba COMPACTA y CON SELECCION en 500 cuando el archivo los
+         da en 400. Quien quiera otro peso lo pisa por className. */
+      num: "font-num text-ink tabular-nums",
     },
     /* "entradas en verde, salidas en tinta". El signo lo escribe el consumidor;
        el componente solo tiñe. */
@@ -310,10 +311,11 @@ const tableCell = cva("align-middle", {
   },
   compoundVariants: [
     /* El tamaño depende de la familia Y de la densidad, no de una sola:
-       sans 14/14/13 · mono 13/13/12 · num 14/13/13. */
+       sans 14/14/13 · mono 13/13/12 · num 14/13/13. El 500 del importe solo lo
+       lleva `default` (la dispersion del archivo); medium y compact quedan en 400. */
     { density: "default", font: "sans", class: "text-sm" },
     { density: "default", font: "mono", class: "text-[13px]" },
-    { density: "default", font: "num", class: "text-sm" },
+    { density: "default", font: "num", class: "text-sm font-medium" },
     /* medium mantiene el sans en 14 y baja solo la cifra a 13: es lo que hace
        el bloque CON SELECCION, donde el nombre pesa mas que el importe. */
     { density: "medium", font: "sans", class: "text-sm" },
@@ -349,7 +351,10 @@ function cellClasses(opts: {
        tendria un pie a medio camino que nadie ha especificado. */
     section === "foot" && "px-4 py-3.5",
     section === "foot" && font === "sans" && "font-display text-[15px] font-semibold",
-    section === "foot" && font === "num" && "text-base",
+    // La cifra del Total va SIEMPRE en 500/16 (el archivo la pinta asi), pese a
+    // que la base de `num` ya no lleva peso: el pie lo reimpone aqui para que no
+    // dependa de la densidad de la tabla.
+    section === "foot" && font === "num" && "text-base font-medium",
   );
 }
 
@@ -502,7 +507,7 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
           onClick={onSort}
           className={cn(
             "inline-flex cursor-pointer items-center gap-1 rounded-xs font-[inherit] tracking-[inherit] uppercase",
-            "transition-colors duration-140 ease-out outline-none",
+            "transition-colors duration-140 ease-[ease] outline-none",
             "hover:text-ink",
             "focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
           )}
@@ -537,7 +542,8 @@ function SortGlyph({ direction }: { direction?: TableSortDirection }) {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="size-3 shrink-0"
+      // 11px como en el archivo (ph-arrows-down-up a font-size:11px), no 12.
+      className="size-[11px] shrink-0"
       aria-hidden="true"
       focusable="false"
     >

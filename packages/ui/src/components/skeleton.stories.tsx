@@ -37,8 +37,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/* Etiqueta mono de los bloques del documento: 11px, tracking .1em, gris 500. */
-const rotulo = "font-meta text-ink-600 text-[11px] tracking-[0.1em] uppercase";
+/* Etiqueta mono de los bloques del documento: 11px, tracking .1em, gris 500.
+   El documento pinta TODOS estos rotulos de seccion con --tk-500 (ink-500), no
+   ink-600; el 600 queda para cifras y texto de contenido, no para las etiquetas. */
+const rotulo = "font-meta text-ink-500 text-[11px] tracking-[0.1em] uppercase";
 
 export const Basico: Story = {
   name: "Básico",
@@ -202,7 +204,7 @@ function CrossFade() {
             vacia en el DOM para siempre; y ya invisible, debe salir tambien del
             arbol de accesibilidad. */}
         <div
-          className="pointer-events-none absolute inset-[18px] flex flex-col gap-[14px] transition-opacity duration-300"
+          className="pointer-events-none absolute inset-[18px] flex flex-col gap-[14px] transition-opacity duration-300 motion-reduce:transition-none"
           style={{ opacity: cargando ? 1 : 0 }}
           role={cargando ? "status" : undefined}
           aria-label={cargando ? "Cargando perfil" : undefined}
@@ -221,7 +223,7 @@ function CrossFade() {
         </div>
 
         <div
-          className="flex flex-col gap-[14px] transition-opacity duration-300"
+          className="flex flex-col gap-[14px] transition-opacity duration-300 motion-reduce:transition-none"
           style={{ opacity: cargando ? 0 : 1 }}
           aria-hidden={cargando}
         >

@@ -139,15 +139,21 @@ const PaperclipGlyph = ({ className, ...props }: GlyphProps) => (
   </svg>
 );
 
-/* El prototipo pide `ph-fill ph-check-circle`. Se usa el trazo, no el relleno,
- * a proposito: el relleno obliga a calar el check con el color del fondo, y la
- * fila puede posarse sobre surface, sobre page o sobre una tarjeta. El trazo es
- * agnostico del fondo y ya es el check que dibuja progress.tsx, asi que el
- * sistema no acaba con dos checks distintos. */
+/* El prototipo pinta el listo con `ph-fill ph-check-circle`: disco solido con el
+ * check en negativo, no un contorno. Se redibuja a mano la MISMA silueta rellena
+ * (viewBox 256, regla de relleno nonzero) para clavar el diseno, exactamente la
+ * geometria que ya usa progress.tsx — asi el sistema no acaba con dos checks
+ * distintos. `currentColor` tiñe el disco en fg-success; el check deja ver lo que
+ * hay detras (la superficie de la fila), igual que el filled del prototipo. */
 const CheckCircleGlyph = ({ className, ...props }: GlyphProps) => (
-  <svg {...GLYPH} className={cn("shrink-0", className)} {...props}>
-    <circle cx="128" cy="128" r="96" />
-    <path d="M88 136l32 32 64-64" />
+  <svg
+    viewBox="0 0 256 256"
+    fill="currentColor"
+    aria-hidden="true"
+    className={cn("shrink-0", className)}
+    {...props}
+  >
+    <path d="M128,24A104,104,0,1,0,232,128,104.13,104.13,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z" />
   </svg>
 );
 
@@ -654,7 +660,7 @@ export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(f
           (variant === "inline" ? (
             <>
               <PaperclipGlyph className="size-[18px] text-ink-600" />
-              <span className="min-w-0 flex-1 truncate text-sm text-ink-600">{placeholder}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink-500">{placeholder}</span>
               {/* Es un <span>, no un <button>: un boton dentro de otro es HTML
                     invalido y ademas partiria la zona en dos paradas de
                     tabulador que hacen exactamente lo mismo. */}
@@ -750,7 +756,7 @@ const fileRowMeta = cva("shrink-0 font-mono text-[11px]", {
 const rowIconButton = cva(
   [
     "inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-xs",
-    "transition-colors duration-140 ease-out",
+    "transition-colors duration-140 ease-[ease]",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1 focus-visible:ring-offset-page",
   ],
   {
@@ -882,6 +888,11 @@ export const FileUploadItem = React.forwardRef<HTMLLIElement, FileUploadItemProp
                 // que una fila detenida no se confunda con una que avanza.
                 status === "paused" && "[--tk-progress-fill:var(--tk-500)]",
               )}
+              // El relleno anima el ancho a .18s lineal, como el bloque EN VIVO
+              // del documento (transition:width .18s linear), y no a los 300ms
+              // ease-out por defecto de Progress. El motion-reduce ya lo apaga
+              // desde la base de Progress (transition-none).
+              indicatorClassName="duration-[180ms] ease-linear"
             />
           )}
         </div>
@@ -893,7 +904,7 @@ export const FileUploadItem = React.forwardRef<HTMLLIElement, FileUploadItemProp
           <button
             type="button"
             onClick={onRetry}
-            className="shrink-0 cursor-pointer rounded-xs px-2 py-[5px] font-mono text-[11px] tracking-[0.02em] text-ink uppercase transition-colors duration-140 ease-out outline-none hover:bg-tint-error focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1 focus-visible:ring-offset-page"
+            className="shrink-0 cursor-pointer rounded-xs px-2 py-[5px] font-mono text-[11px] tracking-[0.02em] text-ink uppercase transition-colors duration-140 ease-[ease] outline-none hover:bg-tint-error focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1 focus-visible:ring-offset-page"
           >
             {retryLabel}
           </button>
@@ -936,7 +947,7 @@ const thumbnail = cva("relative size-[88px] shrink-0 overflow-hidden rounded-lg"
       uploading: "flex items-center justify-center border border-edge bg-surface-2",
       add: [
         "flex cursor-pointer items-center justify-center border-[1.5px] border-dashed border-ink-400 text-ink-600",
-        "transition-colors duration-140 ease-out",
+        "transition-colors duration-140 ease-[ease]",
         "hover:border-ink-600 hover:text-ink",
         "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
       ],
@@ -1016,7 +1027,11 @@ export const FileUploadThumbnail = React.forwardRef<HTMLElement, FileUploadThumb
             // El estado ya lo anuncia el consumidor en su lista; aqui el
             // spinner es puramente visual.
             aria-hidden="true"
-            className="size-[22px] animate-spin rounded-full border-2 border-edge-2 border-t-ink motion-reduce:animate-none"
+            // El documento gira a dsSpin .7s linear, no al 1s por defecto de
+            // animate-spin. Un aro congelado se lee como interfaz rota, asi que
+            // con prefers-reduced-motion se ralentiza a un tercio en vez de
+            // pararse, igual que el spinner de button.tsx.
+            className="size-[22px] animate-spin rounded-full border-2 border-edge-2 border-t-ink [animation-duration:0.7s] motion-reduce:[animation-duration:2.1s]"
           />
         ) : (
           <>

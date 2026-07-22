@@ -15,8 +15,8 @@ import { cn } from "../lib/cn";
  *               6. Se usa para filtrar la misma lista, con contador en la
  *               activa.
  *   soft        EXTENSION · no esta en el archivo. Riel r12 sobre surface-2,
- *               activa = tarjeta (superficie elevada r8 con sombra xs). Para
- *               alternar modos dentro de una tarjeta.
+ *               activa = tarjeta (superficie elevada r8 con borde edge de 1px y
+ *               sombra xs). Para alternar modos dentro de una tarjeta.
  *   underline   EXTENSION · no esta en el archivo. Sin riel: linea de 1px bajo
  *               toda la fila y subrayado de 2px en tinta bajo la activa. Para
  *               navegacion de pagina con 3+ secciones.
@@ -36,17 +36,23 @@ import { cn } from "../lib/cn";
  *
  * DESVIACIONES DELIBERADAS RESPECTO AL PROTOTIPO
  * ----------------------------------------------
- * 1. El prototipo cambia el font-weight de la pestaña activa. No lo copiamos:
- *    el peso cambia el ancho del texto, asi que al seleccionar saltaria la
- *    posicion del resto de pestañas. La seleccion ya va marcada por fondo y
- *    tinta, que es lo que manda el bloque "SELECCION EN TINTA".
- * 2. En underline, la inactiva lleva un borde inferior TRANSPARENTE de 2px en
+ * 1. En underline, la inactiva lleva un borde inferior TRANSPARENTE de 2px en
  *    vez de no llevar borde. Con `border:none` la fila se movia 2px cada vez
  *    que cambiaba la seleccion.
- * 3. El bloque "EN VIVO · PRUEBALO" enseña una pildora deslizante sobre riel
- *    r999 con padding 8/16 y mono 13. Es una demo de MOTION, no la geometria
- *    canonica: manda el bloque "SEGMENTED CONTROL · DEL ARCHIVO" (riel r12,
- *    h40, mono 14). Por eso aqui no hay indicador animado.
+ * 2. El bloque "EN VIVO · PRUEBALO" enseña una PILDORA DESLIZANTE (riel r999,
+ *    padding 8/16, mono 13) y un toggle con muelle. Es una demo de MOTION con
+ *    geometria propia, no la del archivo: manda "SEGMENTED CONTROL · DEL
+ *    ARCHIVO" (riel r12, h40, mono 14), asi que NO se monta el indicador
+ *    deslizante. El _pop de seleccion, en cambio, SI es del archivo —lo
+ *    disparan selectSeg/selectSoft/selectUnder sobre las tres pieles
+ *    canonicas— y se reproduce con @keyframes (ver TAB_POP_KEYFRAMES).
+ *
+ * PESO DE LA ACTIVA: el prototipo sube el label activo del segmentado a 500 y
+ * aqui SI se copia (`data-[state=active]:font-medium`). El label es
+ * monoespaciado (Ubuntu Sans Mono y todos sus fallbacks), asi que el avance de
+ * cada glifo es fijo y el cambio de grosor NO desplaza al resto de pestañas.
+ * La activa va ademas en `--tk-ink-strong` (la tinta del archivo, mas
+ * contrastada que `--tk-ink` y que invierte a blanco puro en oscuro).
  */
 
 type TabsVariant = "segmented" | "soft" | "underline";
@@ -55,6 +61,40 @@ type TabsVariant = "segmented" | "soft" | "underline";
  * que repetirla en cada trigger — y sobre todo para que no pueda desparejar la
  * piel del riel con la de las pestañas. */
 const TabsVariantContext = React.createContext<TabsVariant>("segmented");
+
+/* POP DE SELECCION DEL ARCHIVO
+ * ---------------------------
+ * El prototipo dispara `_pop` al elegir cada pestaña: scale [1, 0.9, 1] (0.94 en
+ * underline) con un muelle stiffness 520 / damping 14 (~0.35s). Ese muelle esta
+ * subamortiguado (damping ratio ~0.31), asi que hunde y rebota un poco por
+ * encima de 1 antes de asentar. CSS no tiene muelles, asi que se aproxima con
+ * una parada de hundimiento y un sobreimpulso corto (keyframe multi-parada),
+ * como manda la guia de animaciones.
+ *
+ * Se aplica sobre `data-[state=active|checked]`, asi que tambien corre una vez
+ * en el montaje para la pestaña por defecto; es un pop sutil de entrada,
+ * coherente con el resto de animaciones de aparicion del documento.
+ *
+ * React 19 hoista a <head> cualquier <style> con `href` + `precedence` y lo
+ * deduplica por href, asi que la regla entra una sola vez aunque haya varios
+ * grupos montados. */
+const TAB_POP_KEYFRAMES = `
+@keyframes tk-tab-pop {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(0.9); }
+  40%  { transform: scale(0.885); }
+  62%  { transform: scale(1.035); }
+  80%  { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+@keyframes tk-tab-pop-sm {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(0.94); }
+  40%  { transform: scale(0.93); }
+  62%  { transform: scale(1.02); }
+  80%  { transform: scale(0.995); }
+  100% { transform: scale(1); }
+}`;
 
 const tabsList = cva("flex", {
   variants: {
@@ -80,7 +120,7 @@ const triggerBase = [
   "relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
   // Label mono, MAYUSCULAS por CSS, +2% de tracking y nunca bold.
   "font-mono font-normal tracking-[0.02em] uppercase",
-  "cursor-pointer transition-colors duration-140 ease-out select-none",
+  "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
   "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2",
   "disabled:cursor-not-allowed disabled:text-ink-400",
   // Icono 16 en el segmentado del archivo; se mantiene en las extensiones.
@@ -104,12 +144,20 @@ const tabsTrigger = cva(triggerBase, {
     variant: {
       segmented: [
         ...segmentedSkin,
-        // activa: bloque gris 238 = surface-3, que en oscuro sube a 58.
-        "data-[state=active]:bg-surface-3 data-[state=active]:text-ink",
+        // activa: bloque gris 238 = surface-3 (en oscuro sube a 58), texto en
+        // --tk-ink-strong y peso 500, tal cual el archivo. El peso no descuadra
+        // la fila porque la fuente es monoespaciada (avance de glifo fijo).
+        "data-[state=active]:bg-surface-3 data-[state=active]:font-medium data-[state=active]:text-ink-strong",
+        // Pop de seleccion del archivo (_pop 0.9, muelle 520/14, ~0.35s).
+        "data-[state=active]:animate-[tk-tab-pop_350ms_ease-out]",
+        "motion-reduce:data-[state=active]:data-[state=active]:animate-none",
       ],
       soft: [
         "rounded-sm px-6 py-[9px] text-[13px]",
         "text-ink-600 hover:not-disabled:text-ink",
+        // Borde 1px del archivo: transparente en la inactiva y edge (--tk-border)
+        // en la activa, para que la tarjeta no cambie de tamaño al seleccionar.
+        "border border-transparent",
         /* La activa es una tarjeta ELEVADA sobre el riel. En claro eso es
          * surface (255) sobre surface-2 (243), pero la escala se invierte en
          * oscuro: alli surface es 27 y surface-2 es 36, asi que reusar surface
@@ -121,14 +169,21 @@ const tabsTrigger = cva(triggerBase, {
          * mandando la nuestra. Asi un `data-[state=active]:bg-*` del consumidor
          * gana en los dos temas. */
         "[--tk-tab-soft-active:var(--tk-surface)] dark:[--tk-tab-soft-active:var(--tk-surface-3)]",
-        "data-[state=active]:bg-[var(--tk-tab-soft-active)] data-[state=active]:text-ink data-[state=active]:shadow-xs",
+        "data-[state=active]:border-edge data-[state=active]:bg-[var(--tk-tab-soft-active)] data-[state=active]:text-ink-strong data-[state=active]:shadow-xs",
         "focus-visible:ring-offset-surface-2",
+        // Pop de seleccion del archivo (_pop 0.9, muelle 520/14, ~0.35s).
+        "data-[state=active]:animate-[tk-tab-pop_350ms_ease-out]",
+        "motion-reduce:data-[state=active]:data-[state=active]:animate-none",
       ],
       underline: [
         "-mb-px border-b-2 border-transparent px-0.5 pt-2.5 pb-3 text-[13px]",
         "text-ink-600 hover:not-disabled:text-ink",
-        "data-[state=active]:border-ink data-[state=active]:text-ink",
+        // Subrayado 2px y texto en --tk-ink-strong (la tinta del archivo).
+        "data-[state=active]:border-ink-strong data-[state=active]:text-ink-strong",
         "focus-visible:ring-offset-page",
+        // Pop de seleccion del archivo (_pop 0.94 → hunde menos, muelle 520/14).
+        "data-[state=active]:animate-[tk-tab-pop-sm_350ms_ease-out]",
+        "motion-reduce:data-[state=active]:data-[state=active]:animate-none",
       ],
     },
   },
@@ -140,7 +195,12 @@ const tabsTrigger = cva(triggerBase, {
 const segmentedControlItem = [
   ...triggerBase,
   ...segmentedSkin,
-  "data-[state=checked]:bg-surface-3 data-[state=checked]:text-ink",
+  // Misma piel activa que la variante segmentada (fondo 238, texto ink-strong,
+  // peso 500), pero el estado se llama `checked` en RadioGroup.
+  "data-[state=checked]:bg-surface-3 data-[state=checked]:text-ink-strong data-[state=checked]:font-medium",
+  // Mismo pop del archivo (_pop 0.9) al elegir la opcion.
+  "data-[state=checked]:animate-[tk-tab-pop_350ms_ease-out]",
+  "motion-reduce:data-[state=checked]:data-[state=checked]:animate-none",
 ];
 
 export interface TabsProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {
@@ -169,6 +229,11 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(function Tabs(
   return (
     <TabsVariantContext.Provider value={variant}>
       <TabsPrimitive.Root ref={ref} className={cn("flex flex-col", className)} {...props}>
+        {/* Los @keyframes del pop; React 19 los hoista a <head> y los deduplica
+            por href, asi que no ensucian el DOM del grupo. */}
+        <style href="tk-tab-pop" precedence="default">
+          {TAB_POP_KEYFRAMES}
+        </style>
         {children}
       </TabsPrimitive.Root>
     </TabsVariantContext.Provider>
@@ -307,7 +372,7 @@ export interface SegmentedControlProps extends Omit<
  * con `TabsContent`: ahi la relacion pestaña ↔ panel la cablea Radix.
  */
 export const SegmentedControl = React.forwardRef<HTMLDivElement, SegmentedControlProps>(
-  function SegmentedControl({ className, controls, ...props }, ref) {
+  function SegmentedControl({ className, controls, children, ...props }, ref) {
     return (
       <RadixRadioGroup.Root
         ref={ref}
@@ -317,7 +382,13 @@ export const SegmentedControl = React.forwardRef<HTMLDivElement, SegmentedContro
         aria-controls={controls}
         className={cn(tabsList({ variant: "segmented" }), className)}
         {...props}
-      />
+      >
+        {/* Mismo pop que las pestañas; React 19 hoista el <style> a <head>. */}
+        <style href="tk-tab-pop" precedence="default">
+          {TAB_POP_KEYFRAMES}
+        </style>
+        {children}
+      </RadixRadioGroup.Root>
     );
   },
 );

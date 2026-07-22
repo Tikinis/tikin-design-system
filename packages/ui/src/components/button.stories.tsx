@@ -86,7 +86,7 @@ export const Deshabilitado: Story = {
   ),
 };
 
-/** corner 12/10/8/6 · icono 16/16/12/12 · label 16/14/14/12 · px 24/20/16/12 */
+/** corner 12/10/8/6 · icono 16/16/12/12 · label 16/14/12/12 · px 24/20/16/12 */
 export const Tamanos: Story = {
   name: "Tamaños",
   render: (args) => (

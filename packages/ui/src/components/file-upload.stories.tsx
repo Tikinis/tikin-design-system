@@ -179,7 +179,7 @@ export const TiposDeArchivo: Story = {
             <div className="flex size-11 items-center justify-center rounded-md bg-surface-2">
               <FileTypeIcon kind={kind} className="size-[22px]" />
             </div>
-            <span className="font-meta text-[11px] text-ink-600 uppercase">{kind}</span>
+            <span className="font-meta text-[11px] text-ink-500 uppercase">{kind}</span>
           </div>
         ))}
       </div>

@@ -53,10 +53,18 @@ function Chevron({ className }: { className?: string }) {
       aria-hidden="true"
       focusable="false"
       className={cn(
-        "size-[var(--tk-chev)] shrink-0 transition-transform duration-150 ease-out",
+        // El prototipo gira el chevron con `transition:transform .15s`. Sin funcion
+        // declarada, esa es la curva CSS `ease` (cubic-bezier .25,.1,.25,1), NO
+        // `ease-out`: 150ms y esa curva calcan el giro del documento.
+        "size-[var(--tk-chev)] shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
         // El trigger lleva la clase `group`; al abrirse Radix le pone
         // data-state=open y el chevron gira 180 grados.
         "group-data-[state=open]:rotate-180",
+        // Con menos movimiento el chevron sigue volteando para indicar abierto,
+        // pero sin animar: quitar la transicion lo deja instantaneo. Va sobre
+        // `transition-*`, no sobre `rotate`, asi que no compite en especificidad
+        // con la regla del data-attribute.
+        "motion-reduce:transition-none",
         className,
       )}
     >
@@ -76,6 +84,21 @@ const menuContent = [
   "z-50 flex min-w-[220px] flex-col gap-0.5 p-1.5",
   "rounded-lg border border-edge bg-surface shadow-md",
   "outline-none",
+  /* ENTRADA DEL PANEL — el prototipo lo abre con Motion:
+       { opacity:[0,1], y:[-8,0], scale:[0.97,1] }, duracion 0.22s, ease cubic-bezier(.2,.8,.2,1).
+     Se replica con @starting-style (variante `starting:` de Tailwind 4) + una
+     transicion, la misma via que el tooltip de este paquete. No con @keyframes:
+     mientras Radix mide la posicion del panel aparca el nodo y anula ahi las
+     `animation`, pero NO las `transition`, asi que solo la transicion sobrevive
+     a esa medida. NO hay animacion de salida a proposito: el original quita el
+     panel de golpe (sc-if), y Radix, al no encontrar animacion de cierre, lo
+     desmonta en el acto. `-translate-y-2` son los 8px de subida; el escalado
+     crece desde el centro, el default de Motion. */
+  "opacity-100 translate-y-0 scale-100",
+  "transition-[opacity,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+  "starting:opacity-0 starting:-translate-y-2 starting:scale-[0.97]",
+  // Con menos movimiento el panel aparece ya colocado, sin deslizar ni escalar.
+  "motion-reduce:transition-none",
 ];
 
 /* Opciones: r8, padding 10/12, mono 13, hover bg superficie 2.
@@ -85,7 +108,10 @@ const menuItem = cva(
   [
     "flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2.5",
     "font-mono text-[13px] tracking-[0.02em] whitespace-nowrap uppercase",
-    "transition-colors duration-140 ease-out outline-none select-none",
+    // El documento NO pone transicion en las opciones del panel: el hover cambia
+    // el fondo de golpe. Sin `transition-*` para calcar ese salto seco (el
+    // trigger y los segmentos si la llevan; las opciones no).
+    "outline-none select-none",
     "data-[disabled]:pointer-events-none data-[disabled]:text-ink-500",
     "[&_svg]:size-4 [&_svg]:shrink-0",
   ],
@@ -168,7 +194,14 @@ const menuTrigger = cva(
     "group relative inline-flex items-center justify-center",
     "border bg-surface text-ink",
     "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    // `.tk-ctl-sec` del prototipo: `transition: background .14s ease`. `ease` es
+    // cubic-bezier(.25,.1,.25,1), NO `ease-out`. Mantengo `transition-colors`
+    // (no solo background) a proposito: el paso a tinta invertida del estado
+    // abierto cruza fondo y texto juntos y no deja texto sobre su mismo tono un
+    // frame — negro-sobre-negro al cerrar, que es justo lo que las desviaciones
+    // documentadas evitan. En hover/press, lo unico que el original anima, el
+    // texto no cambia, asi que se ve identico.
+    "cursor-pointer transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "border-ink",
     /* El hover y el pressed claros van condicionados a que el panel este
@@ -290,7 +323,10 @@ const splitSegment = cva(
     "group relative inline-flex items-center justify-center",
     "bg-ink text-surface",
     "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    // `.tk-ctl-pri`: `transition: background .14s ease`. Misma correccion de curva
+    // que el trigger (`ease`, no `ease-out`); el segmento nunca invierte, solo
+    // mueve el fondo entre tinta y sus tonos 800 / strong.
+    "cursor-pointer transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "hover:not-disabled:bg-ink-800 active:not-disabled:bg-ink-strong",
     "disabled:cursor-not-allowed disabled:bg-edge disabled:text-ink-500",
@@ -306,7 +342,11 @@ const splitSegment = cva(
         menu: "rounded-r-md px-3 data-[state=open]:bg-ink-800",
       },
       size: {
-        m: "h-10 text-sm [--tk-chev:12px]",
+        // El chevron del split es 10 en el documento: su boton va a
+        // `font-size:10px` y el glifo hereda ese tamaño. Son DOS menos que el
+        // del MenuButton (12) — controles distintos, no un descuido. `--tk-chev`
+        // solo lo consume el segmento del chevron; en el de la accion no molesta.
+        m: "h-10 text-sm [--tk-chev:10px]",
         s: "h-8 text-xs [--tk-chev:10px]",
       },
     },
@@ -451,11 +491,20 @@ const buttonGroupItem = cva(
   [
     "inline-flex h-full items-center justify-center",
     "font-mono font-normal tracking-[0.02em] whitespace-nowrap uppercase",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    // Segmento del prototipo: `transition: background .14s ease`. `ease` es
+    // cubic-bezier(.25,.1,.25,1), no `ease-out`. `transition-colors` cruza fondo
+    // y texto juntos al activarse; el original solo anima el fondo, pero cruzar
+    // ambos evita el parpadeo de texto sobre su mismo tono y se ve mejor sin
+    // desviarse de lo que el documento anima de verdad (el fondo).
+    "cursor-pointer transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] select-none",
     // El anillo va por dentro: el contenedor recorta con overflow-hidden y un
     // anillo exterior quedaria cortado justo en los segmentos de los extremos.
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset",
-    "bg-transparent text-ink",
+    // Inactivo = superficie (el documento pinta `background:var(--tk-surface)`),
+    // no transparente: sobre `page` (crema en claro, gris 18 en oscuro) el
+    // transparente dejaba ver otro tono. Deshabilitado sigue sin fondo, como el
+    // original, y el activo se lo come `data-[state=on]:bg-ink` por dentro.
+    "bg-surface text-ink disabled:bg-transparent",
     /* Mismo guardia que en el trigger: el hover y el pressed claros solo valen
        en el segmento inactivo. Sin `not-data-[state=on]` ganarian por
        especificidad al estado activo y dejarian el label en `text-surface`

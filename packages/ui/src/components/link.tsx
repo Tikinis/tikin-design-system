@@ -48,7 +48,7 @@ const link = cva(
   [
     // El foco se dibuja con un radio propio: el link no tiene caja visible.
     "rounded-xs outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
-    "transition-colors duration-140 ease-out",
+    "transition-colors duration-140 ease-[ease]",
   ],
   {
     variants: {
@@ -76,6 +76,17 @@ const link = cva(
         ],
       },
     },
+
+    compoundVariants: [
+      /* El inline arranca en tinta fuerte (--tk-ink-strong), no en --tk-ink.
+         En la seccion, la tarjeta definitoria "INLINE · EN TEXTO" pinta el link
+         y su parrafo en var(--tk-ink-strong): el enlace se funde con el cuerpo y
+         solo lo delata el subrayado. Los tipos suelto y externo si nacen en
+         --tk-ink (su swatch DEFAULT de la matriz de estados). Va en compound y no
+         en la variante para que herede el mismo hover/pressed/disabled que los
+         otros dos y para que un text-* del consumidor lo siga pisando por cn(). */
+      { variant: "inline", disabled: false, class: "text-ink-strong" },
+    ],
 
     defaultVariants: { variant: "inline", disabled: false },
   },
@@ -255,7 +266,7 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
 const iconButton = cva(
   [
     "relative inline-flex shrink-0 items-center justify-center",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     /* Dos hooks para un solo estado: `disabled:` solo casa con el atributo
        nativo, que no existe cuando asChild renderiza un <a>; ahi el estado

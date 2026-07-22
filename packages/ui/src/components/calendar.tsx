@@ -240,7 +240,7 @@ const calendarDay = cva(
     "relative flex size-8 items-center justify-center rounded-sm",
     // Las cifras van SIEMPRE mono, como el resto de numeros del sistema.
     "font-mono text-sm leading-5 tabular-nums",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
     FOCUS_RING,
   ],
   {
@@ -254,11 +254,14 @@ const calendarDay = cva(
       variant: {
         default: "bg-transparent text-[var(--base-foreground)]",
         current: "bg-[var(--base-accent)] text-[var(--base-accent-foreground)]",
-        /* Sin `opacity-50`: la opacidad se aplicaba ENCIMA del gris y hundia
-           los dias de meses vecinos a 2.2:1, cuando siguen siendo clicables.
-           Figma no pide opacidad, solo un gris apagado. --tk-600 es
-           practicamente el --base-muted-foreground que especifica y pasa AA. */
-        outside: "bg-transparent text-ink-600",
+        /* Dia de mes vecino: CANONICO body0 (opacity .5 + --base-muted-foreground),
+           que es justo lo que documenta la cabecera de este fichero. Va atenuado a
+           proposito para que el mes en curso siga siendo el protagonista; ese
+           acento apagado ("gris 400" en la prosa de la seccion 23) sale de la
+           muted-foreground al 50%, no de un gris solido. --base-muted-foreground
+           SI invierte en .dark, asi que no es la desviacion 2, y quitar la opacidad
+           no es ninguna de las seis: se clava igual que el archivo. */
+        outside: "bg-transparent text-[var(--base-muted-foreground)] opacity-50",
       },
       selected: {
         true: "bg-[var(--base-primary)] text-[var(--base-primary-foreground)]",
@@ -386,12 +389,13 @@ export const CalendarWeekday = React.forwardRef<HTMLDivElement, CalendarWeekdayP
           "flex h-[21px] w-8 shrink-0 items-center justify-center",
           // Mayusculas iniciales POR CSS. Intl devuelve "lun" en minuscula y
           // pasarlo por JS romperia el texto que copia el usuario.
-          /* --tk-600 y no --base-muted-foreground. Ese ultimo sale de la escala
-             neutral de Tailwind que el archivo de Figma arrastro de otra
-             libreria, no de la paleta de Tikin, y en claro da 4.47:1 sobre el
-             fondo hueso: se queda a 0.03 del minimo AA. El gris del sistema
-             pasa en los dos temas (4.93:1 claro, 6.63:1 oscuro). */
-          "font-mono text-xs leading-4 text-ink-600 capitalize select-none",
+          /* Color CANONICO de la cabecera (Calendar/Day Header, node 2:156675):
+             --base-muted-foreground, tal y como lo documenta la cabecera de este
+             fichero. Ese token SI se redefine en el bloque .dark de figma.css, asi
+             que invierte en los dos temas y no es la desviacion 2. No se cambia por
+             ningun gris del sistema: la cabecera tiene que leerse identica al
+             archivo y esta sustitucion no es ninguna de las seis desviaciones. */
+          "font-mono text-xs leading-4 text-[var(--base-muted-foreground)] capitalize select-none",
           className,
         )}
         {...props}
@@ -429,7 +433,7 @@ export const CalendarNavButton = React.forwardRef<HTMLButtonElement, CalendarNav
         className={cn(
           "inline-flex size-8 shrink-0 items-center justify-center rounded-sm",
           "bg-surface-2 text-ink",
-          "cursor-pointer transition-colors duration-140 ease-out select-none",
+          "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
           FOCUS_RING,
           "hover:not-aria-disabled:bg-surface-3",
           "aria-disabled:cursor-not-allowed aria-disabled:text-ink-400",
@@ -765,10 +769,14 @@ export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(function
         {/* aria-live: al cambiar de mes con las flechas o con AvPag el lector
             anuncia el mes nuevo, que es la unica pista de que la rejilla se ha
             movido entera. */}
+        {/* El titulo "Julio 2026" va en Funnel Display 16/500 (font-display,
+            text-base, font-medium): asi lo pinta la seccion 23 y asi lo monta el
+            date-picker del sistema. capitalize porque Intl devuelve "julio" en
+            minuscula y las mayusculas iniciales las pone el CSS, no el JS. */}
         <div
           id={captionId}
           aria-live="polite"
-          className="font-sans text-sm font-medium text-ink capitalize"
+          className="font-display text-base font-medium text-ink capitalize"
         >
           {formatMonthCaption(month, locale)}
         </div>

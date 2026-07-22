@@ -34,6 +34,17 @@ import { cn } from "../lib/cn";
  *   disabled ........ fondo surface-2 + inset 1.5 tk-border
  *   error ........... fondo rojo 6%  + inset 1.5 rojo
  *
+ * ANIMACION — "click · pop con spring" (lo dice el bloque EN VIVO del doc).
+ *   Al alternar, el original NO transiciona el fondo ni el borde: los cambia al
+ *   instante y corre un unico "pop" sobre la CASILLA ENTERA con Motion:
+ *       _animate(box, { scale: [1, 0.82, 1] }, { type: 'spring', stiffness: 600, damping: 13 })
+ *   La marca solo conmuta opacidad (0<->1), sin transicion propia: el
+ *   movimiento percibido lo pone el pop de la casilla, no la marca. Aqui se
+ *   reproduce igual — fondo/borde instantaneos, pop en la casilla — pero sin la
+ *   dependencia Motion: el muelle 600/13 (subamortiguado, zeta ~0.27, por eso
+ *   rebota por encima de 1) se aproxima con la Web Animations API y un keyframe
+ *   multiparada. Ver POP_KEYFRAMES y popBox mas abajo.
+ *
  * DESVIACIONES DELIBERADAS RESPECTO AL PROTOTIPO
  * ----------------------------------------------
  * 1. El prototipo escribe el error como literales rgba(255,46,46,0.06) y
@@ -56,7 +67,10 @@ const checkboxBox = cva(
     // 22 no cae en la escala de 4: literal y comentado, en vez de un size-5.5
     // que nadie sabria leer.
     "size-[22px] rounded-xs",
-    "cursor-pointer transition-[background-color,box-shadow] duration-140 ease-out outline-none",
+    // Sin `transition`: el original cambia fondo y borde al instante y deja la
+    // animacion en el "pop" de la casilla (ver popBox). Meter un fundido de
+    // fondo aqui es justo lo que el prototipo NO hace.
+    "cursor-pointer outline-none",
     "focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     // El relleno de checked es tinta y la marca su inverso: en oscuro se
     // invierten los dos a la vez, asi que el contraste se conserva.
@@ -118,6 +132,35 @@ export interface CheckboxProps
   rowClassName?: string;
 }
 
+/* "Pop con spring" del documento. El original corre scale [1, 0.82, 1] con un
+   muelle stiffness 600 / damping 13: baja rapido a 0.82 (aplasta) y vuelve con
+   rebote (zeta ~0.27 => sobrepasa 1 antes de asentar). Se reproduce esa curva
+   como keyframe multiparada — bajada, sobrepaso, asentamiento — sin depender de
+   una libreria de animacion. 440ms es la ventana en la que el muelle 600/13
+   deja de ser perceptible. */
+const POP_KEYFRAMES: Keyframe[] = [
+  { transform: "scale(1)", offset: 0 },
+  { transform: "scale(0.82)", offset: 0.26 },
+  { transform: "scale(1.05)", offset: 0.52 },
+  { transform: "scale(0.985)", offset: 0.78 },
+  { transform: "scale(1)", offset: 1 },
+];
+
+/** Corre el pop sobre la casilla al alternar, respetando reduced-motion. */
+function popBox(node: HTMLElement | null) {
+  // Sin nodo (SSR / primer render) o sin WAAPI (jsdom en los tests) no hay pop.
+  if (!node || typeof node.animate !== "function") return;
+  // prefers-reduced-motion vive en JS aqui, no en CSS: se comprueba a mano y se
+  // omite el pop entero cuando el usuario pide menos movimiento. Doble `?.`
+  // porque en algunos entornos matchMedia no existe.
+  const media =
+    typeof window !== "undefined"
+      ? window.matchMedia?.("(prefers-reduced-motion: reduce)")
+      : undefined;
+  if (media?.matches) return;
+  node.animate(POP_KEYFRAMES, { duration: 440, easing: "linear" });
+}
+
 /* Geometria de Phosphor: viewBox 256 y trazo 24, que es su peso `bold`. */
 const CheckMark = ({ className }: { className?: string }) => (
   <svg
@@ -165,15 +208,39 @@ const MinusMark = ({ className }: { className?: string }) => (
 export const Checkbox = React.forwardRef<
   React.ComponentRef<typeof CheckboxPrimitive.Root>,
   CheckboxProps
->(function Checkbox({ className, rowClassName, label, invalid = false, id, ...props }, ref) {
+>(function Checkbox(
+  { className, rowClassName, label, invalid = false, id, onCheckedChange, ...props },
+  ref,
+) {
   // El label necesita un id estable para el htmlFor aunque el consumidor no lo
   // pase. useId es estable entre servidor y cliente, Math.random no lo seria.
   const generatedId = React.useId();
   const boxId = id ?? generatedId;
 
+  // Ref propio para poder correr el pop sobre la casilla, fusionado con el que
+  // reenvia el consumidor: el suyo se conserva intacto (funcion u objeto).
+  const innerRef = React.useRef<HTMLButtonElement>(null);
+  const setRefs = React.useCallback(
+    (node: HTMLButtonElement | null) => {
+      innerRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref],
+  );
+
+  // El pop se dispara al alternar (click o barra espaciadora, que es cuando
+  // Radix emite onCheckedChange), igual que el original lo hace en su onClick.
+  // Un deshabilitado no emite el evento, asi que tampoco hace pop. El callback
+  // del consumidor se reenvia intacto detras del pop.
+  const handleCheckedChange: NonNullable<CheckboxProps["onCheckedChange"]> = (checked) => {
+    popBox(innerRef.current);
+    onCheckedChange?.(checked);
+  };
+
   const box = (
     <CheckboxPrimitive.Root
-      ref={ref}
+      ref={setRefs}
       id={boxId}
       className={cn(
         checkboxBox({ invalid }),
@@ -189,18 +256,21 @@ export const Checkbox = React.forwardRef<
         className,
       )}
       aria-invalid={invalid || undefined}
+      onCheckedChange={handleCheckedChange}
       {...props}
     >
       <CheckboxPrimitive.Indicator
         /* forceMount mantiene la marca en el DOM tambien sin marcar. Sin el,
-           Radix la desmonta y no hay nada que animar al desmarcar: el "pop con
-           spring" del documento solo se veria en una direccion. */
+           Radix la desmonta y al desmarcar no habria nada visible que el pop de
+           la casilla arrastre; ademas el estado unchecked la necesita presente
+           para conmutar su opacidad. */
         forceMount
         className={cn(
           "group pointer-events-none flex items-center justify-center",
-          "transition-[transform,opacity] duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-          "data-[state=unchecked]:scale-50 data-[state=unchecked]:opacity-0",
-          "motion-reduce:transition-none",
+          // La marca del original solo conmuta opacidad, al instante y sin
+          // transicion: el movimiento lo aporta el pop de la casilla, no la
+          // marca. Por eso aqui no hay ni scale ni transition en la marca.
+          "data-[state=unchecked]:opacity-0",
         )}
       >
         {/* Que marca se ve lo decide el data-state, no una condicion en JS:

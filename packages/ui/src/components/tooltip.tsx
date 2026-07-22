@@ -63,13 +63,19 @@ const tooltipContent = cva(
      * retenerlo montado solo para animarlo dejaria un nodo con role="tooltip"
      * en el arbol de accesibilidad mas tiempo del debido.
      *
+     * La curva es CSS `ease` (cubic-bezier(.25,.1,.25,1)), calcada del original:
+     * `.tk-tip-bub { transition: opacity .14s ease }`. Se escribe con el
+     * cubic-bezier explicito porque Tailwind no trae utilidad para el keyword
+     * `ease`, y su `ease-out` es OTRA curva (arranque mas plano) que dejaba el
+     * fade sintiendose distinto al del archivo.
+     *
      * Matiz conocido: mientras mide la posicion, Radix aparca la burbuja fuera
      * de pantalla y anula ahi las `animation`, no las `transition`, asi que el
      * primer frame del fade puede consumirse aun sin verse. Se acepta a
      * sabiendas: pasar a @keyframes para entrar en esa guarda haria que
      * Presence esperase al `animationend`, y un cierre inmediato despues de
      * abrir dejaria la burbuja colgada los 140ms enteros. */
-    "opacity-100 transition-opacity duration-140 ease-out starting:opacity-0",
+    "opacity-100 transition-opacity duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] starting:opacity-0",
     "motion-reduce:transition-none",
   ],
   {

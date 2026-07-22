@@ -179,16 +179,21 @@ function WarningCircleGlyph() {
 
 /* Spinner de 15 con borde de 2, igual que el del prototipo. El blanco al 30%
  * va literal y no por token: solo tiene sentido sobre la superficie fija tinta
- * 900, que es la unica que este componente pinta. */
+ * 900, que es la unica que este componente pinta. Gira a 0.7s lineales, como el
+ * `animation:dsSpin .7s linear infinite` del prototipo: `animate-spin` de
+ * Tailwind por si solo gira a 1s, asi que se reaprovecha su keyframe y se fija
+ * la duracion — mismo apaño que button.tsx. */
 function SpinnerGlyph() {
   return (
     <span
       data-slot="toast-glyph-spinner"
       aria-hidden="true"
-      /* El giro NO lleva motion-reduce:animate-none, al reves que la entrada y
+      /* El giro NO se para con prefers-reduced-motion, al reves que la entrada y
          la salida: aquellas son adorno, esto es la unica señal de que la
-         operacion sigue en marcha. */
-      className="size-[15px] animate-spin rounded-full border-2 border-[rgba(255,255,255,0.3)] border-t-[var(--tk-toast-ink)]"
+         operacion sigue en marcha. Pero un aro a toda velocidad tampoco respeta
+         a quien pidio menos movimiento, asi que se ralentiza a un tercio (2.1s)
+         en vez de pararse — identico a button.tsx. */
+      className="size-[15px] animate-spin rounded-full border-2 border-[rgba(255,255,255,0.3)] border-t-[var(--tk-toast-ink)] [animation-duration:0.7s] motion-reduce:[animation-duration:2.1s]"
     />
   );
 }

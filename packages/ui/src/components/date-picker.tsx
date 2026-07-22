@@ -174,9 +174,22 @@ type Seleccion = Date | DateRange | null;
 const panel = cva(
   [
     "z-50 box-border w-[340px] max-w-[calc(100vw-2rem)] rounded-xl border border-edge bg-surface text-ink shadow-md",
-    /* Mismo fade corto que usan modal y tooltip: entrada por @starting-style,
-     * sin salida, porque Radix desmonta el contenido al cerrar. */
-    "opacity-100 transition-opacity duration-140 ease-out starting:opacity-0",
+    /* ENTRADA DEL PANEL — el prototipo abre TODOS sus popovers con Motion:
+       { opacity:[0,1], y:[-8,0], scale:[0.97,1] }, duracion 0.22s, ease
+       cubic-bezier(.2,.8,.2,1). El date picker es un popover mas, asi que calca
+       la misma entrada que el menu y el filtro de este paquete, no un fundido
+       distinto. Se replica con @starting-style (variante `starting:` de
+       Tailwind 4) + una transicion, NO con @keyframes: mientras Radix mide la
+       posicion del panel aparca el nodo y anula ahi las `animation`, pero NO las
+       `transition`, asi que solo la transicion sobrevive a esa medida. Sin
+       animacion de salida a proposito: el original quita el panel de golpe y
+       Radix, al no hallar cierre, lo desmonta en el acto. `-translate-y-2` son
+       los 8px de subida; el escalado crece desde el centro (default del
+       transform, que es el mismo origen que usa Motion). */
+    "translate-y-0 scale-100 opacity-100",
+    "transition-[opacity,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+    "starting:-translate-y-2 starting:scale-[0.97] starting:opacity-0",
+    // Con menos movimiento el panel aparece ya colocado, sin deslizar ni escalar.
     "motion-reduce:transition-none",
     "outline-none",
   ],
@@ -236,7 +249,7 @@ const diaBoton = cva(
   [
     "relative flex size-[34px] items-center justify-center rounded-(--radius-pill)",
     "font-mono text-[13px] leading-none tabular-nums",
-    "cursor-pointer transition-colors duration-140 ease-out select-none",
+    "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
     // "deshabilitados sin pointer": gris 400, sin relleno y sin marca de hoy.
     "aria-disabled:cursor-not-allowed aria-disabled:bg-transparent aria-disabled:text-ink-400 aria-disabled:shadow-none",
@@ -247,13 +260,14 @@ const diaBoton = cva(
         default: "text-ink",
         // Hoy: borde por inset shadow para no alterar el tamaño de la celda.
         current: "text-ink shadow-[inset_0_0_0_1px_var(--tk-ink)]",
-        /* Los dias de los meses vecinos siguen siendo clicables y
-           seleccionables, asi que su tinta tiene que cumplir contraste. El
-           text-ink-400 anterior daba 1.84:1 y ademas era MAS claro que lo que
-           pide Figma, que usa --base-muted-foreground (rgb 115). --tk-600 es
-           practicamente ese mismo gris y pasa AA en los dos temas, sin perder la
-           distincion con los dias del mes en curso, que van a tinta plena. */
-        outside: "text-ink-600",
+        /* "Fuera de mes en gris 400", literal del documento (bloque HOY Y
+           CIFRAS). El export de Figma pinta estos dias con
+           --base-muted-foreground (un gris ~600), pero la autoridad de Figma
+           sobre un color solo vale cuando el doc NO da el numero, y aqui lo da:
+           manda el 400. text-ink-400 es utilidad semantica y invierte con el
+           tema, asi que se lee en claro y en oscuro; cuando uno de estos dias es
+           extremo de un rango, la compound de abajo lo sube a text-surface. */
+        outside: "text-ink-400",
       },
       state: {
         default: "[&:not([aria-disabled=true])]:hover:bg-surface-2",
@@ -281,15 +295,15 @@ const diaBoton = cva(
  * el propio foco, que caeria al <body> — fuera del panel, que ademas es no
  * modal por defecto. Apagada sigue enfocable y el manejador ignora el clic. */
 const flechaMes =
-  "inline-flex size-8 items-center justify-center rounded-sm border border-edge text-ink cursor-pointer transition-colors duration-140 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface [&:not([aria-disabled=true])]:hover:bg-surface-2 aria-disabled:cursor-not-allowed aria-disabled:text-ink-400";
+  "inline-flex size-8 items-center justify-center rounded-sm border border-edge text-ink cursor-pointer transition-colors duration-140 ease-[ease] outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface [&:not([aria-disabled=true])]:hover:bg-surface-2 aria-disabled:cursor-not-allowed aria-disabled:text-ink-400";
 
 const chipPreset =
-  "box-border inline-flex shrink-0 cursor-pointer items-center rounded-(--radius-pill) px-3 py-1.5 font-mono text-xs tracking-[0.02em] uppercase transition-colors duration-140 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface";
+  "box-border inline-flex shrink-0 cursor-pointer items-center rounded-(--radius-pill) px-3 py-1.5 font-mono text-xs tracking-[0.02em] uppercase transition-colors duration-140 ease-[ease] outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface";
 
 const disparador = cva([
   "box-border inline-flex h-control-m items-center gap-2 rounded-md border border-edge-2 bg-surface px-4",
   "font-mono text-sm font-normal tracking-[0.02em] whitespace-nowrap text-ink uppercase",
-  "cursor-pointer transition-colors duration-140 ease-out select-none",
+  "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
   "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
   "hover:not-disabled:bg-surface-2",
   "data-[state=open]:border-ink data-[state=open]:bg-surface-2",
@@ -944,7 +958,11 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                     <th
                       key={cabecera.largo}
                       scope="col"
-                      className="h-[var(--tk-dp-head)] font-meta text-[10px] font-normal text-ink-600 uppercase"
+                      /* "cabecera de dias ... gris 500", literal del documento
+                         (color var(--tk-500)). text-ink-500 es la utilidad
+                         semantica que resuelve a ese --tk-500 y invierte con el
+                         tema. */
+                      className="h-[var(--tk-dp-head)] font-meta text-[10px] font-normal text-ink-500 uppercase"
                     >
                       {/* La inicial suelta ("L") no dice nada leida en voz alta;
                           el nombre completo viaja aparte para el lector. */}
@@ -1029,7 +1047,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                 type="button"
                 disabled={!seleccionCompleta}
                 onClick={() => aplicar(borrador, true)}
-                className="mt-3 flex h-control-l w-full cursor-pointer items-center justify-center rounded-lg bg-ink font-mono text-sm tracking-[0.02em] text-surface uppercase transition-colors duration-140 ease-out outline-none hover:not-disabled:bg-ink-800 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-400"
+                className="mt-3 flex h-control-l w-full cursor-pointer items-center justify-center rounded-lg bg-ink font-mono text-sm tracking-[0.02em] text-surface uppercase transition-colors duration-140 ease-[ease] outline-none hover:not-disabled:bg-ink-800 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-400"
               >
                 {etiquetaConfirmar}
               </button>

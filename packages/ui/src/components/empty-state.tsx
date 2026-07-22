@@ -257,7 +257,7 @@ const emptyStateAction = cva(
     // select-none igual que Button: al pulsar y arrastrar sobre un boton el
     // navegador selecciona el label, y una seleccion azul sobre MAYUSCULAS mono
     // se lee como un fallo de render.
-    "transition-colors duration-140 ease-out select-none",
+    "transition-colors duration-140 ease-[ease] select-none",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed",
     // Los iconos del prototipo van a 15px, mas pequeños que el label.

@@ -48,8 +48,8 @@ import { cn } from "../lib/cn";
  * step-end y no un fundido: un caret de texto parpadea duro, no respira. */
 const CARET_KEYFRAMES = `
 @keyframes tk-otp-caret {
-  0%, 50%   { opacity: 1; }
-  50.01%, 100% { opacity: 0; }
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }`;
 
 const otpCell = cva(
@@ -67,7 +67,14 @@ const otpCell = cva(
     "border-[0.5px] bg-[var(--textfield-bg-default)]",
     // DM Mono 500 a 22px. tabular-nums para que el 1 ocupe lo mismo que el 8.
     "font-num text-[22px] leading-none font-medium text-ink tabular-nums",
-    "transition-[border-color,background-color,box-shadow] duration-140 ease-out",
+    /* El prototipo pide `transition:border-color .15s, background .15s`: 150ms y
+       sin funcion de easing declarada, que en CSS es el `ease` por defecto
+       (cubic-bezier(.25,.1,.25,1)) — NO el ease-in-out que Tailwind mete por su
+       cuenta. Se replica con duration-150 + ease- explicito. box-shadow entra en
+       la lista porque el foco activo se dibuja con sombra inset (no engordando el
+       borde, para no mover la cifra): sin ella el anillo de foco aparece de golpe
+       en vez de fundir a los mismos 150ms que el color del prototipo. */
+    "transition-[border-color,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
     "select-none",
   ],
   {
@@ -290,10 +297,11 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
   }, []);
 
   return (
-    /* Sin `gap` aqui a proposito: la separacion del mensaje va como `mt-2` del
-       propio mensaje. El nodo del mensaje esta SIEMPRE montado (ver abajo) y un
-       gap se lo cobraria tambien cuando esta vacio, metiendo 8px muertos a todo
-       consumidor que no pase `message`. Con margen propio, vacio no ocupa. */
+    /* Sin `gap` aqui a proposito: la separacion del mensaje va como `mt-3.5`
+       (14px, el gap del bloque del prototipo) del propio mensaje. El nodo del
+       mensaje esta SIEMPRE montado (ver abajo) y un gap del contenedor se lo
+       cobraria tambien cuando esta vacio, metiendo 14px muertos a todo consumidor
+       que no pase `message`. Con margen propio, vacio no ocupa. */
     <div className={cn("flex w-fit flex-col", wrapperClassName)}>
       <div
         className={cn(
@@ -405,7 +413,7 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
           para que el cambio se detecte. Es justo el caso real — `message` es
           undefined hasta que la verificacion falla, y "Codigo incorrecto. Te
           quedan N intentos." es exactamente lo que hay que anunciar.
-          Vacio no ocupa: sin contenido no hay caja de texto y el mt-2 solo se
+          Vacio no ocupa: sin contenido no hay caja de texto y el mt-3.5 solo se
           aplica cuando hay mensaje. */}
       <span
         id={messageId}
@@ -414,8 +422,12 @@ export const OtpInput = React.forwardRef<HTMLInputElement, OtpInputProps>(functi
         aria-live="polite"
         className={cn(
           "flex items-center gap-1.5 text-[12.5px] leading-snug",
-          "[&_svg]:size-[15px] [&_svg]:shrink-0",
-          message != null && "mt-2",
+          // Icono a 14px, el `font-size:14px` del <i> Phosphor del prototipo.
+          "[&_svg]:size-[14px] [&_svg]:shrink-0",
+          // 14px de separacion con las casillas: el `gap:14px` del bloque del
+          // prototipo. Va como margen del mensaje (no gap del contenedor) para
+          // que vacio no reserve esos 14px; ver la nota del contenedor externo.
+          message != null && "mt-3.5",
           messageTone[feedback ?? "default"],
         )}
       >

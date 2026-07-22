@@ -67,14 +67,14 @@ const chip = cva(
         action: [
           "h-10 gap-2 px-[18px] font-sans text-sm",
           "border border-edge-2 bg-surface text-ink",
-          "cursor-pointer transition-colors duration-140 ease-out select-none",
+          "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
           "hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge",
           "disabled:cursor-not-allowed disabled:border-edge disabled:bg-surface disabled:text-ink-400",
         ],
         /* EXTENSION. Alto 36. El color lo fija el par selected true/false. */
         filter: [
           "h-9 gap-2 border px-4 font-sans text-sm",
-          "cursor-pointer transition-colors duration-140 ease-out select-none",
+          "cursor-pointer transition-colors duration-140 ease-[ease] select-none",
           "disabled:cursor-not-allowed disabled:border-edge disabled:bg-surface disabled:text-ink-400",
         ],
         /* EXTENSION. Alto 36, sin borde, padding asimetrico: el lado derecho
@@ -255,6 +255,35 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
   const esFeedback = variant === "feedback";
   const removible = !esFeedback && Boolean(onRemove);
   const esBoton = !esFeedback && !removible && (variant === "action" || variant === "filter");
+  const tieneContador = !esFeedback && count !== undefined && count !== null;
+
+  /* Pop tactil al pulsar una chip-boton. Reproduce el scale [1, 0.9, 1] con
+     rebote del prototipo (toggleChip -> spring stiffness 500, damping 12,
+     duracion 0.4s) con la Web Animations API, igual que el original. NO se hace
+     con transicion CSS a proposito: pelearia con la transicion de color de
+     140ms y con cualquier transform que ponga el consumidor. El keyframe con
+     overshoot a 1.03 imita la sobreoscilacion del spring (damping 12 = muy
+     subamortiguado). Se salta con prefers-reduced-motion, y en entornos sin
+     element.animate (jsdom en los tests) no hace nada. El onClick del consumidor
+     se dispara siempre, antes del pop. */
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    const el = event.currentTarget;
+    const reduce =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || typeof el.animate !== "function") return;
+    el.animate(
+      [
+        { transform: "scale(1)" },
+        { transform: "scale(0.9)", offset: 0.4 },
+        { transform: "scale(1.03)", offset: 0.75 },
+        { transform: "scale(1)" },
+      ],
+      { duration: 400, easing: "cubic-bezier(0.2, 0.85, 0.25, 1)" },
+    );
+  };
 
   /* El aspecto apagado del contenedor <span>. Las clases `disabled:` de la
      variante son inertes ahi (un span jamas casa con :disabled) y, al reves,
@@ -269,6 +298,10 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
     // Solo lo que puede recibir foco pinta anillo de foco.
     esBoton &&
       "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
+    // El archivo aprieta a 8 el lado del contador (CON CONTADOR: padding
+    // 0 8 0 16); las variantes traen 16 a la derecha, asi que se recorta aqui.
+    // Va antes que className para que el consumidor pueda repintar el padding.
+    tieneContador && "pr-2",
     apagadoSinBoton && [
       "cursor-not-allowed border-edge bg-surface text-ink-400",
       "hover:not-disabled:bg-surface active:not-disabled:bg-surface",
@@ -287,8 +320,10 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
       )}
       {!esFeedback && startIcon}
       {children}
-      {!esFeedback && count !== undefined && count !== null && (
-        <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-(--radius-pill) bg-ink px-[5px] font-meta text-[11px] text-surface tabular-nums">
+      {tieneContador && (
+        // gap 8 (del gap-2 de la chip) + counter 20x20 pill mono 11 px5, como
+        // CON CONTADOR del archivo. Sin ml propio: la separacion la da el gap.
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-(--radius-pill) bg-ink px-[5px] font-meta text-[11px] text-surface tabular-nums">
           {count}
         </span>
       )}
@@ -306,7 +341,7 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
           }
           className={cn(
             "inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full bg-edge text-ink-700",
-            "transition-colors duration-140 ease-out hover:not-disabled:text-ink",
+            "transition-colors duration-140 ease-[ease] hover:not-disabled:text-ink",
             "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1 focus-visible:ring-offset-surface-2",
             "disabled:cursor-not-allowed disabled:text-ink-400",
           )}
@@ -329,7 +364,7 @@ export const Chip = React.forwardRef<HTMLElement, ChipProps>(function Chip(
         // hace que el lector anuncie "activado"/"desactivado" al pulsarlo.
         aria-pressed={variant === "filter" ? selected : undefined}
         className={clases}
-        onClick={onClick}
+        onClick={handleClick}
         {...(props as React.ComponentPropsWithoutRef<"button">)}
       >
         {contenido}
@@ -392,9 +427,11 @@ const badge = cva(
         neutral: "[--tk-badge-dot:var(--tk-400)]",
       },
 
-      /* Alturas 20 / 24 / 28 de la regla "PILL TERMINAL". */
+      /* Alturas 20 / 24 / 28 de la regla "PILL TERMINAL". Paddings del archivo:
+         EN CONTEXTO usa 12 (font 11) para el badge pequeno y la fila SUAVE usa
+         14 (font 12) para el mediano. */
       size: {
-        s: "h-5 px-2.5 text-[11px]",
+        s: "h-5 px-3 text-[11px]",
         m: "h-6 px-3.5 text-xs",
         l: "h-7 px-4 text-xs",
       },

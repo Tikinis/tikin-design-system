@@ -97,13 +97,10 @@ export const ConAccionYCierre: Story = {
 export const Descartables: Story = {
   parameters: { controls: { disable: true } },
   render: function Descartables() {
+    // Mismo trio y mismos textos que el bloque "EN VIVO · DESCARTABLES" del
+    // documento (alertDefs): success, warning y error, cada uno descartable y
+    // sin accion.
     const AVISOS = [
-      {
-        id: "info",
-        tone: "info",
-        title: "Verificación en proceso",
-        body: "Tu cuenta estará lista en pocos minutos; te avisamos cuando puedas enviar.",
-      },
       {
         id: "success",
         tone: "success",
@@ -111,15 +108,53 @@ export const Descartables: Story = {
         body: "$250.000 llegaron a $mariarojas · ref TX-4821.",
       },
       {
+        id: "warning",
+        tone: "warning",
+        title: "Verifica tu identidad",
+        body: "Para enviar más de $1.000.000 confirma tu documento.",
+      },
+      {
         id: "error",
         tone: "error",
         title: "No se pudo completar el envío",
-        body: "Saldo insuficiente en tu Cuenta Tikin. Recarga e inténtalo de nuevo.",
+        body: "Saldo insuficiente en tu Cuenta Tikin. Recarga e inténtalo.",
       },
     ] as const;
 
     const [ocultos, setOcultos] = React.useState<string[]>([]);
     const visibles = AVISOS.filter((a) => !ocultos.includes(a.id));
+    const activos = visibles.length;
+
+    // Referencias vivas a cada Alert para poder medir su altura al colapsarlo.
+    const nodos = React.useRef(new Map<string, HTMLDivElement>());
+
+    // El Alert NO gestiona su visibilidad: el colapso de salida es cosa de quien
+    // lo quita de la lista (aqui). Se calca el del prototipo (dismissAlert):
+    // opacity 1->0, height real->0 y marginBottom 0->-12 (se traga el gap de 12)
+    // en 0.32s con la curva ease-in cubic-bezier(0.4,0,1,1). Se replica con la
+    // Web Animations API midiendo offsetHeight igual que el original, y solo se
+    // quita del estado cuando la animacion termina para que no salte.
+    const quitar = (id: string) => {
+      const el = nodos.current.get(id);
+      const sinMovimiento =
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (!el || sinMovimiento || typeof el.animate !== "function") {
+        // Con movimiento reducido (o sin soporte) desaparece sin animar.
+        setOcultos((prev) => [...prev, id]);
+        return;
+      }
+
+      const salida = el.animate(
+        [
+          { opacity: 1, height: `${el.offsetHeight}px`, marginBottom: "0px" },
+          { opacity: 0, height: "0px", marginBottom: "-12px" },
+        ],
+        { duration: 320, easing: "cubic-bezier(0.4,0,1,1)", fill: "forwards" },
+      );
+      salida.onfinish = () => setOcultos((prev) => [...prev, id]);
+    };
 
     return (
       <div className="flex w-[560px] max-w-full flex-col gap-3">
@@ -127,15 +162,35 @@ export const Descartables: Story = {
           <span className="font-mono text-[13px] tracking-[0.14em] text-ink-600 uppercase">
             En vivo · descartables
           </span>
-          <span className="font-meta text-[11px] text-ink-600 tabular-nums">
-            {visibles.length}/{AVISOS.length}
+          {/* Contador como en el prototipo: "N activas" o "Todas descartadas",
+              en Ubuntu Mono 11 y tinta 500. */}
+          <span className="font-meta text-[11px] text-ink-500">
+            {activos === 0 ? "Todas descartadas" : `${activos} activas`}
           </span>
           <button
             type="button"
             onClick={() => setOcultos([])}
             disabled={ocultos.length === 0}
-            className="ml-auto h-[30px] cursor-pointer rounded-sm px-3 font-mono text-xs tracking-[0.02em] text-ink-700 uppercase hover:not-disabled:bg-surface-2 disabled:cursor-not-allowed disabled:text-ink-400"
+            // Activo en tinta plena (var(--tk-ink)); apagado en tinta 400 con
+            // cursor por defecto, como restoreColor/restoreCursor del original.
+            // Hover surface-2 y pressed edge (data-hover / data-press).
+            className="ml-auto inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-sm px-3 font-mono text-xs tracking-[0.02em] text-ink uppercase hover:not-disabled:bg-surface-2 active:not-disabled:bg-edge disabled:cursor-default disabled:text-ink-400"
           >
+            <svg
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              {/* Flecha circular antihoraria (ph-arrow-counter-clockwise). */}
+              <path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5" />
+              <path d="M2.6 2.7v2.4h2.4" />
+            </svg>
             Restaurar
           </button>
         </div>
@@ -143,9 +198,13 @@ export const Descartables: Story = {
         {visibles.map((a) => (
           <Alert
             key={a.id}
+            ref={(node) => {
+              if (node) nodos.current.set(a.id, node);
+              else nodos.current.delete(a.id);
+            }}
             tone={a.tone}
             title={a.title}
-            onDismiss={() => setOcultos((prev) => [...prev, a.id])}
+            onDismiss={() => quitar(a.id)}
           >
             {a.body}
           </Alert>

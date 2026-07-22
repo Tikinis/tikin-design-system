@@ -296,7 +296,13 @@ const keypadKey = cva(
     "inline-flex h-[52px] w-full items-center justify-center rounded-lg select-none",
     "border-none bg-transparent text-ink",
     "font-num text-[22px] leading-none font-medium",
-    "cursor-pointer transition-colors duration-140 ease-out",
+    // El prototipo cambia el fondo con `transition: background .14s ease`. `ease`
+    // es cubic-bezier(.25,.1,.25,1), NO `ease-out` (0,0,.2,1) — curva distinta,
+    // no da igual. Se conserva `transition-colors` (no solo background) por
+    // consistencia con la rejilla hermana calendar.tsx; lo unico que el original
+    // anima es el fondo del hover/press, donde la tinta del texto no cambia, asi
+    // que se ve identico al doc.
+    "cursor-pointer transition-colors duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     // hover superficie 2 · pressed borde. La tira estatica del documento solo
     // llega a dibujar uno de los dos; ver cabecera.

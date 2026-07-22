@@ -73,7 +73,12 @@ const fieldBox = cva(
     "relative flex w-full items-stretch",
     // 0.5px es literal en Figma y en el documento; no es un redondeo de 1px.
     "border-[0.5px] bg-[var(--textfield-bg-default)]",
-    "transition-[border-color,background-color,box-shadow] duration-140 ease-out",
+    // El documento fija la curva: "transicion · 140ms ease" y el CSS del
+    // prototipo usa `border-color .14s ease`. `ease` es cubic-bezier(.25,.1,.25,1),
+    // NO `ease-out` (cubic-bezier(0,0,.58,1)): son curvas distintas y hay que
+    // clavar la del documento. `motion-reduce` corta la transicion para quien
+    // pide menos movimiento (regla dura de accesibilidad).
+    "transition-[border-color,background-color,box-shadow] duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
     "[&_svg]:size-[var(--tf-icon)] [&_svg]:shrink-0",
   ],
   {
@@ -358,7 +363,14 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
               htmlFor={id}
               className={cn(
                 "pointer-events-none absolute left-0 max-w-full truncate font-sans",
-                "transition-[top,left,font-size,letter-spacing,color,transform] duration-140 ease-out",
+                /* El documento anima la etiqueta con EXACTAMENTE cuatro
+                   propiedades: `top .14s ease, font-size .14s ease, transform
+                   .14s ease, color .14s ease`. Ni `left` (el salto horizontal del
+                   modo leading, de 46 a 16) ni `letter-spacing` estan en esa
+                   lista, asi que en el original caen de golpe mientras el resto
+                   se desliza. Se replica esa lista y esa curva (`ease`, no
+                   `ease-out`). motion-reduce lo deja sin transicion. */
+                "transition-[top,font-size,transform,color] duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none",
                 hasOwnPlaceholder
                   ? LABEL_FLOAT
                   : [LABEL_REST, LABEL_FLOAT_ON_FOCUS, LABEL_FLOAT_ON_VALUE],
@@ -423,7 +435,9 @@ const textareaBox = cva(
   [
     "w-full rounded-lg border-[0.5px] bg-[var(--textfield-bg-default)]",
     "px-3.5 py-3 font-sans text-[15px] leading-[1.5] text-ink",
-    "transition-[border-color,background-color,box-shadow] duration-140 ease-out outline-none",
+    // Misma curva que el TextField: el documento pide "140ms ease"
+    // (cubic-bezier(.25,.1,.25,1)), no ease-out. motion-reduce la anula.
+    "transition-[border-color,background-color,box-shadow] duration-140 ease-[cubic-bezier(0.25,0.1,0.25,1)] outline-none motion-reduce:transition-none",
     "placeholder:text-[color:var(--textfield-text-label-default)]",
     "disabled:cursor-not-allowed disabled:border-[var(--textfield-stroke-disabled)]",
     "disabled:bg-[var(--textfield-bg-disabled)] disabled:text-ink-500",

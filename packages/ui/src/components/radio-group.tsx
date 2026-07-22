@@ -27,6 +27,19 @@ import { cn } from "../lib/cn";
  *   disabled   inset 1.5px --tk-border     + fondo --tk-surface-2
  *   error      inset 1.5px rojo            + fondo rojo transparente
  *
+ * ANIMACION — "pop con spring" (igual que el checkbox de la seccion 20).
+ *   Al seleccionar, el original NO transiciona el anillo ni el fondo: los cambia
+ *   al instante y corre un unico "pop" sobre el CIRCULO con Motion:
+ *       _pop(ring, 0.75)  ->  scale [1, 0.75, 1], spring stiffness 520, damping 14
+ *   El punto solo conmuta (Indicator monta/desmonta), sin transicion propia: el
+ *   movimiento percibido lo pone el pop del circulo, no el punto. Aqui se
+ *   reproduce igual —anillo/fondo instantaneos, pop en el circulo— pero sin la
+ *   dependencia Motion: el muelle 520/14 (subamortiguado, zeta ~0.31, por eso
+ *   rebota por encima de 1) se aproxima con la Web Animations API y un keyframe
+ *   multiparada. Ver POP_KEYFRAMES y popRing mas abajo. Por eso NINGUN elemento
+ *   del control lleva `transition`: meter un fundido es justo lo que el
+ *   prototipo NO hace.
+ *
  * DOS DIVERGENCIAS ANOTADAS A PROPOSITO
  * 1. El fondo de error usa --colours-purered-transparent (alpha 0.05) donde el
  *    prototipo escribe el literal rgba(255,46,46,0.06). Se prefiere el token
@@ -57,7 +70,10 @@ const radioItem = cva(
   [
     "group/tk-radio relative flex items-center text-left",
     "font-sans text-ink",
-    "cursor-pointer transition-colors duration-140 ease-out",
+    /* Sin `transition`: el original cambia anillo, fondo y borde al instante y
+       deja el movimiento en el pop del circulo (ver popRing). Un fundido de
+       color aqui es justo lo que el prototipo NO hace. */
+    "cursor-pointer",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     "disabled:cursor-not-allowed disabled:text-ink-500",
     // Valores por defecto = estado OFF.
@@ -132,6 +148,36 @@ const radioGroup = cva("flex", {
   },
   defaultVariants: { orientation: "vertical" },
 });
+
+/* "Pop con spring" del prototipo. El original corre scale [1, 0.75, 1] con un
+   muelle stiffness 520 / damping 14: baja rapido a 0.75 (aplasta) y vuelve con
+   rebote (zeta ~0.31 => sobrepasa 1 antes de asentar). Se reproduce esa curva
+   como keyframe multiparada —bajada, sobrepaso, asentamiento— sin depender de
+   una libreria de animacion. Es mas hondo que el pop del checkbox (0.75 vs 0.82)
+   porque el prototipo asi lo pide. ~470ms es la ventana en la que el muelle
+   520/14 deja de ser perceptible (algo mas lento que el 600/13 del checkbox). */
+const POP_KEYFRAMES: Keyframe[] = [
+  { transform: "scale(1)", offset: 0 },
+  { transform: "scale(0.75)", offset: 0.26 },
+  { transform: "scale(1.06)", offset: 0.52 },
+  { transform: "scale(0.985)", offset: 0.78 },
+  { transform: "scale(1)", offset: 1 },
+];
+
+/** Corre el pop sobre el circulo al seleccionar, respetando reduced-motion. */
+function popRing(node: HTMLElement | null) {
+  // Sin nodo (SSR / primer render) o sin WAAPI (jsdom en los tests) no hay pop.
+  if (!node || typeof node.animate !== "function") return;
+  // prefers-reduced-motion vive en JS aqui, no en CSS: se comprueba a mano y se
+  // omite el pop entero cuando el usuario pide menos movimiento. Doble `?.`
+  // porque en algunos entornos matchMedia no existe.
+  const media =
+    typeof window !== "undefined"
+      ? window.matchMedia?.("(prefers-reduced-motion: reduce)")
+      : undefined;
+  if (media?.matches) return;
+  node.animate(POP_KEYFRAMES, { duration: 470, easing: "linear" });
+}
 
 /* El grupo comunica a sus hijos el estado de error y la disposicion. `invalid`
  * por contexto evita que el consumidor tenga que repetirlo opcion por opcion y
@@ -243,7 +289,7 @@ export interface RadioProps
  * (el nombre de una cuenta, un metodo de envio), no una etiqueta de sistema.
  */
 export const Radio = React.forwardRef<HTMLButtonElement, RadioProps>(function Radio(
-  { className, appearance, invalid, description, children, ...props },
+  { className, appearance, invalid, description, children, onClick, ...props },
   ref,
 ) {
   const group = React.useContext(RadioGroupContext);
@@ -252,6 +298,22 @@ export const Radio = React.forwardRef<HTMLButtonElement, RadioProps>(function Ra
   const id = React.useId();
   const labelId = `${id}-label`;
   const descriptionId = `${id}-description`;
+
+  /* Ref propio al CIRCULO (no al control) para correr el pop justo sobre el, tal
+   * cual el prototipo: pickRadio anima `e.currentTarget.querySelector('span')`,
+   * que es el circulo, no la fila entera. Es independiente del `ref` que se
+   * reenvia al consumidor, asi que no hay que fusionarlos. */
+  const circleRef = React.useRef<HTMLSpanElement>(null);
+
+  /* El pop se dispara al clicar (raton o barra espaciadora, que en un <button>
+   * enfocado tambien emite click), igual que el original lo hace en su onClick.
+   * Se corre incluso al reclicar la opcion ya marcada, como el prototipo. El
+   * onClick del consumidor se reenvia intacto detras del pop; como se
+   * desestructura de props, el spread no lo pisa. */
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    popRing(circleRef.current);
+    onClick?.(event);
+  };
 
   return (
     <RadixRadioGroup.Item
@@ -271,12 +333,14 @@ export const Radio = React.forwardRef<HTMLButtonElement, RadioProps>(function Ra
       aria-describedby={description ? descriptionId : undefined}
       aria-invalid={isInvalid || undefined}
       {...props}
+      onClick={handleClick}
     >
       {/* El circulo es decorativo: el estado ya lo lleva aria-checked del role
           radio, y anunciarlo dos veces solo estorba. */}
       <span
+        ref={circleRef}
         aria-hidden="true"
-        className="flex size-[22px] shrink-0 items-center justify-center rounded-pill bg-[var(--tk-radio-bg)] shadow-[inset_0_0_0_var(--tk-radio-ring-w)_var(--tk-radio-ring)] transition-[box-shadow,background-color] duration-140 ease-out"
+        className="flex size-[22px] shrink-0 items-center justify-center rounded-pill bg-[var(--tk-radio-bg)] shadow-[inset_0_0_0_var(--tk-radio-ring-w)_var(--tk-radio-ring)]"
       >
         {/* Indicator solo se monta cuando la opcion esta marcada. */}
         <RadixRadioGroup.Indicator className="size-2.5 rounded-pill bg-[var(--tk-radio-dot)]" />

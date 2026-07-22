@@ -74,7 +74,7 @@ const toggleTrack = cva(
        clases y ganaria la que el CSS pusiera despues. Con la altura del track
        (16-24px) ambos radios se ven identicos. */
     "relative inline-flex shrink-0 items-center rounded-full",
-    "cursor-pointer transition-colors duration-140 ease-out",
+    "cursor-pointer transition-colors duration-140 ease-[ease]",
     "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page",
     // Apagado: track blanco en claro / tinta en oscuro, con borde. Ver nota 3
     // sobre por que el borde va como sombra inset de 1px y no como `border`:
@@ -143,7 +143,12 @@ const toggleThumb = cva(
     // data-disabled tambien al thumb, asi que el selector casa.
     "data-[state=checked]:bg-[var(--toggle-thumb-bg-on)]",
     "data-[disabled]:data-[disabled]:bg-[var(--toggle-thumb-bg-disabled)]",
-    /* El documento pide un muelle (stiffness 680). CSS no tiene springs, asi
+    /* El muelle del archivo (toggleTg: stiffness 680, damping 20) mueve el knob
+     * en DOS ejes a la vez: VIAJA en x y se APLASTA —scale [1, 0.85, 1]— al pasar.
+     *
+     * El VIAJE va aqui, en CSS: es lo unico que tiene posicion de reposo, y una
+     * transicion la mantiene sin animar en el montaje (un @keyframes o un WAAPI
+     * dispararian al pintar un toggle ya encendido). CSS no tiene springs, asi
      * que se aproxima con una curva de rebote corto, cuyo sobreimpulso maximo
      * ronda el 10% del recorrido.
      *
@@ -154,7 +159,12 @@ const toggleThumb = cva(
      * sub-pixel, dura milisegundos, y la alternativa (quitar el rebote solo en
      * S, o recortar con `overflow-hidden`) o rompe la coherencia del gesto
      * entre tamaños o se lleva por delante el pseudo-elemento del area tactil,
-     * que precisamente sobresale del track. */
+     * que precisamente sobresale del track.
+     *
+     * El APLASTADO (scale) es simetrico —empieza y acaba en 1— y solo debe correr
+     * al alternar, asi que se lanza a mano en `runToggleMotion`, no en CSS. Va
+     * sobre la propiedad `scale`, no sobre `transform`, para componerse con este
+     * translateX en vez de pisarlo. */
     "transition-transform duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
     "motion-reduce:transition-none",
     "data-[state=checked]:translate-x-[var(--tk-toggle-travel)]",
@@ -166,6 +176,53 @@ const toggleThumb = cva(
     defaultVariants: { size: "l" },
   },
 );
+
+/* ANIMACION AL ALTERNAR (fuente: toggleTg en el archivo). El motor original
+ * corre dos gestos imperativos al hacer click, ademas del viaje en x del knob:
+ *
+ *   knob:  scale [1, 0.85, 1]  con muelle stiffness 680, damping 20
+ *   track: scale [1, 1.05, 1]  con duration 0.3s
+ *
+ * Ambos son simetricos (empiezan y acaban en 1) y no deben correr en el montaje,
+ * asi que se disparan a mano con WAAPI —igual que el pop del checkbox—, no con un
+ * @keyframes ligado a data-state (que se dispararia al pintar). Se animan sobre la
+ * propiedad `scale`, independiente de `transform`, para no pisar el translateX del
+ * knob ni un `transform` que ponga el consumidor. */
+
+// El aplastado del knob. Un muelle 680/20 (ratio de amortiguacion ~0.38) cae a
+// 0.85 y vuelve con un rebote corto: sobreimpulso a ~1.04, contragolpe a ~0.99 y
+// reposo. Se expande a paradas —como el pop del checkbox— porque una transicion
+// no puede hundirse y volver.
+const KNOB_SQUASH: Keyframe[] = [
+  { scale: "1", offset: 0 },
+  { scale: "0.85", offset: 0.3 },
+  { scale: "1.04", offset: 0.58 },
+  { scale: "0.99", offset: 0.82 },
+  { scale: "1", offset: 1 },
+];
+
+// El latido de la pista: crece un 5% y vuelve. Del archivo: duration 0.3 con el
+// easing por defecto de su motor (cubic-bezier(.2,.85,.25,1)).
+const TRACK_PULSE: Keyframe[] = [{ scale: "1" }, { scale: "1.05" }, { scale: "1" }];
+
+/** Lanza aplastado (knob) + latido (track) al alternar, respetando
+ *  reduced-motion. Sin nodo (SSR / primer render) o sin WAAPI (jsdom en los
+ *  tests) no corre nada. */
+function runToggleMotion(track: HTMLElement | null, thumb: HTMLElement | null) {
+  // prefers-reduced-motion se comprueba a mano —vive en JS, no en CSS— y apaga
+  // los dos gestos. Doble `?.` porque en algunos entornos matchMedia no existe.
+  const media =
+    typeof window !== "undefined"
+      ? window.matchMedia?.("(prefers-reduced-motion: reduce)")
+      : undefined;
+  if (media?.matches) return;
+  if (thumb && typeof thumb.animate === "function") {
+    thumb.animate(KNOB_SQUASH, { duration: 340, easing: "linear" });
+  }
+  if (track && typeof track.animate === "function") {
+    track.animate(TRACK_PULSE, { duration: 300, easing: "cubic-bezier(0.2,0.85,0.25,1)" });
+  }
+}
 
 type ToggleVariants = VariantProps<typeof toggleTrack>;
 
@@ -200,10 +257,38 @@ export interface ToggleProps
  * `aria-labelledby` apuntando al texto de la fila. `SwitchField` ya lo cablea.
  */
 export const Toggle = React.forwardRef<React.ComponentRef<typeof Switch.Root>, ToggleProps>(
-  function Toggle({ className, thumbClassName, size, ...props }, ref) {
+  function Toggle({ className, thumbClassName, size, onCheckedChange, ...props }, ref) {
+    // Refs propios para correr el latido (track) y el aplastado (thumb) al
+    // alternar. El del track se fusiona con el que reenvia el consumidor, que se
+    // conserva intacto (funcion u objeto).
+    const trackRef = React.useRef<HTMLButtonElement>(null);
+    const thumbRef = React.useRef<HTMLSpanElement>(null);
+    const setTrackRef = React.useCallback(
+      (node: HTMLButtonElement | null) => {
+        trackRef.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      },
+      [ref],
+    );
+
+    // Se dispara al alternar (click, Espacio o Enter, que es cuando Radix emite
+    // onCheckedChange), igual que el original lo lanza en su onClick. Un
+    // deshabilitado no emite el evento, asi que tampoco anima. El callback del
+    // consumidor se reenvia intacto detras de la animacion.
+    const handleCheckedChange: NonNullable<ToggleProps["onCheckedChange"]> = (checked) => {
+      runToggleMotion(trackRef.current, thumbRef.current);
+      onCheckedChange?.(checked);
+    };
+
     return (
-      <Switch.Root ref={ref} className={cn(toggleTrack({ size, className }))} {...props}>
-        <Switch.Thumb className={cn(toggleThumb({ size }), thumbClassName)} />
+      <Switch.Root
+        ref={setTrackRef}
+        className={cn(toggleTrack({ size, className }))}
+        {...props}
+        onCheckedChange={handleCheckedChange}
+      >
+        <Switch.Thumb ref={thumbRef} className={cn(toggleThumb({ size }), thumbClassName)} />
       </Switch.Root>
     );
   },
