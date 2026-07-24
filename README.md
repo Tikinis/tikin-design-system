@@ -7,7 +7,7 @@ literales del archivo de Figma.
 La documentación viva es el Storybook. Ahí está cada componente con sus
 variantes, sus estados y su matriz de especificación:
 
-**→ https://nicolasgardila.github.io/tikin-design-system/**
+**→ https://tikinis.github.io/tikin-design-system/**
 
 Se redespliega solo en cada push a `main` (workflow `pages.yml`).
 
@@ -45,7 +45,7 @@ versión, una actualización, y todos los productos van sincronizados.
 Igual que shadcn/ui: el componente se copia a tu repositorio y pasa a ser tuyo.
 
 ```bash
-npx shadcn@latest add https://nicolasgardila.github.io/tikin-design-system/r/button.json
+npx shadcn@latest add https://tikinis.github.io/tikin-design-system/r/button.json
 ```
 
 Esta vía **sí requiere Tailwind 4** en tu proyecto, más los tokens:
@@ -176,7 +176,7 @@ una propuesta coherente, no especificación aprobada.
 - **Dónde se publica.** El monorepo está listo para publicar (build, `exports`,
   versionado con changesets), pero falta elegir destino: npm privado, GitHub
   Packages o solo registry. Las URLs de este README asumen
-  `https://nicolasgardila.github.io/tikin-design-system`; cámbialas con `TIKIN_REGISTRY_URL` al generar
+  `https://tikinis.github.io/tikin-design-system`; cámbialas con `TIKIN_REGISTRY_URL` al generar
   el registry.
 
 ## Problemas conocidos en el origen

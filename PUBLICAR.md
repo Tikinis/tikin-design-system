@@ -15,7 +15,7 @@ Sustituye la URL del registry, que ahora mismo es un marcador de posición:
 
 ```bash
 # en el sitio donde vayáis a desplegar el Storybook
-export TIKIN_REGISTRY_URL="https://nicolasgardila.github.io/tikin-design-system"
+export TIKIN_REGISTRY_URL="https://tikinis.github.io/tikin-design-system"
 pnpm registry
 ```
 
@@ -77,7 +77,7 @@ Después, el mismo `pnpm changeset` → `pnpm version` → `pnpm release`.
 Cero infraestructura de publicación. Se consume copiando el código:
 
 ```bash
-npx shadcn@latest add https://nicolasgardila.github.io/tikin-design-system/r/button.json
+npx shadcn@latest add https://tikinis.github.io/tikin-design-system/r/button.json
 ```
 
 Requiere Tailwind 4 en cada proyecto consumidor. Con esta ruta pierdes la

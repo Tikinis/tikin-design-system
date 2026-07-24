@@ -14,15 +14,15 @@ Distribución híbrida: paquete npm **y** registry estilo shadcn desde una sola 
 
 | | |
 |---|---|
-| Repo | github.com/nicolasgardila/tikin-design-system (público) |
-| Storybook + registry | https://nicolasgardila.github.io/tikin-design-system/ |
+| Repo | github.com/Tikinis/tikin-design-system (público) |
+| Storybook + registry | https://tikinis.github.io/tikin-design-system/ |
 | npm | **sin publicar** — ver `PUBLICAR.md` |
 
 El Storybook se redespliega solo en cada push a `main` (`.github/workflows/pages.yml`)
 y sirve el registry en `/r/*.json`.
 
-> El repo está bajo la cuenta personal `nicolasgardila`, no una org de la empresa.
-> Si debe vivir en una org, transferir con `gh repo transfer`.
+> El repo vive en la organización `Tikinis`. La URL personal anterior
+> (`nicolasgardila/tikin-design-system`) redirige automáticamente.
 
 ## Estructura
 
