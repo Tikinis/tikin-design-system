@@ -46,7 +46,7 @@ pnpm add @tikin/ui @phosphor-icons/react
 En el entry de la app, **una sola vez**:
 
 ```tsx
-import "@tikin/ui/styles.css";   // tokens + estilos compilados; no requiere config de Tailwind
+import "@tikin/ui/styles.css"; // tokens + estilos compilados; no requiere config de Tailwind
 ```
 
 Uso:
@@ -63,6 +63,7 @@ import { Button, TextField } from "@tikin/ui";
 
 **Providers de overlay** (montar una vez cerca del root, solo si usas esos
 componentes):
+
 - Tooltips → envolver en `<TooltipProvider>`.
 - Toasts → `<ToastProvider>` + `<ToastViewport />`.
 - Snackbars → `<SnackbarProvider>` + `<SnackbarViewport />`.
@@ -88,12 +89,14 @@ Nombre de registry → símbolos que se importan de `@tikin/ui`. Para instalar
 suelto: `.../r/<nombre>.json`.
 
 **Acciones**
+
 - `button` → `Button` · botón; `variant` primary/secondary/ghost/link, `size`, `loading`
 - `link` → `Link`, `IconButton` · enlace (siempre subrayado), botón de solo icono
 - `menu-button` → `MenuButton`, `SplitButton`, `ButtonGroup` · menú desplegable, split, grupo
 - `filter-chip` → `FilterChip` · chip con opciones para filtrar
 
 **Formulario**
+
 - `text-field` → `TextField`, `Textarea` · campo con etiqueta interna, mensaje de error
 - `search-input` → `SearchInput` · campo de búsqueda
 - `checkbox` → `Checkbox` · casilla
@@ -108,12 +111,14 @@ suelto: `.../r/<nombre>.json`.
 - `calendar` → `Calendar` · calendario
 
 **Selección y navegación**
+
 - `tabs` → `Tabs` (+`TabsList`/`TabsTrigger`/`TabsContent`), `SegmentedControl` · pestañas y control segmentado
 - `steps` → `Steps`, `StepsDots` · pasos/wizard
 - `pagination` → `Pagination` · paginación
 - `navigation` → `TabBar`, `TopBar`, `Sidebar` (+ sub-items) · barras de navegación
 
 **Contenido y datos**
+
 - `card` → `Card`, `CardFeature`, `CardMedia`, `CardStat` · tarjeta y sus roles
 - `table` → `Table` (+`TableHeader`/`TableBody`/`TableRow`/`TableCell`…) · tabla
 - `list-item` → `List`, `ListItem` (+`ListItemIcon`/`ListItemValue`/`ListItemAmount`/`ListItemCheck`) · listas
@@ -123,6 +128,7 @@ suelto: `.../r/<nombre>.json`.
 - `empty-state` → `EmptyState`, `EmptyStateAction` · estado vacío
 
 **Feedback y overlays**
+
 - `alert` → `Alert`, `AlertAction` · alerta en bloque; `tone`
 - `banner` → `Banner`, `BannerAction` · banner
 - `toast` → `Toast`, `ToastProvider`, `ToastViewport`, `ToastAction` · toasts (requiere provider)
