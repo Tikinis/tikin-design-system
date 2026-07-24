@@ -17,6 +17,7 @@ Distribución híbrida: paquete npm **y** registry estilo shadcn desde una sola 
 | Repo | github.com/Tikinis/tikin-design-system (público) |
 | Storybook + registry | https://tikinis.github.io/tikin-design-system/ |
 | npm | **sin publicar** — ver `PUBLICAR.md` |
+| Skill de Claude Code | `skills/tikin-ui/SKILL.md` — que la IA use el DS sola (ver `skills/README.md`) |
 
 El Storybook se redespliega solo en cada push a `main` (`.github/workflows/pages.yml`)
 y sirve el registry en `/r/*.json`.

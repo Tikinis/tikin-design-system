@@ -64,6 +64,21 @@ de recibir correcciones.
 
 ---
 
+## Para Claude Code (que la IA use el DS sola)
+
+Hay una skill que hace que Claude, en cualquier repo de Tikin, construya el
+front sobre `@tikin/ui` en vez de inventar componentes. Instálala una vez:
+
+```bash
+mkdir -p ~/.claude/skills/tikin-ui
+curl -sL https://raw.githubusercontent.com/Tikinis/tikin-design-system/main/skills/tikin-ui/SKILL.md \
+  -o ~/.claude/skills/tikin-ui/SKILL.md
+```
+
+Detalles y la variante por-repo en [`skills/README.md`](skills/README.md).
+
+---
+
 ## Tema claro y oscuro
 
 El tema se activa con la clase `.dark` en cualquier ancestro:
