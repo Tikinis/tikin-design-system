@@ -1,0 +1,32 @@
+{
+  "name": "@tikin/eslint-config",
+  "version": "0.1.0",
+  "description": "Reglas de ESLint que obligan a usar el design system @tikin/ui en apps web de Tikin",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node -e \"console.log('@tikin/eslint-config es config plana — no requiere build')\"",
+    "typecheck": "node -e \"process.exit(0)\"",
+    "test": "node --test"
+  },
+  "peerDependencies": {
+    "eslint": ">=9"
+  },
+  "devDependencies": {
+    "eslint": "^10.7.0",
+    "typescript-eslint": "^8.64.0"
+  },
+  "keywords": [
+    "eslint",
+    "eslintconfig",
+    "tikin",
+    "design-system"
+  ],
+  "license": "UNLICENSED"
+}

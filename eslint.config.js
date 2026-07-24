@@ -24,6 +24,8 @@ export default tseslint.config(
       "*.config.{js,ts}",
       "**/vite.config.ts",
       "**/vitest.config.ts",
+      // El paquete @tikin/eslint-config y su test corren en Node.
+      "packages/eslint-config/**/*.js",
     ],
     languageOptions: {
       // Node y navegador a la vez: auditar-stories.mjs corre en Node, pero la

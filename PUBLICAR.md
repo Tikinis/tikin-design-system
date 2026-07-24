@@ -57,7 +57,8 @@ En la raíz, crea `.npmrc`:
 @tikin:registry=https://npm.pkg.github.com
 ```
 
-Y en `packages/ui/package.json` y `packages/tokens/package.json`:
+Y en `packages/ui/package.json`, `packages/tokens/package.json` y
+`packages/eslint-config/package.json`:
 
 ```json
 "publishConfig": { "registry": "https://npm.pkg.github.com" }

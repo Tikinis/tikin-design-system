@@ -91,6 +91,15 @@ importers:
         specifier: ^8.1.5
         version: 8.1.5(esbuild@0.27.7)(jiti@2.7.0)
 
+  packages/eslint-config:
+    devDependencies:
+      eslint:
+        specifier: ^10.7.0
+        version: 10.7.0(jiti@2.7.0)
+      typescript-eslint:
+        specifier: ^8.64.0
+        version: 8.64.0(eslint@10.7.0(jiti@2.7.0))(typescript@5.9.3)
+
   packages/tokens:
     dependencies:
       '@fontsource/dm-mono':

@@ -28,12 +28,22 @@ y sirve el registry en `/r/*.json`.
 ## Estructura
 
 ```
-packages/tokens   @tikin/tokens — CSS puro, 3 capas (ver abajo)
-packages/ui       @tikin/ui — un fichero por componente + .test + .stories
-apps/storybook    docs vivas; sirve el registry en public/r/
-docs/             Sistema de Diseño.dc.html + figma-export/ + ANIMACIONES-ref.txt
-scripts/          generación de registry, guardas y utilidades
+packages/tokens         @tikin/tokens — CSS puro, 3 capas (ver abajo)
+packages/ui             @tikin/ui — un fichero por componente + .test + .stories
+packages/eslint-config  @tikin/eslint-config — lint que obliga a usar el DS (apps web)
+apps/storybook          docs vivas; sirve el registry en public/r/
+docs/                   Sistema de Diseño.dc.html + figma-export/ + ANIMACIONES-ref.txt
+scripts/                generación de registry, guardas y utilidades
+skills/                 skill tikin-ui para Claude Code (que la IA use el DS)
 ```
+
+### Dos capas para que "todo el front use el DS"
+
+- **IA** → la skill `skills/tikin-ui` (guía a Claude en cualquier repo).
+- **Personas/CI** → `@tikin/eslint-config` marca `<button>`/`<input>`/`<textarea>`
+  crudos en las apps web. Se instala en cada consumidor (ver su README).
+  Aplica a **admin** y **landing** (Next.js). **NO** a `Tikin.app`, que es
+  Expo/React Native y no puede consumir el DS web.
 
 ### Las 3 capas de tokens
 
