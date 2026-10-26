@@ -1,0 +1,55 @@
+# gitleaks — reglas por defecto + contraseñas sueltas (TIKIN-1183)
+#
+# Cada excepción dice por qué es un falso positivo. Antes de agregar una, confirma que
+# lo que se calla NO es una credencial: si lo es, se saca del repo y su valor vive en
+# Infisical (ver Tikinis/tikin docs/secretos/inventario.md).
+
+title = "tikin-design-system"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "tikin-password-suelta"
+description = "Contraseña en claro asignada a una clave pass/password/pwd/contraseña"
+regex = '''(?i)\b(?:pass(?:word|wd)?|pwd|contrase(?:ñ|n)a)[a-z0-9_-]*["']?\s*[:=]\s*["']?([^\s"'`<>$|]{8,})'''
+# Solo en notas y configuración: en el código, «password: x» es casi siempre una variable.
+path = '''(?i)(\.(md|mdx|txt|ya?ml|conf|cfg|ini|properties|toml|json|env|sh)$|(^|/)\.env[^/]*$)'''
+secretGroup = 1
+entropy = 3.0
+keywords = ["pass", "pwd", "contrase"]
+
+[[rules.allowlists]]
+description = "Referencias a variables, expresiones o placeholders, no valores"
+regexTarget = "secret"
+regexes = [
+  '''^\$''',
+  '''^\{''',
+  '''(?i)^(process\.env|os\.environ|env\.|secrets\.|config\.|settings\.)''',
+  '''(?i)(redactado|redacted|example|changeme|placeholder|xxxx|\*\*\*\*)''',
+  '''\(\)?;?,?$''',
+  '''[=&|]{2}''',
+  '''^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+[,;)]*$''',
+  '''^[a-z]+([A-Z][a-z0-9]+)+[,;)]*$''',
+  '''^[A-Z][A-Z0-9_]+[,;)]*$''',
+  '''^[a-z]+(-[a-z]+)+[,;)]*$''',
+  '''^/''',
+]
+
+[[rules.allowlists]]
+description = "Palabras que empiezan por pass y no son contraseñas (passport, passthrough, passwordAttempts)"
+regexTarget = "match"
+regexes = ['''(?i)\bpass(port|through|keys?|wordattempts|ed\b|es\b|ing\b)''']
+
+[[allowlists]]
+description = "Binarios: imágenes, fuentes y PDF no llevan credenciales en texto"
+paths = ['''(?i)\.(png|jpe?g|webp|gif|ico|svg|pdf|woff2?|ttf|otf|mp4|mov)$''']
+
+[[allowlists]]
+description = "Tests y fixtures: tokens, JWT y claves falsas para probar el código. Solo para reglas genéricas; una llave con forma real (AWS, Stripe, etc.) en un test sigue frenando."
+targetRules = ["generic-api-key", "jwt", "tikin-password-suelta"]
+paths = [
+  '''(^|/)(test|tests|__tests__|__mocks__|fixtures|e2e)/''',
+  '''\.(test|spec)\.[cm]?[jt]sx?$''',
+  '''(^|/)test_[^/]+\.py$''',
+]

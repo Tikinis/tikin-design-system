@@ -1,0 +1,44 @@
+name: gitleaks
+
+# Bloquea el PR si trae un secreto. Escanea solo los commits nuevos del PR
+# (o del push) con la configuración del repo (.gitleaks.toml).
+#
+# Usa el binario oficial y no gitleaks-action: la acción pide licencia de pago
+# para repos de una organización.
+
+on:
+  pull_request:
+  push:
+    branches: [main, qa, staging]
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.30.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Instalar gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Escanear los commits nuevos
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            RANGO="$HEAD_SHA"
+          else
+            RANGO="$BASE..$HEAD_SHA"
+          fi
+          gitleaks git . --redact --verbose --no-banner --log-opts="$RANGO"
